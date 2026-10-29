@@ -114,8 +114,8 @@ Use this table for subsequent test requests; track signed patch versions separat
 | 1 | R8 app | Not checked: the current base APK is not minified. Earlier stress-host checks used a separate test app. |
 | 2 | R8 patch | Verified by patch 3 in the same app. |
 | 3 | Assets | Current raw-DEX loader does not replace APK assets. |
-| 4 | File changes | Earlier signed-fixture checks only; not verified through GitHub in this installed base. |
-| 5 | Missing dependency | Earlier signed-fixture checks only; not verified through this flow. |
+| 4 | File changes | Verified by patch 8: real private-cache JSON changed from revision 1 to 2 and was read back. |
+| 5 | Missing dependency | Reproduced in patch 9; fixed in patch 10 by bundling Codec with the identical implementation. |
 | 6 | New dependency | Verified by Commons Codec patch 2 in the same app. |
 | 7 | Dependency upgrade | Verified on the same phone via patch 7: the bundled newer runtime did not replace the APK's old runtime. See below. |
 
@@ -146,6 +146,24 @@ APK SHA-256, version and installation timestamps matched the pre-test values. On
 **Outcome: replacing this dependency already embedded in the APK is unsupported by the current parent-first loader.** Patch 7 itself loaded and ran normally; the negative result is the actual runtime observation, not an intentional exception or a fake version label. This does not rule out adding new libraries or using separately isolated/relocated versions inside patch code, and does not claim every possible dependency-upgrade strategy is impossible.
 
 Reproduce with `tools/build-embedded-upgrade.ps1` and the matching signing key. The JVM checks are in `tools/CheckEmbeddedUpgrade.java`. The new runtime is resolved separately from the compiler's 1.9.23 runtime, so the build does not silently change the base SDK or old fixture dependencies. Official [Kotlin 2.0.21 license](https://raw.githubusercontent.com/JetBrains/kotlin/v2.0.21/license/LICENSE.txt) and [notice](https://raw.githubusercontent.com/JetBrains/kotlin/v2.0.21/license/NOTICE.txt) accompany the distributed patch.
+
+## Original tests 4 and 5 — actual file change and dependency packaging fix
+
+Both verified sequentially on the same RMX2117 phone and installed APK, 29 October 2026. Evidence is under `.tools/file-missing-phone/`.
+
+**Test 4, patch 8:** the old demo only invoked `greet`; the previous file fixture expected a separate `writeFile` operation and a file path. The new payload wires real file I/O through `greet`. It uses Android's application-cache `java.io.tmpdir`, validates directory ownership against the app UID, and confines writes to one diagnostic JSON file. Android's framework initializes this property from the app cache ([AOSP source](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-13.0.0_r69/core/java/android/app/ActivityThread.java)).
+
+The native screen showed `/data/data/dev.patchrelay.demo/cache/patchrelay-file-test.json`, actual read-before JSON `{"patchrelayTest":4,"revision":1}`, read-after JSON `{"patchrelayTest":4,"revision":2}`, and active patch 8. Writes use a synced temporary file and atomic replacement; unrecognized preexisting data is left untouched. Two filesystem unit tests passed. This demonstrates private-cache file contents, not immutable APK assets or all possible file locations. Cache may be cleared by Android; no durability guarantee is claimed.
+
+**Test 5, patch 9:** the phone displayed `Result: MISSING` and `NoClassDefFoundError: Failed resolution of: Lorg/apache/commons/codec/digest/DigestUtils;`, with active patch 9. This was the real missing-class error, caught and displayed so the app remained usable.
+
+**Fix, patch 10:** the identical implementation was packaged with Commons Codec 1.15. The phone then displayed `Result: AVAILABLE`, input `PatchRelay`, SHA-256 `f2ae0dc66d8f68bb6c45240ed32b2f553494f583d0e15f0994a8a6880692a583`, active patch 10. The hash matched an independent calculation. JVM classloader checks also reproduced the missing/fixed contrast.
+
+The packaging preflight was corrected to inspect DEX class definitions: a reference to a class is not evidence its implementation is included. An interim update check on version 8 said up to date while the public endpoint served 9; a retry subsequently applied 9. Its precise caching/propagation cause was not established and no cache-fix claim is made.
+
+APK SHA-256, version and installation timestamps were unchanged across all three patches, and only `dev.patchrelay.demo` was installed for PatchRelay. The normal channel now serves patch 10. No APK install was performed for these cases.
+
+The root fixes demonstrated here are wiring the demo to execute real file I/O, and including required dependency classes. Each patch uses the APK as its parent loader; previously downloaded patch versions do not automatically provide dependencies to later versions. `tools/build-file-missing-tests.ps1` builds the specific test artifacts; the general code-only publisher still requires appropriate dependency packaging and does not automatically support arbitrary AAR resources/native libraries.
 
 ## Rebuild patch 2
 
