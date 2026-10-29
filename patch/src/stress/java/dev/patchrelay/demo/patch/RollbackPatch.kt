@@ -6,6 +6,6 @@ import dev.patchrelay.Patch
 class RollbackPatch : Patch {
     override fun invoke(operation: String, input: String): String {
         require(operation == "greet") { "Unknown operation: $operation" }
-        error("Patch 4: controlled startup failure.\nRollback test: restart once more to restore patch 3.")
+        error("Patch 5: repeated controlled startup failure.\nRollback test: restart once more to restore patch 3.")
     }
 }
