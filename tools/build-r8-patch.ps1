@@ -1,5 +1,6 @@
 param([string]$AndroidSdk = $env:ANDROID_HOME, [string]$PrivateKey = '.keys/patch-signing.key')
 $ErrorActionPreference = 'Stop'
+Import-Module "$PSScriptRoot/PatchBuild.psm1" -Force
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 & "$PSScriptRoot/../gradlew.bat" :patch:testStressUnitTest :patch:stressJar :patch:stressClasspath --console=plain --max-workers=2
 if ($LASTEXITCODE -ne 0) { throw 'R8 patch source checks failed' }
@@ -20,6 +21,5 @@ $dex = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes((Join-Path $out
 if (!$dex.Contains('Ldev/patchrelay/demo/patch/R8Patch;')) { throw 'Patch entry point was renamed or removed' }
 $descriptor = 'L' + $renamed.Replace('.', '/') + ';'
 if (!$dex.Contains($descriptor) -or $dex.Contains('Ldev/patchrelay/demo/patch/PatchFormatter;')) { throw 'DEX does not match helper mapping' }
-& java "$PSScriptRoot/Publisher.java" sign $PrivateKey "$out/classes.dex" dev.patchrelay.demo 3 3 dev.patchrelay.demo.patch.R8Patch https://github.com/jaypal1046/patchrelay/releases/download/demo-patch-3/classes.dex "$out/patch.json"
-if ($LASTEXITCODE -ne 0) { throw 'Signing failed; manifests are not overwritten' }
+Write-PatchManifest -PrivateKey $PrivateKey -OutputDirectory $out -AppId dev.patchrelay.demo -BaseVersion 3 -Version 3 -EntryPoint dev.patchrelay.demo.patch.R8Patch -ArtifactUrl https://github.com/jaypal1046/patchrelay/releases/download/demo-patch-3/classes.dex
 Write-Output "R8 verified: helper renamed to $renamed; reflective entry point preserved. No APK built or installed."

@@ -1,5 +1,6 @@
 param([string]$AndroidSdk = $env:ANDROID_HOME, [string]$PrivateKey = '.keys/patch-signing.key')
 $ErrorActionPreference = 'Stop'
+Import-Module "$PSScriptRoot/PatchBuild.psm1" -Force
 if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 & "$PSScriptRoot/../gradlew.bat" :demo:assembleRelease :patch:testStressUnitTest :patch:imageProbeJar --console=plain --max-workers=2
 if ($LASTEXITCODE -ne 0) { throw 'Image test build failed' }
@@ -20,10 +21,8 @@ try {
         if ($hash -eq $afterHash) { throw 'After image already embedded in base APK' }
     }
 } finally { $archive.Dispose() }
-& "$AndroidSdk/build-tools/35.0.0/d8.bat" --min-api 26 --lib "$AndroidSdk/platforms/android-35/android.jar" --output $out "$PSScriptRoot/../patch/build/libs/image-probe.jar"
-if ($LASTEXITCODE -ne 0) { throw 'Image patch DEX failed' }
+ConvertTo-PatchDex -AndroidSdk $AndroidSdk -BuildTools '35.0.0' -OutputDirectory $out -Jar "$PSScriptRoot/../patch/build/libs/image-probe.jar"
 $dex = [Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes((Join-Path $out 'classes.dex')))
 if (!$dex.Contains($afterHash) -or $dex.Contains('Ldev/patchrelay/demo/patch/BuildConfig;')) { throw 'Expected image hash was not inlined into patch code' }
-& java "$PSScriptRoot/Publisher.java" sign $PrivateKey "$out/classes.dex" dev.patchrelay.demo 3 11 dev.patchrelay.demo.patch.ImageAssetPatch https://github.com/jaypal1046/patchrelay/releases/download/image-assets-test-v1/classes.dex "$out/patch.json"
-if ($LASTEXITCODE -ne 0) { throw 'Signing failed; manifests are not overwritten' }
+Write-PatchManifest -PrivateKey $PrivateKey -OutputDirectory $out -AppId dev.patchrelay.demo -BaseVersion 3 -Version 11 -EntryPoint dev.patchrelay.demo.patch.ImageAssetPatch -ArtifactUrl https://github.com/jaypal1046/patchrelay/releases/download/image-assets-test-v1/classes.dex
 Write-Output "Base contains before image only; patch pins after SHA-256 $afterHash. Phone installation requires approval."

@@ -6,15 +6,13 @@ import android.os.Looper
 import android.util.AtomicFile
 import android.util.Log
 import dalvik.system.DexClassLoader
+import dev.patchrelay.core.HttpsDownloads
+import dev.patchrelay.core.SignedManifests
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
-import java.util.Base64
 import java.util.UUID
 
 /** Experimental, single-process patch loader for directly distributed Android apps. */
@@ -45,11 +43,11 @@ class PatchRelay @Throws(IOException::class) constructor(
     @Throws(Exception::class)
     fun stage(manifestUrl: String): Boolean {
         workerThread()
-        val envelope = download(manifestUrl, MAX_MANIFEST)
+        val envelope = HttpsDownloads.download(manifestUrl, MAX_MANIFEST)
         val manifest = verify(envelope)
         val version = manifest.getLong("version")
         if (version <= state.getLong("highest", 0)) return false
-        val dex = download(manifest.getString("artifactUrl"), MAX_PATCH)
+        val dex = HttpsDownloads.download(manifest.getString("artifactUrl"), MAX_PATCH)
         checkHash(dex, manifest.getString("sha256"))
         val target = File(directory, "$version.dex")
         if (target.exists()) throw IOException("Patch file already exists")
@@ -151,52 +149,8 @@ class PatchRelay @Throws(IOException::class) constructor(
         return implementation.asSubclass(Patch::class.java).getDeclaredConstructor().newInstance()
     }
 
-    private fun verify(envelope: ByteArray): JSONObject {
-        if (envelope.size > MAX_MANIFEST) throw SecurityException("Manifest too large")
-        val signed = JSONObject(String(envelope, Charsets.UTF_8))
-        val payload = Base64.getDecoder().decode(signed.getString("payload"))
-        Signatures.verify(payload, Base64.getDecoder().decode(signed.getString("signature")), publicKey)
-        val manifest = JSONObject(String(payload, Charsets.UTF_8))
-        if (manifest.getInt("schema") != 1 || manifest.getInt("apiVersion") != 1 ||
-            context.packageName != manifest.getString("appId") ||
-            baseVersion != manifest.getString("baseVersion") || manifest.getLong("version") <= 0
-        ) throw SecurityException("Patch incompatible with installed app")
-        return manifest
-    }
-
-    private fun download(address: String, limit: Int): ByteArray {
-        var url = URL(address)
-        repeat(6) {
-            if (url.protocol != "https" || url.userInfo != null) throw IOException("HTTPS URL required")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = 15000
-            connection.readTimeout = 20000
-            try {
-                val status = connection.responseCode
-                if (status in listOf(301, 302, 303, 307, 308)) {
-                    val location = connection.getHeaderField("Location") ?: throw IOException("Missing redirect location")
-                    url = URL(url, location)
-                    return@repeat
-                }
-                if (status != 200) throw IOException("Download HTTP $status")
-                if (connection.contentLengthLong > limit) throw IOException("Download too large")
-                connection.inputStream.use { input ->
-                    ByteArrayOutputStream().use { output ->
-                        val buffer = ByteArray(8192)
-                        while (true) {
-                            val count = input.read(buffer)
-                            if (count == -1) break
-                            if (output.size() + count > limit) throw IOException("Download too large")
-                            output.write(buffer, 0, count)
-                        }
-                        return output.toByteArray()
-                    }
-                }
-            } finally { connection.disconnect() }
-        }
-        throw IOException("Too many redirects")
-    }
+    private fun verify(envelope: ByteArray): JSONObject =
+        SignedManifests.verify(envelope, publicKey, context.packageName, baseVersion)
 
     private fun checkHash(data: ByteArray, expected: String) {
         val digest = MessageDigest.getInstance("SHA-256").digest(data)

@@ -1,5 +1,7 @@
 # PatchRelay
 
+**Structure:** [architecture and runtime boundaries](docs/architecture.md). `core/` shares download/signature checks. `sdk/` is the Java/Kotlin DEX adapter; `react-native/android/` stages React Native Android JS bundles. `demo/`, `patch/`, and `visual/` contain examples/test fixtures. [React Native Android setup and boundaries](docs/react-native-android.md) includes a separate pinned release example. Flutter and iOS adapters remain pending.
+
 Current phone testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
 [Sequential phone results and original test-case numbering](docs/sequential-phone-tests.md): file changes, bundled new dependencies and R8 patches are verified in the same app. Test 5's missing class was reproduced in patch 9 and fixed by bundling Codec in patch 10, now the normal update. Test 7 still shows that bundling a newer runtime does not replace an APK-embedded runtime. Test numbers and patch versions are tracked separately.
@@ -19,21 +21,21 @@ Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server
 - Unconfirmed launch rolls back on the next launch; failed loading restores prior/built-in implementation.
 - GitHub-hosted demo APK, SDK AAR, patch DEX, signed manifest.
 
-This code-patching mode targets **directly distributed Android apps**. Google Play prohibits downloading executable DEX/JAR/native code outside its update mechanism: [policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en). No iOS, React Native, or Flutter SDK is implemented yet.
+This code-patching mode targets **directly distributed Android apps**. Google Play prohibits downloading executable DEX/JAR/native code outside its update mechanism: [policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en). React Native Android uses a separate JS-bundle adapter; iOS and Flutter remain unimplemented.
 
 ## Build
 
 Requires JDK 17, Android SDK platform 35, build tools 35.0.0. Set `JAVA_HOME` and `ANDROID_HOME`; or set `sdk.dir` in ignored `local.properties`.
 
 ```powershell
-.\gradlew.bat :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
+.\gradlew.bat :core:testDebugUnitTest :core:assembleRelease :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
 ```
 
 The demo release is **non-debuggable but signed with a development key**, for testing only. Production apps need their own release signing configuration.
 
 ## Integrate
 
-Add the SDK AAR and `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
+Add both the SDK AAR and core AAR, plus `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
 
 ```kotlin
 val relay = PatchRelay(context, "your-exact-build-id", publicKeyBase64)
@@ -63,10 +65,11 @@ Change the implementation in `patch/`, then:
 
 ```powershell
 .\tools\build-patch.ps1 `
-  -ArtifactUrl https://github.com/OWNER/REPO/releases/download/patch-1/classes.dex
+  -ArtifactUrl https://github.com/OWNER/REPO/releases/download/patch-1/classes.dex `
+  -OutputDirectory dist/patch-1
 ```
 
-Upload `dist/classes.dex` and `dist/patch.json` to that GitHub release, using GitHub's website or `gh release create`. App fetches `https://github.com/OWNER/REPO/releases/latest/download/patch.json`. A regular HTTPS server can serve the same two files without GitHub. Publish artifacts before exposing the manifest. Keep releases immutable; increment patch versions for fixes and rollbacks.
+Upload `dist/patch-1/classes.dex` and `dist/patch-1/patch.json` to that GitHub release, using GitHub's website or `gh release create`. App fetches `https://github.com/OWNER/REPO/releases/latest/download/patch.json`. A regular HTTPS server can serve the same two files without GitHub. Publish artifacts before exposing the manifest. Keep releases immutable; increment patch versions for fixes and rollbacks.
 
 `Publisher.java sign` accepts private key, DEX, app ID, exact base version, positive patch version, entry-point class, HTTPS artifact URL, output manifest. Signature covers the exact UTF-8 payload bytes encoded in the envelope; clients verify before interpreting metadata.
 

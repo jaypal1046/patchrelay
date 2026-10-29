@@ -6,3 +6,7 @@ local.properties
 dist/
 *.jks
 *.keystore
+node_modules/
+examples/react-native/ios/
+examples/react-native/Gemfile
+examples/react-native/.bundle/

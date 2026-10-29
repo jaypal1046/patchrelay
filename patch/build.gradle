@@ -23,32 +23,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     embeddedUpgrade('org.jetbrains.kotlin:kotlin-stdlib:2.0.21') { transitive = false }
 }
-tasks.register('jar', Jar) {
-    dependsOn 'compileReleaseKotlin'
-    from layout.buildDirectory.dir('tmp/kotlin-classes/release')
-    include '**/*.class'
-    archiveFileName = 'patch.jar'
-    destinationDirectory = layout.buildDirectory.dir('libs')
-}
-tasks.register('stressJar', Jar) {
-    dependsOn 'compileStressKotlin'
-    from layout.buildDirectory.dir('tmp/kotlin-classes/stress')
-    from 'src/stress/assets'
-    archiveFileName = 'stress-thin.jar'
-    destinationDirectory = layout.buildDirectory.dir('libs')
-}
-tasks.register('bundledStressJar', Jar) {
-    dependsOn 'compileStressKotlin'
-    from layout.buildDirectory.dir('tmp/kotlin-classes/stress')
-    from 'src/stress/assets'
-    from { configurations.stressRuntimeClasspath.findAll {
-        it.name.startsWith('gson-') || it.name.startsWith('commons-codec-')
-    }.collect { zipTree(it) } }
-    exclude 'META-INF/**', '**/module-info.class'
-    duplicatesStrategy = DuplicatesStrategy.FAIL
-    archiveFileName = 'stress-bundled.jar'
-    destinationDirectory = layout.buildDirectory.dir('libs')
-}
 tasks.register('stressClasspath') {
     dependsOn 'compileStressKotlin'
     doLast {
@@ -58,19 +32,6 @@ tasks.register('stressClasspath') {
                 }.files.collect { it.absolutePath }.join('\n')
     }
 }
-tasks.register('dependencyPatchJar', Jar) {
-    dependsOn 'compileStressKotlin'
-    from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
-        include 'dev/patchrelay/demo/patch/DependencyPatch.class'
-    }
-    from { configurations.stressRuntimeClasspath.findAll {
-        it.name.startsWith('commons-codec-')
-    }.collect { zipTree(it) } }
-    exclude 'META-INF/**', '**/module-info.class'
-    duplicatesStrategy = DuplicatesStrategy.FAIL
-    archiveFileName = 'dependency-patch.jar'
-    destinationDirectory = layout.buildDirectory.dir('libs')
-}
 tasks.register('dependencyPatchNotices', Copy) {
     from { zipTree(configurations.stressRuntimeClasspath.find { it.name.startsWith('commons-codec-') }) }
     include 'META-INF/LICENSE.txt', 'META-INF/NOTICE.txt'
@@ -78,32 +39,37 @@ tasks.register('dependencyPatchNotices', Copy) {
     includeEmptyDirs = false
     into layout.buildDirectory.dir('dependency-notices')
 }
-tasks.register('embeddedUpgradeJar', Jar) {
-    dependsOn 'compileStressKotlin'
-    from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
-        include 'dev/patchrelay/demo/patch/EmbeddedUpgradePatch.class'
-    }
-    from { configurations.embeddedUpgrade.collect { zipTree(it) } }
-    exclude 'META-INF/**', '**/module-info.class'
-    duplicatesStrategy = DuplicatesStrategy.FAIL
-    archiveFileName = 'embedded-upgrade.jar'
-    destinationDirectory = layout.buildDirectory.dir('libs')
-}
+// One packaging rule; scenarios select classes and explicitly bundled dependencies.
 [
-    fileProbeJar: [file: 'file-probe.jar', classes: ['FileChangePatch*.class', 'FileProbeStore*.class'], codec: false],
-    imageProbeJar: [file: 'image-probe.jar', classes: ['ImageAssetPatch*.class'], codec: false],
-    missingProbeJar: [file: 'missing-probe.jar', classes: ['MissingDependencyPatch.class'], codec: false],
-    fixedMissingProbeJar: [file: 'missing-probe-fixed.jar', classes: ['MissingDependencyPatch.class'], codec: true]
+    jar: [variant: 'release', file: 'patch.jar', classes: ['**/*.class']],
+    stressJar: [file: 'stress-thin.jar', assets: true],
+    bundledStressJar: [file: 'stress-bundled.jar', assets: true, dependencies: ['gson-', 'commons-codec-']],
+    dependencyPatchJar: [file: 'dependency-patch.jar', classes: ['DependencyPatch.class'], dependencies: ['commons-codec-']],
+    embeddedUpgradeJar: [file: 'embedded-upgrade.jar', classes: ['EmbeddedUpgradePatch.class'], embedded: true],
+    fileProbeJar: [file: 'file-probe.jar', classes: ['FileChangePatch*.class', 'FileProbeStore*.class']],
+    imageProbeJar: [file: 'image-probe.jar', classes: ['ImageAssetPatch*.class']],
+    missingProbeJar: [file: 'missing-probe.jar', classes: ['MissingDependencyPatch.class']],
+    fixedMissingProbeJar: [file: 'missing-probe-fixed.jar', classes: ['MissingDependencyPatch.class'], dependencies: ['commons-codec-']]
 ].each { taskName, spec ->
     tasks.register(taskName, Jar) {
-        dependsOn 'compileStressKotlin'
-        from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
-            include spec.classes.collect { 'dev/patchrelay/demo/patch/' + it }
+        def variant = spec.variant ?: 'stress'
+        dependsOn "compile${variant.capitalize()}Kotlin"
+        from(layout.buildDirectory.dir("tmp/kotlin-classes/$variant")) {
+            if (spec.classes) {
+                include spec.classes.collect { variant == 'release' ? it : 'dev/patchrelay/demo/patch/' + it }
+            }
         }
-        if (spec.codec) {
-            from { configurations.stressRuntimeClasspath.findAll { it.name.startsWith('commons-codec-') }.collect { zipTree(it) } }
+        if (spec.assets) from 'src/stress/assets'
+        if (spec.dependencies) {
+            from { configurations.stressRuntimeClasspath.findAll { dependency ->
+                spec.dependencies.any { dependency.name.startsWith(it) }
+            }.collect { zipTree(it) } }
         }
-        exclude 'META-INF/**', '**/module-info.class'
+        if (spec.embedded) from { configurations.embeddedUpgrade.collect { zipTree(it) } }
+        // Preserve release/thin JAR contents; strip dependency metadata only in bundled probes.
+        if (spec.dependencies || spec.embedded) {
+            exclude 'META-INF/**', '**/module-info.class'
+        }
         duplicatesStrategy = DuplicatesStrategy.FAIL
         archiveFileName = spec.file
         destinationDirectory = layout.buildDirectory.dir('libs')
