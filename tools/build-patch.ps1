@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory=$true)][string]$ArtifactUrl,
     [long]$Version = 1,
     [string]$AppId = 'dev.patchrelay.demo',
-    [string]$BaseVersion = '1',
+    [string]$BaseVersion = '2',
     [string]$EntryPoint = 'dev.patchrelay.demo.patch.DemoPatch',
     [string]$PrivateKey = '.keys/patch-signing.key',
     [string]$AndroidSdk = $env:ANDROID_HOME,

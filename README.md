@@ -2,12 +2,12 @@
 
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
-**Experimental Android Java/Kotlin prototype.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
+**Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
 
 ## Current scope
 
-- Android 8+ Java SDK, callable from Kotlin.
-- Separate Java patch compilation into DEX; Kotlin implementations must also supply their runtime dependencies in the original app or patch.
+- Android 8+ Kotlin SDK, callable from Java.
+- Separate Kotlin patch compilation into DEX; Kotlin runtime dependencies ship in the original app.
 - RSA-3072 signed manifests; SHA-256 artifact verification; pinned public key in the installed app.
 - App ID, exact base build, API version, increasing patch version checks.
 - HTTPS downloads with size/time limits and HTTPS-only redirects.
@@ -29,21 +29,21 @@ The demo release is **non-debuggable but signed with a development key**, for te
 
 ## Integrate
 
-Add the SDK AAR to your Android app. Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
+Add the SDK AAR and `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
 
-```java
-PatchRelay relay = new PatchRelay(context, "your-exact-build-id", publicKeyBase64);
-Patch logic = relay.start((operation, input) -> originalImplementation(operation, input));
-String result = logic.invoke("your-operation", input);
+```kotlin
+val relay = PatchRelay(context, "your-exact-build-id", publicKeyBase64)
+val logic = relay.start(Patch { operation, input -> originalImplementation(operation, input) })
+val result = logic.invoke("your-operation", input)
 // After the patched startup path has succeeded:
-relay.markHealthy();
+relay.markHealthy()
 // Stage an update for the next process launch:
-boolean staged = relay.stage(manifestHttpsUrl);
+val staged = relay.stage(manifestHttpsUrl)
 ```
 
 Use one SDK instance in one designated app process. Persist and retain that instance/implementation across activity recreation. SDK disk/network operations belong on worker threads. `baseVersion` must change whenever native app code or the contract changes. Patch classes must have unique names not already packaged in the app, implement `dev.patchrelay.Patch`, and expose a public no-argument constructor. Do not package another copy of the interface in a patch.
 
-Kotlin apps can implement/call the same Java interface. Kotlin patch compilation itself is not configured in this prototype.
+SDK, demo app, and patch implementation use Kotlin. Java interoperability is exercised by the instrumentation tests. The dependency-free signing utility uses Java 17 source-file execution.
 
 ## Publish a patch
 
@@ -77,7 +77,7 @@ adb shell am force-stop dev.patchrelay.demo
 adb shell am start -n dev.patchrelay.demo/.MainActivity
 ```
 
-Original message becomes `Patched Java logic: hello PatchRelay`. The manifest URL is supplied explicitly in this technical demo; there is no update-settings UI yet.
+Original message becomes `Patched Kotlin logic: hello PatchRelay`. The manifest URL is supplied explicitly in this technical demo; there is no update-settings UI yet. Use the v0.2.0+ Kotlin demo APK with the current manifest; v0.1.0 targets the earlier Java demo base build.
 
 ## Rollback and limitations
 

@@ -13,10 +13,10 @@ public final class HostedPatchTest extends InstrumentationTestCase {
         java.io.File root = new java.io.File(app.getNoBackupFilesDir(), "patchrelay");
         java.io.File[] builds = root.listFiles();
         if (builds != null) for (java.io.File build : builds) PatchRelayTest.deleteTree(build);
-        PatchRelay relay = new PatchRelay(app, "1", BuildConfig.PATCH_PUBLIC_KEY);
+        PatchRelay relay = new PatchRelay(app, "2", BuildConfig.PATCH_PUBLIC_KEY);
         assertTrue(relay.stage(URL));
         assertFalse(relay.stage(URL));
-        assertEquals("Patched Java logic: hello github", relay.start((op, input) -> "original").invoke("greet", "github"));
+        assertEquals("Patched Kotlin logic: hello github", relay.start((op, input) -> "original").invoke("greet", "github"));
         relay.markHealthy();
         assertEquals(1L, relay.activeVersion());
         PatchRelay incompatible = new PatchRelay(app, "different-build", BuildConfig.PATCH_PUBLIC_KEY);

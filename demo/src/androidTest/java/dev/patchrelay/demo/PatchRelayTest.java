@@ -18,7 +18,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         app = getInstrumentation().getTargetContext();
         app.getSharedPreferences("patchrelay", 0).edit().clear().commit();
         directory = new File(new File(app.getNoBackupFilesDir(), "patchrelay"),
-                UUID.nameUUIDFromBytes("1".getBytes(StandardCharsets.UTF_8)).toString());
+                UUID.nameUUIDFromBytes("2".getBytes(StandardCharsets.UTF_8)).toString());
         directory.mkdirs();
         File[] files = directory.listFiles();
         if (files != null) for (File file : files) deleteTree(file);
@@ -30,7 +30,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         assertTrue("Cannot remove test artifact " + file, file.delete());
     }
 
-    private PatchRelay relay() throws Exception { return new PatchRelay(app, "1", BuildConfig.PATCH_PUBLIC_KEY); }
+    private PatchRelay relay() throws Exception { return new PatchRelay(app, "2", BuildConfig.PATCH_PUBLIC_KEY); }
     private Patch fallback() { return (operation, input) -> "original"; }
 
     private void stageFixture() throws Exception {
@@ -52,11 +52,11 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         assertEquals(0, app.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE);
         stageFixture();
         PatchRelay relay = relay();
-        assertEquals("Patched Java logic: hello test", relay.start(fallback()).invoke("greet", "test"));
+        assertEquals("Patched Kotlin logic: hello test", relay.start(fallback()).invoke("greet", "test"));
         assertEquals(1L, relay.activeVersion());
         relay.markHealthy();
         PatchRelay nextLaunch = relay();
-        assertEquals("Patched Java logic: hello restart", nextLaunch.start(fallback()).invoke("greet", "restart"));
+        assertEquals("Patched Kotlin logic: hello restart", nextLaunch.start(fallback()).invoke("greet", "restart"));
         nextLaunch.markHealthy();
     }
 
@@ -87,7 +87,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         assertTrue(app.getSharedPreferences("patchrelay", 0).edit().remove("pending")
                 .putLong("active", 2).putLong("previous", 1).putBoolean("booting", true).commit());
         PatchRelay restored = relay();
-        assertEquals("Patched Java logic: hello restored", restored.start(fallback()).invoke("greet", "restored"));
+        assertEquals("Patched Kotlin logic: hello restored", restored.start(fallback()).invoke("greet", "restored"));
         // Simulate another process death before confirmation of the restored patch.
         PatchRelay nextLaunch = relay();
         assertEquals("original", nextLaunch.start(fallback()).invoke("greet", "test"));
@@ -105,7 +105,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
 
     public void testNewBaseDoesNotLoadOldPatch() throws Exception {
         stageFixture();
-        PatchRelay upgraded = new PatchRelay(app, "2", BuildConfig.PATCH_PUBLIC_KEY);
+        PatchRelay upgraded = new PatchRelay(app, "3", BuildConfig.PATCH_PUBLIC_KEY);
         assertEquals("original", upgraded.start(fallback()).invoke("greet", "test"));
     }
 
