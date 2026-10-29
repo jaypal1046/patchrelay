@@ -5,7 +5,7 @@ if (!$AndroidSdk) { throw 'Set ANDROID_HOME or pass -AndroidSdk' }
 if ($LASTEXITCODE -ne 0) { throw 'R8 patch source checks failed' }
 $out = Join-Path $PSScriptRoot '../dist/r8-patch-3'
 New-Item -ItemType Directory -Force $out | Out-Null
-$arguments = @('-cp', "$AndroidSdk/build-tools/35.0.0/lib/d8.jar", 'com.android.tools.r8.R8', '--release', '--min-api', '26',
+$arguments = @('-cp', "$AndroidSdk/build-tools/35.0.0/lib/d8.jar", 'com.android.tools.r8.R8', '--release', '--no-data-resources', '--min-api', '26',
     '--lib', "$AndroidSdk/platforms/android-35/android.jar", '--pg-conf', "$PSScriptRoot/../patch/r8-patch-rules.pro",
     '--pg-map-output', "$out/mapping.txt", '--output', $out)
 foreach ($library in (Get-Content "$PSScriptRoot/../patch/build/stress-classpath.txt")) { $arguments += @('--lib', $library) }

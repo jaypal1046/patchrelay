@@ -34,7 +34,32 @@ abb86033e76b5dacc9b365f0dab2f77c82d4d2c1ac5a8683863830423ce8f297
 
 Version code, version name, first-install timestamp and last-update timestamp were unchanged. Package listing showed only `dev.patchrelay.demo` for PatchRelay. Local screenshot and captured evidence are under `.tools/dependency-patch-phone/`; no phone screenshot was uploaded publicly.
 
-**Result: a newly bundled dependency worked in the same installed app after a real GitHub patch download.** This does not demonstrate replacing an existing dependency or updating APK assets. No additional case was run after this result.
+**Result: a newly bundled dependency worked in the same installed app after a real GitHub patch download.** This does not demonstrate replacing an existing dependency or updating APK assets. That test stopped after patch 2; patch 3 below was a subsequent user-requested step.
+
+## Patch 3 — R8/ProGuard processing of downloaded code
+
+Verified on the same physical phone and installed APK on 29 October 2026. Release: [demo-patch-3](https://github.com/jaypal1046/patchrelay/releases/tag/demo-patch-3).
+
+- Confirmed active patch 2 before starting. No app was installed or replaced.
+- Two new JVM tests checked the formatter's known output and rejection of unsupported operations.
+- R8 compiled the patch with `patch/r8-patch-rules.pro`. Rules preserve the reflection entry point, constructor and `invoke` method, while permitting the retained helper class to be renamed.
+- Mapping showed `dev.patchrelay.demo.patch.PatchFormatter -> a.a`. The produced DEX contained the renamed descriptor, lacked the original helper descriptor, and retained the named entry point.
+- Published signed DEX, manifest and mapping only. An unused passthrough JSON resource was removed during release preparation; the signed DEX was unchanged. The build script now uses R8's `--no-data-resources` option.
+- The existing app downloaded and verified patch 3 from GitHub. After restart, its native screen showed:
+
+```text
+Patch 3: R8/ProGuard
+Input: PatchRelay
+Output: YALERHCTAP
+Helper class: a.a
+Active patch: 3
+```
+
+The output matched an independent uppercase/reverse calculation, and the runtime helper name matched the R8 mapping. APK SHA-256 remained `abb86033e76b5dacc9b365f0dab2f77c82d4d2c1ac5a8683863830423ce8f297`; version and installation timestamps were unchanged. Only `dev.patchrelay.demo` was listed for PatchRelay. Local screen capture and evidence are under `.tools/r8-patch-phone/`.
+
+**Result: the downloaded R8-processed patch ran its obfuscated helper successfully in the same installed app.** This step tests the patch's ProGuard rules, not shrinking/obfuscating the installed base APK. No further case was run in this step.
+
+Rebuild with `tools/build-r8-patch.ps1`; signing requires the matching private key. Output is under `dist/r8-patch-3/`, with the R8 mapping alongside the signed patch.
 
 ## Rebuild patch 2
 
