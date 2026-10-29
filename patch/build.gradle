@@ -84,3 +84,22 @@ tasks.register('embeddedUpgradeJar', Jar) {
     archiveFileName = 'embedded-upgrade.jar'
     destinationDirectory = layout.buildDirectory.dir('libs')
 }
+[
+    fileProbeJar: [file: 'file-probe.jar', classes: ['FileChangePatch*.class', 'FileProbeStore*.class'], codec: false],
+    missingProbeJar: [file: 'missing-probe.jar', classes: ['MissingDependencyPatch.class'], codec: false],
+    fixedMissingProbeJar: [file: 'missing-probe-fixed.jar', classes: ['MissingDependencyPatch.class'], codec: true]
+].each { taskName, spec ->
+    tasks.register(taskName, Jar) {
+        dependsOn 'compileStressKotlin'
+        from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
+            include spec.classes.collect { 'dev/patchrelay/demo/patch/' + it }
+        }
+        if (spec.codec) {
+            from { configurations.stressRuntimeClasspath.findAll { it.name.startsWith('commons-codec-') }.collect { zipTree(it) } }
+        }
+        exclude 'META-INF/**', '**/module-info.class'
+        duplicatesStrategy = DuplicatesStrategy.FAIL
+        archiveFileName = spec.file
+        destinationDirectory = layout.buildDirectory.dir('libs')
+    }
+}
