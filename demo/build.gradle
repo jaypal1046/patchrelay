@@ -15,9 +15,21 @@ android {
         buildConfigField 'String', 'PATCH_MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/latest/download/patch.json"'
     }
     buildFeatures { buildConfig true }
-    testBuildType 'release'
-    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+    testBuildType providers.gradleProperty('testBuildType').getOrElse('release')
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.debug }
+        stress {
+            initWith release
+            applicationIdSuffix '.stress'
+            minifyEnabled true
+            matchingFallbacks = ['release']
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'stress-rules.pro'
+        }
+    }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
 }
-dependencies { implementation project(':sdk') }
+dependencies {
+    implementation project(':sdk')
+    stressImplementation 'com.google.code.gson:gson:2.8.9'
+}

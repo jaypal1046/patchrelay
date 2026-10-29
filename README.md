@@ -86,6 +86,8 @@ Single process only. No background scheduler, automatic method instrumentation, 
 
 ## Verification
 
+[Complex Kotlin test results](docs/complex-patch-tests.md): R8 host/patch compatibility, APK assets, app-private file changes, new dependencies, and existing dependency upgrades. Seven stress tests confirm both working features and current limits.
+
 Unit tests reject altered metadata and wrong signing keys. Android instrumentation tests exercise actual DEX loading in a non-debuggable app, restart persistence, unconfirmed-boot rollback, tampered DEX/manifest rejection, base-version changes, HTTP rejection, and main-thread protection.
 
 Instrumentation fixtures are signed using the demo key and embedded only in the test APK. Matching fixtures are checked in at `demo/src/androidTest/assets/`. Do not regenerate the demo public key without regenerating these fixtures. `PatchRelayTest` runs offline; `HostedPatchTest` additionally downloads the public demo release.

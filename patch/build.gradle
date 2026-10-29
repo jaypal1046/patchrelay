@@ -5,12 +5,47 @@ android {
     defaultConfig { minSdk 26 }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
+    buildTypes {
+        stress { initWith release; matchingFallbacks = ['release'] }
+    }
 }
-dependencies { compileOnly project(':sdk') }
+dependencies {
+    compileOnly project(':sdk')
+    stressImplementation 'com.google.code.gson:gson:2.10.1'
+    stressImplementation 'commons-codec:commons-codec:1.15'
+}
 tasks.register('jar', Jar) {
     dependsOn 'compileReleaseKotlin'
     from layout.buildDirectory.dir('tmp/kotlin-classes/release')
     include '**/*.class'
     archiveFileName = 'patch.jar'
     destinationDirectory = layout.buildDirectory.dir('libs')
+}
+tasks.register('stressJar', Jar) {
+    dependsOn 'compileStressKotlin'
+    from layout.buildDirectory.dir('tmp/kotlin-classes/stress')
+    from 'src/stress/assets'
+    archiveFileName = 'stress-thin.jar'
+    destinationDirectory = layout.buildDirectory.dir('libs')
+}
+tasks.register('bundledStressJar', Jar) {
+    dependsOn 'compileStressKotlin'
+    from layout.buildDirectory.dir('tmp/kotlin-classes/stress')
+    from 'src/stress/assets'
+    from { configurations.stressRuntimeClasspath.findAll {
+        it.name.startsWith('gson-') || it.name.startsWith('commons-codec-')
+    }.collect { zipTree(it) } }
+    exclude 'META-INF/**', '**/module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    archiveFileName = 'stress-bundled.jar'
+    destinationDirectory = layout.buildDirectory.dir('libs')
+}
+tasks.register('stressClasspath') {
+    dependsOn 'compileStressKotlin'
+    doLast {
+        layout.buildDirectory.file('stress-classpath.txt').get().asFile.text =
+                configurations.stressCompileClasspath.incoming.artifactView {
+                    attributes { attribute(Attribute.of('artifactType', String), 'android-classes-jar') }
+                }.files.collect { it.absolutePath }.join('\n')
+    }
 }
