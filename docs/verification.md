@@ -14,6 +14,12 @@ Kotlin implementation: Android SDK, demo app, and separately compiled patch.
 
 Automatic approval review rejected both the combined stop/relaunch command and the subsequent launch-only command that would supply the GitHub manifest URL. No specific reason was supplied. The phone's patch download and activation were not verified; emulator success does not establish physical-device success.
 
+## v0.3.0 manual update screen
+
+Added a user-operated Check for update button, visible progress/errors, and an app-settings shortcut for a manual restart. Release build, signature unit test, and Android test compilation passed. Installed v0.3.0 on the same RMX2117 phone and verified the enabled button through its native UI hierarchy.
+
+The phone then displayed `Checking GitHub for an update…`, followed by `Update downloaded and verified.` with active patch `0`. This confirms the user-operated GitHub download and verification on the physical device. Activation still requires the user to force-stop the app in settings and reopen it; that final state has not yet been observed. The earlier automated-launch rejection does not describe this subsequent manual-download result.
+
 ## Reproduce emulator tests
 
 Build `:demo:assembleReleaseAndroidTest`, install the demo APK and its Android test APK on the selected emulator, then run:
