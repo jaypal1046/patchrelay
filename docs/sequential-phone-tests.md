@@ -61,6 +61,22 @@ The output matched an independent uppercase/reverse calculation, and the runtime
 
 Rebuild with `tools/build-r8-patch.ps1`; signing requires the matching private key. Output is under `dist/r8-patch-3/`, with the R8 mapping alongside the signed patch.
 
+## Patch 4 — controlled startup failure and rollback
+
+Verified on the same physical phone on 29 October 2026. This intentionally failing fixture is [demo-patch-4](https://github.com/jaypal1046/patchrelay/releases/tag/demo-patch-4), now quarantined as a prerelease. The normal latest-update endpoint was restored to working patch 3 and verified after the test.
+
+- Started with the working patch-3 screen, output `YALERHCTAP`, helper `a.a`.
+- Built and signed patch 4 for the same package and base. Its `greet` implementation deliberately throws a caught `IllegalStateException` before the app calls `markHealthy()`. The patch body performs no file writes or other side effects. A JVM test verifies this exact controlled failure.
+- The same app fetched and verified patch 4 from GitHub. After it was staged, GitHub's normal channel was returned to patch 3; no replacement APK was published or installed.
+- After restart, the phone visibly displayed `Patch 4: controlled startup failure.` and its rollback instruction. This failure was recorded before recovery.
+- The user force-stopped and reopened the same app. It returned to `Patch 3: R8/ProGuard`, `Output: YALERHCTAP`, `Helper class: a.a`, `Active patch: 3`.
+- No update button was pressed between the controlled failure and recovery. Recovery used the previously cached patch; startup does not fetch a manifest automatically.
+- Installed APK SHA-256, version and install timestamps remained unchanged. Only `dev.patchrelay.demo` was listed for PatchRelay. Local evidence is under `.tools/rollback-patch-phone/`.
+
+**Result: unconfirmed-startup rollback worked on the physical phone, from failing patch 4 to previously healthy patch 3, without reinstalling.** This was a controlled, caught startup exception followed by a user restart, not a test of every crash type or failures after startup confirmation. SDK patch files/health state are updated normally; no user-file migration was exercised.
+
+The SDK retains its highest accepted version after rollback, so the next new patch must use version **5 or higher**, even though the active working code is patch 3. The deliberately failing version 4 is no longer served by the normal latest-release URL.
+
 ## Rebuild patch 2
 
 Requires the matching private signing key, JDK 17 and Android SDK 35/build tools 35.0.0:
