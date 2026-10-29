@@ -31,7 +31,11 @@ java -Djava.awt.headless=true tools/MakeImageAssets.java
 
 The generated test cards are deterministic for the same font renderer and are checked into source. The after-image hash is computed from the actual source PNG during the build and inlined into the signed patch. Output includes the base APK, two PNGs, signed patch DEX and manifest under `dist/image-assets-test-v1/`. Existing manifests are not overwritten.
 
-## Expected phone flow after setup approval
+## Observed emulator result
+
+Verified on emulator-5554: orange APK image at patch 0 changed to blue downloaded image at patch 11 after staging from GitHub and restarting. Actual image hashes matched both expected values above. APK SHA-256 stayed `c75554ef7b5e3c8864de6fc9bddf47da7e3a10a2d4665f3cb8e7d1318cb9df11`; versionCode 4 and lastUpdateTime `2026-10-29 18:27:49` stayed unchanged. Screenshots and UI dumps are saved locally in `.tools/image-emulator/`. This verifies the emulator only; physical-phone setup remains pending.
+
+## Phone steps
 
 1. Open the updated base. Confirm the orange circle and **Image source: APK baseline**. Record this new base APK's hash and install timestamp; the previous text-only APK hash is not used as the OTA comparison baseline.
 2. Tap **Download image update**. Wait for verification.
