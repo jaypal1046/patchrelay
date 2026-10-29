@@ -1,8 +1,13 @@
 plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android' }
+def imageHash = java.security.MessageDigest.getInstance('SHA-256').digest(file('../test-assets/image-after.png').bytes).encodeHex().toString()
 android {
     namespace 'dev.patchrelay.demo.patch'
     compileSdk 35
-    defaultConfig { minSdk 26 }
+    defaultConfig {
+        minSdk 26
+        buildConfigField 'String', 'TEST_IMAGE_SHA256', '"' + imageHash + '"'
+    }
+    buildFeatures { buildConfig true }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
     buildTypes {
@@ -86,6 +91,7 @@ tasks.register('embeddedUpgradeJar', Jar) {
 }
 [
     fileProbeJar: [file: 'file-probe.jar', classes: ['FileChangePatch*.class', 'FileProbeStore*.class'], codec: false],
+    imageProbeJar: [file: 'image-probe.jar', classes: ['ImageAssetPatch*.class'], codec: false],
     missingProbeJar: [file: 'missing-probe.jar', classes: ['MissingDependencyPatch.class'], codec: false],
     fixedMissingProbeJar: [file: 'missing-probe-fixed.jar', classes: ['MissingDependencyPatch.class'], codec: true]
 ].each { taskName, spec ->

@@ -8,11 +8,12 @@ android {
         applicationId 'dev.patchrelay.demo'
         minSdk 26
         targetSdk 35
-        versionCode 3
-        versionName '0.3.0'
+        versionCode 4
+        versionName '0.4.0'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
         buildConfigField 'String', 'PATCH_PUBLIC_KEY', '"' + file('patch-public-key.txt').text.trim() + '"'
         buildConfigField 'String', 'PATCH_MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/latest/download/patch.json"'
+        buildConfigField 'String', 'IMAGE_MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/download/image-assets-test-v1/patch.json"'
     }
     buildFeatures { buildConfig true }
     testBuildType providers.gradleProperty('testBuildType').getOrElse('release')
