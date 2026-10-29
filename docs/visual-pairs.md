@@ -24,6 +24,19 @@ Both APKs in each pair contain original code only. The Patch app downloads a sig
 
 The close button exits only that app, in response to the button press. No installer is used for patch activation. An unconfirmed file-write patch or failed operation rolls code back after the next close/reopen. Clear the selected Patch app's storage in Android settings to reset a case for repetition; doing this removes only that app's test data.
 
+## Observed phone results
+
+All 14 APKs were installed on the RMX2117 phone on 29 October 2026 and left installed for manual comparison. These observations are separate from the earlier instrumentation checks:
+
+- PR1 Before displayed active patch 0 and `Original logic: hello phone`. PR1 Patch fetched its signed update from GitHub, closed/reopened, and displayed active patch 1 and `Complex Kotlin patch: hello phone`. Its APK installation timestamp stayed unchanged. The first download timed out; retry succeeded.
+- PR2 showed the same before/after change using the R8-processed patch, with an unchanged installation timestamp.
+- PR3's GitHub patch downloaded and verified, but its post-restart screen check was interrupted when PR4 opened on the phone. No complete visible-result claim is made for PR3.
+- PR4–PR7 were installed but not yet verified through this visible UI flow. Their earlier signed-fixture instrumentation results remain documented separately in `complex-patch-tests.md`.
+
+Before/after screenshots and captured UI text for PR1/PR2 are saved locally under `.tools/visual-phone/`. Screenshots are not uploaded to the public repository. The phone was left under the user's control after the interrupted PR3 check.
+
+For an explicitly requested automated visible check, `tools/verify-visual-phone.ps1 -Case r8host -Device SERIAL` opens only the selected pair, reads its native screen, taps its visible download/close buttons, compares actual output, captures screenshots and compares install timestamps. It aborts if another app takes the foreground. Reset the selected Patch app's storage before repeating a completed case.
+
 ## Build and hosting
 
 Build with JDK 17 and Android SDK 35:
