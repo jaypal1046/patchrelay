@@ -14,6 +14,22 @@ Tested 29 October 2026 on an Android API 37 emulator, in a non-debuggable, R8-mi
 
 Result: **7 tests, 0 failures, 0 errors** after the keep-rule fix. Several tests intentionally confirm unsupported behavior; this does not mean assets or existing-library upgrades now work.
 
+## Actual-phone verification
+
+Repeated all seven checks individually on the connected RMX2117 phone, Android API 31, on 29 October 2026. Both test APKs installed successfully. A USB disconnection interrupted the initial attempt before a result was produced; after reconnection, each test returned `OK (1 test)`.
+
+| Order | Check | Actual-phone result |
+| --- | --- | --- |
+| 1 | Patch in R8-minified host | Executes successfully. |
+| 2 | R8-processed patch entry point | Executes successfully. |
+| 3 | APK asset update | Unsupported: original asset remains; patch JAR resource absent from raw DEX. |
+| 4 | Private file update and rollback | File changes to revision 2; code rolls back, file does not. |
+| 5 | New dependency omitted | Expected Codec-specific `NoClassDefFoundError`. |
+| 6 | New dependency bundled | Expected SHA-256 computed successfully. |
+| 7 | Existing dependency upgraded | Host Gson 2.8.9 wins; newer API raises expected `NoSuchMethodError`. |
+
+These were native instrumentation checks in the separate `.stress` app using locally installed, signed patch fixtures. They did not download the complex fixtures from GitHub and did not reinstall or modify the working `dev.patchrelay.demo` app. Seven successful checks include explicit assertions of unsupported behavior. The temporary stress app and its test APK were removed after verification.
+
 ## Bug found and fixed
 
 Initial run produced six errors because R8 renamed or removed Kotlin runtime classes, including `kotlin.jvm.internal.Intrinsics`. The SDK's original rules kept only its own public ABI. Downloaded code still referenced original Kotlin runtime class names.
