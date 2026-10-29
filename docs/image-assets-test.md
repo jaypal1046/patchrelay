@@ -37,6 +37,12 @@ Verified on emulator-5554: orange APK image at patch 0 changed to blue downloade
 
 ## Phone steps
 
+### Observed RMX2117 result
+
+After explicit setup approval, updated the same package to base 0.4.0. Captured orange baseline with active patch 10, then tapped Download image update. Next observed UI showed blue downloaded image with active patch 11 and expected SHA-256 `4505b1a7c8dbbedcd5b6204d1855fb51bb8f2ac594f8b8b5cef0c8ca2256c3ef`. No agent-issued phone force-stop was performed; exact restart action was not captured. Before/after screenshots and UI dumps are in `.tools/image-phone/` locally.
+
+Across the image download, APK SHA-256 stayed `c75554ef7b5e3c8864de6fc9bddf47da7e3a10a2d4665f3cb8e7d1318cb9df11`, versionCode stayed 4, lastUpdateTime stayed `2026-10-29 18:30:55`. The single setup APK update is separate from this subsequent image-download result.
+
 1. Open the updated base. Confirm the orange circle and **Image source: APK baseline**. Record this new base APK's hash and install timestamp; the previous text-only APK hash is not used as the OTA comparison baseline.
 2. Tap **Download image update**. Wait for verification.
 3. Use **App info — force stop and reopen**, then reopen the same app.
