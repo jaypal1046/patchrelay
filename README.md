@@ -1,5 +1,7 @@
 # PatchRelay
 
+For visible phone comparisons, use the [seven Before/Patch app pairs](docs/visual-pairs.md). Each Patch app downloads its update from GitHub; both APKs initially contain original code.
+
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
 **Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.

@@ -18,6 +18,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - run: chmod +x gradlew && ./gradlew :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :demo:assembleReleaseAndroidTest :patch:jar
       - run: ./gradlew :demo:assembleStress :demo:assembleStressAndroidTest :patch:stressJar :patch:bundledStressJar -PtestBuildType=stress
+      - run: ./gradlew :visual:assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: patchrelay-android
@@ -25,3 +26,4 @@ jobs:
             sdk/build/outputs/aar/*release.aar
             demo/build/outputs/apk/release/*.apk
             patch/build/libs/patch.jar
+            visual/build/outputs/apk/**/release/*.apk
