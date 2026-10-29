@@ -85,7 +85,39 @@ The user reported that patch 5 showed the same failure. By the next native-scree
 
 Unlike the original patch-4 run, the exact patch-5 failure screen was not independently captured, and no matching controlled-failure message could be retrieved from the device log. Therefore the repeat is recorded as **update staged and recovery state observed; exact failure phase not independently verified**, not as a fully verified repeat pass. The user's report is distinguished from tool-observed evidence.
 
-Local records are under `.tools/rollback-repeat-phone/`. Versions 4 and 5 remain deliberate test-only prereleases; normal updates serve working patch 3. The next new patch must use version **6 or higher** after the accepted version-5 attempt. No further patch was deployed in this step.
+Local records are under `.tools/rollback-repeat-phone/`. At the end of that repeat, versions 4 and 5 were test-only prereleases and normal updates served patch 3. The next new patch had to use version **6 or higher** after the accepted version-5 attempt. No further patch was deployed in that step.
+
+## Patch 6 — healthy forward update after rollback
+
+The user requested the "6th step". This was initially interpreted as patch version 6, but the user subsequently clarified the original test-case table. **Patch versions are not test-case numbers:** original test 6 is the new-dependency scenario already demonstrated by patch 2.
+
+The additional healthy version-6 update was nevertheless built, published, downloaded and activated in the same installed app. The native phone screen and the user's confirmation showed:
+
+```text
+Patch 6: healthy update
+Input: PatchRelay
+Characters: 10
+Reversed: yaleRhctaP
+Active patch: 6
+```
+
+Two new JVM tests passed. Output matched an independent character-count/reversal check. APK hash, version and install timestamps remained unchanged; the normal latest release is now `demo-patch-6`. No APK was installed. Evidence is under `.tools/recovery-patch-phone/`.
+
+**Verified: healthy version-6 activation after failed versions 4/5.** A further cold restart to test version-6 persistence was not performed; no persistence-pass claim is made. This payload did not add a dependency, change an asset, or modify a file.
+
+## Original test-case numbering
+
+Use this table for subsequent test requests; track signed patch versions separately.
+
+| Test | Scenario | Status in the requested one-installed-app/GitHub flow |
+| --- | --- | --- |
+| 1 | R8 app | Not checked: the current base APK is not minified. Earlier stress-host checks used a separate test app. |
+| 2 | R8 patch | Verified by patch 3 in the same app. |
+| 3 | Assets | Current raw-DEX loader does not replace APK assets. |
+| 4 | File changes | Earlier signed-fixture checks only; not verified through GitHub in this installed base. |
+| 5 | Missing dependency | Earlier signed-fixture checks only; not verified through this flow. |
+| 6 | New dependency | Verified by Commons Codec patch 2 in the same app. |
+| 7 | Dependency upgrade | Earlier host-library fixture exposed parent-first loading; not verified through this flow. |
 
 ## Rebuild patch 2
 
