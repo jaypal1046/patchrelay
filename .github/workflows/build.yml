@@ -1,0 +1,23 @@
+name: Android SDK and demo
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew && ./gradlew :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patchrelay-android
+          path: |
+            sdk/build/outputs/aar/*release.aar
+            demo/build/outputs/apk/release/*.apk
+            patch/build/libs/patch.jar

@@ -1,0 +1,2 @@
+-keep public interface dev.patchrelay.Patch { *; }
+-keep class dev.patchrelay.PatchRelay { public *; }

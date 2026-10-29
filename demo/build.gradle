@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'dev.patchrelay.demo'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'dev.patchrelay.demo'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+        buildConfigField 'String', 'PATCH_PUBLIC_KEY', '"' + file('patch-public-key.txt').text.trim() + '"'
+    }
+    buildFeatures { buildConfig true }
+    testBuildType 'release'
+    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
+dependencies { implementation project(':sdk') }
