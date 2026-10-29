@@ -12,11 +12,7 @@ public final class HostedPatchTest extends InstrumentationTestCase {
         app.getSharedPreferences("patchrelay", 0).edit().clear().commit();
         java.io.File root = new java.io.File(app.getNoBackupFilesDir(), "patchrelay");
         java.io.File[] builds = root.listFiles();
-        if (builds != null) for (java.io.File build : builds) {
-            java.io.File[] files = build.listFiles();
-            if (files != null) for (java.io.File file : files) assertTrue(file.delete());
-            assertTrue(build.delete());
-        }
+        if (builds != null) for (java.io.File build : builds) PatchRelayTest.deleteTree(build);
         PatchRelay relay = new PatchRelay(app, "1", BuildConfig.PATCH_PUBLIC_KEY);
         assertTrue(relay.stage(URL));
         assertFalse(relay.stage(URL));

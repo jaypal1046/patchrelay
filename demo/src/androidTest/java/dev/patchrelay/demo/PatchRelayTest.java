@@ -21,7 +21,13 @@ public final class PatchRelayTest extends InstrumentationTestCase {
                 UUID.nameUUIDFromBytes("1".getBytes(StandardCharsets.UTF_8)).toString());
         directory.mkdirs();
         File[] files = directory.listFiles();
-        if (files != null) for (File file : files) assertTrue(file.delete());
+        if (files != null) for (File file : files) deleteTree(file);
+    }
+
+    static void deleteTree(File file) {
+        File[] children = file.listFiles();
+        if (children != null) for (File child : children) deleteTree(child);
+        assertTrue("Cannot remove test artifact " + file, file.delete());
     }
 
     private PatchRelay relay() throws Exception { return new PatchRelay(app, "1", BuildConfig.PATCH_PUBLIC_KEY); }
