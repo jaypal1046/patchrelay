@@ -70,14 +70,11 @@ Upload `dist/classes.dex` and `dist/patch.json` to that GitHub release, using Gi
 
 Install the APK from [Releases](https://github.com/jaypal1046/patchrelay/releases). Install once; the patch itself requires no installer.
 
-```powershell
-adb shell am start -n dev.patchrelay.demo/.MainActivity --es manifestUrl https://github.com/jaypal1046/patchrelay/releases/latest/download/patch.json
-# Wait until the app says the update is verified, then restart its process:
-adb shell am force-stop dev.patchrelay.demo
-adb shell am start -n dev.patchrelay.demo/.MainActivity
-```
+1. Open PatchRelay Demo. It shows `Original Kotlin logic: hello PatchRelay` and active patch `0`.
+2. Tap **Check for update**. Wait for **Update downloaded and verified**.
+3. Tap **Open app settings to restart**, tap **Force stop**, then reopen PatchRelay Demo from its app icon.
 
-Original message becomes `Patched Kotlin logic: hello PatchRelay`. The manifest URL is supplied explicitly in this technical demo; there is no update-settings UI yet. Use the v0.2.0+ Kotlin demo APK with the current manifest; v0.1.0 targets the earlier Java demo base build.
+The message becomes `Patched Kotlin logic: hello PatchRelay`, with active patch `1`. No second APK installation is needed for this patch. The app does not download code until you tap its update button. Use the v0.3.0 demo APK with the latest manifest; older demos target earlier base builds. The demo's GitHub URL is configured in `demo/build.gradle`; the SDK itself accepts any HTTPS manifest URL.
 
 ## Rollback and limitations
 

@@ -18,7 +18,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         app = getInstrumentation().getTargetContext();
         app.getSharedPreferences("patchrelay", 0).edit().clear().commit();
         directory = new File(new File(app.getNoBackupFilesDir(), "patchrelay"),
-                UUID.nameUUIDFromBytes("2".getBytes(StandardCharsets.UTF_8)).toString());
+                UUID.nameUUIDFromBytes("3".getBytes(StandardCharsets.UTF_8)).toString());
         directory.mkdirs();
         File[] files = directory.listFiles();
         if (files != null) for (File file : files) deleteTree(file);
@@ -30,7 +30,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
         assertTrue("Cannot remove test artifact " + file, file.delete());
     }
 
-    private PatchRelay relay() throws Exception { return new PatchRelay(app, "2", BuildConfig.PATCH_PUBLIC_KEY); }
+    private PatchRelay relay() throws Exception { return new PatchRelay(app, "3", BuildConfig.PATCH_PUBLIC_KEY); }
     private Patch fallback() { return (operation, input) -> "original"; }
 
     private void stageFixture() throws Exception {
@@ -105,7 +105,7 @@ public final class PatchRelayTest extends InstrumentationTestCase {
 
     public void testNewBaseDoesNotLoadOldPatch() throws Exception {
         stageFixture();
-        PatchRelay upgraded = new PatchRelay(app, "3", BuildConfig.PATCH_PUBLIC_KEY);
+        PatchRelay upgraded = new PatchRelay(app, "4", BuildConfig.PATCH_PUBLIC_KEY);
         assertEquals("original", upgraded.start(fallback()).invoke("greet", "test"));
     }
 

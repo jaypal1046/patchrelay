@@ -136,6 +136,9 @@ class PatchRelay @Throws(IOException::class) constructor(
     @Synchronized
     fun activeVersion(): Long = sessionVersion
 
+    @Synchronized
+    fun pendingVersion(): Long = state.getLong("pending", 0)
+
     private fun load(version: Long): Patch {
         val manifest = verify(File(directory, "$version.json").readBytes())
         if (manifest.getLong("version") != version) throw SecurityException("Version mismatch")
