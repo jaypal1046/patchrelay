@@ -2,7 +2,7 @@
 
 Current phone testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
-[Sequential phone results](docs/sequential-phone-tests.md): patch 1 changes Kotlin logic; patch 2 adds Commons Codec; patch 3 runs an R8-obfuscated helper; an intentionally failing patch 4 rolls back to patch 3. Each case uses the same installed app. Failed patch 4 is a prerelease; the normal channel serves working patch 3.
+[Sequential phone results](docs/sequential-phone-tests.md): patch 1 changes Kotlin logic; patch 2 adds Commons Codec; patch 3 runs an R8-obfuscated helper; an intentionally failing patch 4 rolls back to patch 3. A version-5 repeat has an explicitly documented evidence gap. Each case uses the same installed app. Failed test versions 4/5 are prereleases; the normal channel serves working patch 3.
 
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 

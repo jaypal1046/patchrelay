@@ -75,7 +75,17 @@ Verified on the same physical phone on 29 October 2026. This intentionally faili
 
 **Result: unconfirmed-startup rollback worked on the physical phone, from failing patch 4 to previously healthy patch 3, without reinstalling.** This was a controlled, caught startup exception followed by a user restart, not a test of every crash type or failures after startup confirmation. SDK patch files/health state are updated normally; no user-file migration was exercised.
 
-The SDK retains its highest accepted version after rollback, so the next new patch must use version **5 or higher**, even though the active working code is patch 3. The deliberately failing version 4 is no longer served by the normal latest-release URL.
+The SDK retains its highest accepted version after rollback. After the original version-4 run, the next version had to be 5 or higher. The deliberately failing version 4 is no longer served by the normal latest-release URL.
+
+### Requested repeat using patch 5
+
+On the user's request to repeat the rollback case, the same deliberate failure was published with signed manifest version 5 and a distinct patch-5 error message. Reusing rejected version 4 would be blocked by the version high-water mark. Source tests passed; the existing app's native UI showed the new update downloaded and verified. Test release 5 was then quarantined as a prerelease and the normal channel restored to patch 3.
+
+The user reported that patch 5 showed the same failure. By the next native-screen inspection, the phone already displayed working patch 3, output `YALERHCTAP`, helper `a.a`. APK bytes and all captured version/install timestamps matched the pre-test values.
+
+Unlike the original patch-4 run, the exact patch-5 failure screen was not independently captured, and no matching controlled-failure message could be retrieved from the device log. Therefore the repeat is recorded as **update staged and recovery state observed; exact failure phase not independently verified**, not as a fully verified repeat pass. The user's report is distinguished from tool-observed evidence.
+
+Local records are under `.tools/rollback-repeat-phone/`. Versions 4 and 5 remain deliberate test-only prereleases; normal updates serve working patch 3. The next new patch must use version **6 or higher** after the accepted version-5 attempt. No further patch was deployed in this step.
 
 ## Rebuild patch 2
 
