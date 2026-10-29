@@ -117,7 +117,35 @@ Use this table for subsequent test requests; track signed patch versions separat
 | 4 | File changes | Earlier signed-fixture checks only; not verified through GitHub in this installed base. |
 | 5 | Missing dependency | Earlier signed-fixture checks only; not verified through this flow. |
 | 6 | New dependency | Verified by Commons Codec patch 2 in the same app. |
-| 7 | Dependency upgrade | Earlier host-library fixture exposed parent-first loading; not verified through this flow. |
+| 7 | Dependency upgrade | Verified on the same phone via patch 7: the bundled newer runtime did not replace the APK's old runtime. See below. |
+
+## Original test 7 — upgrade an APK-embedded dependency
+
+Verified on the RMX2117 phone, 29 October 2026, using the existing installed demo. Transport version: **patch 7**. This is the original dependency-upgrade test, not another intentional startup failure.
+
+The payload bundled Kotlin stdlib **2.0.21**, while the APK contains **1.9.23**. `EmbeddedUpgradePatch` reads `KotlinVersion.CURRENT` and compares the runtime class's loader with the patch class's loader. Requested version and actual runtime version are reported separately.
+
+Before publishing, two isolated JVM classloader checks established:
+
+1. With the host's 1.9.23 runtime in the parent, the new patch reports runtime 1.9.23 from `parent/app`.
+2. With the identical patch JAR and SDK interface isolated from that old parent, it reports runtime 2.0.21 from `patch`. This proves the newer library was actually bundled.
+
+The same installed app downloaded signed [patch 7](https://github.com/jaypal1046/patchrelay/releases/tag/demo-patch-7) from GitHub. A USB interruption delayed observation. After reconnection and opening the app, its native screen showed:
+
+```text
+Test 7: existing dependency upgrade
+Requested Kotlin: 2.0.21
+Runtime Kotlin: 1.9.23
+Library loader: parent/app
+Result: NOT UPGRADED
+Active patch: 7
+```
+
+APK SHA-256, version and installation timestamps matched the pre-test values. Only `dev.patchrelay.demo` was installed for PatchRelay. Evidence and screenshot are under `.tools/embedded-upgrade-phone/`. An optional desktop HTTP download diagnostic stalled and was stopped; it is not used as evidence of the phone's result.
+
+**Outcome: replacing this dependency already embedded in the APK is unsupported by the current parent-first loader.** Patch 7 itself loaded and ran normally; the negative result is the actual runtime observation, not an intentional exception or a fake version label. This does not rule out adding new libraries or using separately isolated/relocated versions inside patch code, and does not claim every possible dependency-upgrade strategy is impossible.
+
+Reproduce with `tools/build-embedded-upgrade.ps1` and the matching signing key. The JVM checks are in `tools/CheckEmbeddedUpgrade.java`. The new runtime is resolved separately from the compiler's 1.9.23 runtime, so the build does not silently change the base SDK or old fixture dependencies. Official [Kotlin 2.0.21 license](https://raw.githubusercontent.com/JetBrains/kotlin/v2.0.21/license/LICENSE.txt) and [notice](https://raw.githubusercontent.com/JetBrains/kotlin/v2.0.21/license/NOTICE.txt) accompany the distributed patch.
 
 ## Rebuild patch 2
 
