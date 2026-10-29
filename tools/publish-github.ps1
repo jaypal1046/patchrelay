@@ -28,5 +28,6 @@ foreach ($file in $Files) {
     $asset = Invoke-RestMethod $upload -Method Post -Headers $headers -ContentType application/octet-stream -InFile $file
     Write-Output "Uploaded $($asset.name)"
 }
-$published = Invoke-RestMethod "$api/$($release.id)" -Method Patch -Headers $headers -ContentType application/json -Body '{"draft":false}'
+$publishBody = @{ draft=$false; make_latest=$(if ($PreRelease) { 'false' } else { 'true' }) } | ConvertTo-Json
+$published = Invoke-RestMethod "$api/$($release.id)" -Method Patch -Headers $headers -ContentType application/json -Body $publishBody
 Write-Output "Published: $($published.html_url)"

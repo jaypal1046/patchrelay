@@ -1,6 +1,6 @@
 # PatchRelay
 
-For visible phone comparisons, use the [seven Before/Patch app pairs](docs/visual-pairs.md). Each Patch app downloads its update from GitHub; both APKs initially contain original code.
+Current phone testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
@@ -76,7 +76,7 @@ Install the APK from [Releases](https://github.com/jaypal1046/patchrelay/release
 2. Tap **Check for update**. Wait for **Update downloaded and verified**.
 3. Tap **Open app settings to restart**, tap **Force stop**, then reopen PatchRelay Demo from its app icon.
 
-The message becomes `Patched Kotlin logic: hello PatchRelay`, with active patch `1`. No second APK installation is needed for this patch. The app does not download code until you tap its update button. Use the v0.3.0 demo APK with the latest manifest; older demos target earlier base builds. The demo's GitHub URL is configured in `demo/build.gradle`; the SDK itself accepts any HTTPS manifest URL.
+The original first patch shows `Patched Kotlin logic: hello PatchRelay`, with active patch `1`. The next dependency test, patch `2`, shows `Patch 2: new dependency` and a SHA-256 computed by a newly bundled library. No second APK installation is needed. The app does not download code until you tap its update button. Install the [v0.3.0 base APK](https://github.com/jaypal1046/patchrelay/releases/download/v0.3.0/demo-release.apk) once; the latest manifest can then move directly to the current compatible patch. The demo's GitHub URL is configured in `demo/build.gradle`; the SDK itself accepts any HTTPS manifest URL.
 
 ## Rollback and limitations
 

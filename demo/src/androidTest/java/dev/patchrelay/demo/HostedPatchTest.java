@@ -5,7 +5,7 @@ import dev.patchrelay.PatchRelay;
 
 /** Explicit network integration test against the signed public demo release. */
 public final class HostedPatchTest extends InstrumentationTestCase {
-    private static final String URL = "https://github.com/jaypal1046/patchrelay/releases/latest/download/patch.json";
+    private static final String URL = "https://github.com/jaypal1046/patchrelay/releases/download/v0.3.0/patch.json";
 
     public void testStageVerifyAndActivateFromGithub() throws Exception {
         android.content.Context app = getInstrumentation().getTargetContext();

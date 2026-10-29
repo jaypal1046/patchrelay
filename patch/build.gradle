@@ -13,6 +13,8 @@ dependencies {
     compileOnly project(':sdk')
     stressImplementation 'com.google.code.gson:gson:2.10.1'
     stressImplementation 'commons-codec:commons-codec:1.15'
+    testImplementation project(':sdk')
+    testImplementation 'junit:junit:4.13.2'
 }
 tasks.register('jar', Jar) {
     dependsOn 'compileReleaseKotlin'
@@ -48,4 +50,24 @@ tasks.register('stressClasspath') {
                     attributes { attribute(Attribute.of('artifactType', String), 'android-classes-jar') }
                 }.files.collect { it.absolutePath }.join('\n')
     }
+}
+tasks.register('dependencyPatchJar', Jar) {
+    dependsOn 'compileStressKotlin'
+    from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
+        include 'dev/patchrelay/demo/patch/DependencyPatch.class'
+    }
+    from { configurations.stressRuntimeClasspath.findAll {
+        it.name.startsWith('commons-codec-')
+    }.collect { zipTree(it) } }
+    exclude 'META-INF/**', '**/module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    archiveFileName = 'dependency-patch.jar'
+    destinationDirectory = layout.buildDirectory.dir('libs')
+}
+tasks.register('dependencyPatchNotices', Copy) {
+    from { zipTree(configurations.stressRuntimeClasspath.find { it.name.startsWith('commons-codec-') }) }
+    include 'META-INF/LICENSE.txt', 'META-INF/NOTICE.txt'
+    eachFile { path = name }
+    includeEmptyDirs = false
+    into layout.buildDirectory.dir('dependency-notices')
 }
