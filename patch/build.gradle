@@ -9,12 +9,14 @@ android {
         stress { initWith release; matchingFallbacks = ['release'] }
     }
 }
+configurations { embeddedUpgrade }
 dependencies {
     compileOnly project(':sdk')
     stressImplementation 'com.google.code.gson:gson:2.10.1'
     stressImplementation 'commons-codec:commons-codec:1.15'
     testImplementation project(':sdk')
     testImplementation 'junit:junit:4.13.2'
+    embeddedUpgrade('org.jetbrains.kotlin:kotlin-stdlib:2.0.21') { transitive = false }
 }
 tasks.register('jar', Jar) {
     dependsOn 'compileReleaseKotlin'
@@ -70,4 +72,15 @@ tasks.register('dependencyPatchNotices', Copy) {
     eachFile { path = name }
     includeEmptyDirs = false
     into layout.buildDirectory.dir('dependency-notices')
+}
+tasks.register('embeddedUpgradeJar', Jar) {
+    dependsOn 'compileStressKotlin'
+    from(layout.buildDirectory.dir('tmp/kotlin-classes/stress')) {
+        include 'dev/patchrelay/demo/patch/EmbeddedUpgradePatch.class'
+    }
+    from { configurations.embeddedUpgrade.collect { zipTree(it) } }
+    exclude 'META-INF/**', '**/module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    archiveFileName = 'embedded-upgrade.jar'
+    destinationDirectory = layout.buildDirectory.dir('libs')
 }
