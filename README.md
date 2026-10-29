@@ -2,6 +2,8 @@
 
 Current phone testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
+[Sequential phone results](docs/sequential-phone-tests.md): patch 1 changes Kotlin logic; patch 2 adds Commons Codec in the same app, with unchanged APK hash and installation timestamps.
+
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
 **Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
