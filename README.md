@@ -51,6 +51,8 @@ Phone verification, 2026-10-30, RMX2117/API31: the base displayed 103 through or
 
 APK SHA-256: `fc09c301b52d5371f6674ba48b2f3dcaadfe49e393f5ca36f56a2ea105936c88`. Local evidence: ignored `.tools/runner-phone/`. [Runner release](https://github.com/jaypal1046/patchrelay/releases/tag/native-runner-v1-patch-1) · [Passing CI](https://github.com/jaypal1046/patchrelay/actions/runs/41056776491). SDK tests cover native fallback, matched-ID routing, mixed native/JS functions and invalid IDs/results; compiled-program checks cover the actual Kotlin/JS exports.
 
+Patch 2 adds a program-managed Cart → Details → Review → Receipt flow to the same base. Compiled checks cover page-specific actions, back/forward form state, quantity bounds, required fields, new-order reset and duplicate local submission. Phone checks passed forward/back-button flow, form/cart retention, validation, native calls between page events, Home/resume, receipt and reset. Android system Back left the app instead of navigating to the previous page; launcher resume retained Details and the draft. See the [broader test matrix](docs/production-readiness.md#broader-test-matrix) for evidence and unresolved cases. This is navigation inside one registered screen, not Android Navigation/Compose integration.
+
 ## Release workflow
 
 1. Set the new native release identity and channel in `runtime.json`.
@@ -58,7 +60,7 @@ APK SHA-256: `fc09c301b52d5371f6674ba48b2f3dcaadfe49e393f5ca36f56a2ea105936c88`.
    `python tools/screens.py base --out dist/native-runner-v1-base`.
 3. Preserve its APK and `baseline.json`. Install that base once.
 4. Change only supported screen Kotlin. Build:
-   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-runner-v1-patch-1 --version 1 --tag native-runner-v1-patch-1`.
+   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-runner-v1-patch-2 --version 2 --tag native-runner-v1-patch-2`.
 5. Upload `screens.js` and `patch.json` to that immutable artifact release.
 6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
 
