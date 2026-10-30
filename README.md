@@ -2,7 +2,7 @@
 
 Signed replacement screens for native Android apps, authored through a small Kotlin screen API. Kotlin/JS produces an interpreted program; installed Android widgets render its validated output. No downloaded DEX, React Native or Flutter runtime.
 
-**Experimental.** V1 passed a real-phone download, activation and restart test. API 2 adds richer UI and stronger compatibility checks; its device verification is tracked separately. Existing Activity/Android Compose screens must be integrated with this API; arbitrary Kotlin methods are not patchable.
+**Experimental.** V1 passed a real-phone download, activation and restart test. API 2 adds richer UI and stronger compatibility checks; its form, input/cursor behavior and restart persistence also passed on that phone. Existing Activity/Android Compose screens must be integrated with this API; arbitrary Kotlin methods are not patchable.
 
 ## Components
 
@@ -15,7 +15,7 @@ Signed replacement screens for native Android apps, authored through a small Kot
 
 API 2 supports nested columns, rows and cards; styled text; text inputs; checkboxes; enabled/disabled buttons. Stable widget IDs preserve native views, focus and cursor during ordinary updates. Input events queue in order; adjacent changes to the same field are coalesced. Only the latest queued result is rendered.
 
-[Architecture](docs/architecture.md) · [V1 phone proof](docs/screen-engine-verification.md) · [Production readiness](docs/production-readiness.md)
+[Architecture](docs/architecture.md) · [V1 phone proof](docs/screen-engine-verification.md) · [API-2 phone proof](docs/api-2-phone-verification.md) · [Production readiness](docs/production-readiness.md)
 
 ## Build and check
 
