@@ -33,7 +33,7 @@ This creates disposable local signing keys and verifies DEX generation, signed m
 | Adapter | Artifact | Compatibility boundary | Current status |
 | --- | --- | --- | --- |
 | Android (Java/Kotlin) | DEX implementation of `Patch` | Exact native base/operation contract and parent runtime | Implemented prototype |
-| React Native | JavaScript bundle and associated assets | Compatible installed React Native runtime and native modules | Initial Android implementation; see [setup](react-native-android.md) |
+| React Native | JavaScript bundle; downloaded asset packs pending | Compatible installed React Native runtime and native modules | Initial Android implementation; see [setup](react-native-android.md) |
 | Flutter | Dart patch supported by a specific engine/toolchain | Installed Flutter engine, Dart execution mode and native plugins | Research required; ordinary release AOT code is not a loadable DEX patch |
 | iOS native | Platform-specific update mechanism | Installed signed executable and platform restrictions | Not implemented |
 
@@ -57,7 +57,7 @@ The React Native Android adapter introduces schema 2 with signed `runtime: react
 
 1. Keep Android SDK behavior stable while consolidating build and publication code.
 2. Finish Android failure/recovery and compatibility tests before calling it production ready.
-3. Implement React Native bundle loading against a fixed native runtime; validate the shared contract with cross-runtime fixtures.
+3. Harden the initial React Native Android adapter, then add asset-pack handling and additional pinned runtime versions.
 4. Investigate Flutter's actual engine/toolchain patching mechanism before promising Dart or mixed native updates.
 
 This structure supports adding adapters without moving test scenarios into the SDK or promising the same code-loading mechanism on every runtime.

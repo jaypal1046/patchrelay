@@ -2,13 +2,15 @@
 
 **Structure:** [architecture and runtime boundaries](docs/architecture.md). `core/` shares download/signature checks. `sdk/` is the Java/Kotlin DEX adapter; `react-native/android/` stages React Native Android JS bundles. `demo/`, `patch/`, and `visual/` contain examples/test fixtures. [React Native Android setup and boundaries](docs/react-native-android.md) includes a separate pinned release example. Flutter and iOS adapters remain pending.
 
-Current phone testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
+Each runtime test uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
 [Sequential phone results and original test-case numbering](docs/sequential-phone-tests.md): file changes, bundled new dependencies and R8 patches are verified in the same app. Test 5's missing class was reproduced in patch 9 and fixed by bundling Codec in patch 10, now the normal update. Test 7 still shows that bundling a newer runtime does not replace an APK-embedded runtime. Test numbers and patch versions are tracked separately.
 
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
 **Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
+
+React Native Android is now [verified on the RMX2117 phone](docs/react-native-android.md#observed-physical-phone-result--2026-10-30): original bundle 0 changed to downloaded bundle 1, with unchanged native APK hash and install timestamp. This is a separate runtime base from the Kotlin demo.
 
 ## Current scope
 
