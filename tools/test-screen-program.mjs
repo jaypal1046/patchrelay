@@ -30,29 +30,66 @@ function render(method, ...args) {
   walk(tree.children); assert.ok(all.length <= 128);
   return Object.fromEntries(all.map(n => [n.id, n]));
 }
+const event = (action, value = null) => render('handleEvent','checkout',action,value);
 let tree = render('renderScreen', 'checkout');
 assert.equal(tree.items.text, 'Items: 1');
 assert.equal(tree.total.text, 'Total: 100');
-tree = render('handleEvent', 'checkout', 'add', null);
+tree = event('add');
 assert.equal(tree.total.text, 'Total: 200');
 if (mode === 'fixed') {
-  assert.equal(tree.pay.enabled, false);
-  tree = render('handleEvent', 'checkout', 'pay', null);
-  assert.equal(tree.pay.enabled, false);
-  tree = render('handleEvent', 'checkout', 'email', 'invalid');
-  assert.equal(tree.validation.style, 'error');
-  tree = render('handleEvent', 'checkout', 'email', 'guest@example.com');
-  assert.equal(tree.email.value, 'guest@example.com');
-  assert.equal(tree.pay.enabled, false);
-  tree = render('handleEvent', 'checkout', 'terms', 'true');
-  assert.equal(tree.pay.enabled, true);
-  tree = render('handleEvent', 'checkout', 'pay', null);
-  assert.equal(tree.status.text, 'Payment confirmed: 200');
+  assert.equal(tree.title.text, 'Cart');
+  tree = event('remove'); tree = event('remove');
+  assert.equal(tree.items.text, 'Items: 1');
+  assert.equal(tree.remove.enabled, false);
+  for (let i = 0; i < 110; i++) tree = event('add');
+  assert.equal(tree.items.text, 'Items: 100');
   assert.equal(tree.add.enabled, false);
+  for (let i = 0; i < 98; i++) tree = event('remove');
+  assert.equal(tree.items.text, 'Items: 2');
+
+  tree = event('to_review'); assert.equal(tree.title.text, 'Cart');
+  tree = event('place_order'); assert.equal(tree.title.text, 'Cart');
+  tree = event('to_details'); assert.equal(tree.title.text, 'Details');
+  tree = event('to_details'); assert.equal(tree.title.text, 'Details', 'Stale cart tap must not skip details');
+  tree = event('to_review'); assert.equal(tree.title.text, 'Details');
+  tree = event('email','invalid');
+  assert.equal(tree.validation.style, 'error'); assert.equal(tree.next.enabled, false);
+  tree = event('email','guest@example.com');
+  assert.equal(tree.next.enabled, false, 'Terms required');
+  tree = event('terms','true'); assert.equal(tree.next.enabled, true);
   assert.throws(() => call('handleEvent','checkout','terms','not-boolean'));
   assert.throws(() => call('handleEvent','checkout','email','a'.repeat(1025)));
+
+  tree = event('to_review');
+  assert.equal(tree.title.text, 'Review');
+  assert.equal(tree.total.text, 'Total: 200');
+  tree = event('email','late@example.com');
+  assert.equal(tree.receipt_email.text, 'Receipt: guest@example.com', 'Stale field event must not change review');
+  tree = event('back_details');
+  assert.equal(tree.email.value, 'guest@example.com');
+  assert.equal(tree.terms.checked, true);
+  tree = event('back_cart'); assert.equal(tree.items.text, 'Items: 2');
+  tree = event('add'); assert.equal(tree.total.text, 'Total: 300');
+  tree = event('to_details'); assert.equal(tree.email.value, 'guest@example.com');
+  tree = event('to_review');
+  assert.equal(tree.total.text, 'Total: 300');
+  tree = event('place_order');
+  assert.equal(tree.title.text, 'Receipt');
+  assert.equal(tree.status.text, 'Payment confirmed: 300');
+  assert.equal(tree.orders.text, 'Orders created: 1');
+  for (let i = 0; i < 10; i++) tree = event('place_order');
+  assert.equal(tree.orders.text, 'Orders created: 1', 'Duplicate local submit must be ignored');
+  tree = event('back_cart');
+  assert.equal(tree.next.enabled, false);
+  tree = event('add'); assert.equal(tree.items.text, 'Items: 3');
+  tree = event('to_details'); assert.equal(tree.title.text, 'Cart');
+  tree = event('new_order');
+  assert.equal(tree.items.text, 'Items: 1');
+  tree = event('to_details');
+  assert.equal(tree.email.value, ''); assert.equal(tree.terms.checked, false);
+  assert.equal(tree.next.enabled, false);
 } else {
-  tree = render('handleEvent','checkout','pay',null);
+  tree = event('pay');
   assert.equal(tree.status.text, 'Payment confirmed: 200');
 }
 assert.throws(() => call('renderScreen','unknown'));
@@ -64,4 +101,4 @@ if (mode === 'fixed') {
   assert.throws(() => call('invokePatch','checkout.total.v1',101,100));
 } else assert.throws(() => call('invokePatch','checkout.total.v1',3,100));
 assert.throws(() => call('invokePatch','checkout.shipping.v1',10,5));
-console.log('Compiled Kotlin screen verified: ' + mode);
+console.log('Compiled Kotlin verified: ' + mode + ', schema, navigation/state guards, quantity bounds, validation, local duplicate-submit protection and function exports.');
