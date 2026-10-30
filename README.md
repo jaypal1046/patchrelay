@@ -2,6 +2,8 @@
 
 Experimental replacement screens for native Android apps, authored in Kotlin and delivered from GitHub as signed interpreted programs. React Native, Flutter, downloaded DEX and native-library patching are not implemented targets.
 
+Verified on the RMX2117/API31 phone: a signed Kotlin-only patch restored the payment button, fixed the total, handled the native button event and survived another process restart with the same APK hash/install timestamps. CI also passed.
+
 The current proof replaces a checkout screen with two bugs: a missing payment button and an incorrect total. The developer changes only `screens/src/commonMain/kotlin/Checkout.kt`. Kotlin/JS compiles the supported screen module; the installed interpreter returns a validated widget tree and the Android renderer creates native TextViews and Buttons. Events travel back to the Kotlin-authored program. This is a small supported screen API, not an automatic converter for existing Activity or Android Compose code.
 
 ## Structure
@@ -39,11 +41,11 @@ Use a fresh output directory, increasing version and unique release tag for each
 
 The builder checks source content, not filenames alone. It rejects changes to SDK/native host code, manifests, native assets and compiler settings relative to the baseline. Eligible common Kotlin screen code is recompiled as a complete module; this is not a binary delta or arbitrary method extraction.
 
-A new base can be captured with `python tools/screens.py base --out dist/NEW_BASE` while the screen source is in its baseline state. The example checks expect the deliberately buggy baseline. Allocate a new base compatibility ID in the host and publisher workflow for each incompatible native release; this prototype is pinned to `native-screens-v1`.
+A new base can be captured with `python tools/screens.py base --out dist/NEW_BASE` while the screen source is in its baseline state. The original demo file is preserved at `demo/fixtures/Checkout.baseline.kt`; current source contains the fix. The example checks expect the deliberately buggy baseline. Allocate a new base compatibility ID in the host and publisher workflow for each incompatible native release; this prototype is pinned to `native-screens-v1`.
 
 ## Hosting
 
-Upload `screens.js` and `patch.json` as immutable assets under the signed release tag. Publish the matching base APK and its snapshot for testing. Only after assets are available, publish the signed manifest to `channels/native-screens-v1.json`. The demo polls that exact raw GitHub channel, separate from historical prototype release channels. Future patches use new artifact tags and a newer signed channel manifest. The SDK can use any HTTPS manifest/artifact host.
+Upload `screens.js` and `patch.json` as immutable assets under the signed release tag. Publish the matching base APK and its snapshot for testing. Only after artifacts are available, publish the signed manifest as `patch.json` in the separate `native-screens-v1` channel release. The demo polls that release URL, separate from historical prototype release channels. Keep `channels/native-screens-v1.json` as the signed source-history mirror; the app does not poll that mirror. The channel manifest is a mutable pointer, while versioned artifacts remain immutable. Future patches use new artifact tags and a newer signed channel manifest. The SDK can use any HTTPS manifest/artifact host.
 
 The private key stays in ignored `.keys/`; the app pins `demo/patch-public-key.txt`. New users must generate their own key pair with `java tools/Publisher.java keygen PRIVATE PUBLIC` and build their base with that public key. Do not replace this repository's demo key without rebuilding the base.
 
@@ -53,7 +55,7 @@ One screen (`checkout`), one complete program, column/text/button widgets and lo
 
 WebView is used solely as the local interpreter. It has file/content/network loads disabled, no JavaScript-to-Java interface and no external navigation. Native widgets come from validated program output. Programs are signed trusted code, not arbitrary third-party scripts; this is not a proof of complete sandbox isolation.
 
-Health is confirmed after a valid native tree renders. Failed or unconfirmed patched startup falls back, preserving the accepted-version high-water mark. Recovery does not undo persistent app data or external side effects. An interpreter timeout prepares fallback and requires a process restart. State is currently in-memory and resets on restart. One designated process only; key rotation, broad compatibility, resource-exhaustion recovery and production operations need further work.
+Health is confirmed after a validated native tree is constructed and attached; this does not guarantee every later draw or event succeeds. Failed or unconfirmed patched startup falls back, preserving the accepted-version high-water mark. Recovery does not undo persistent app data or external side effects. An interpreter timeout prepares fallback and requires a process restart. State is currently in-memory and resets on restart. One designated process only; key rotation, broad compatibility, resource-exhaustion recovery and production operations need further work.
 
 Google Play has an interpreter/VM exception conditioned on indirect Android API access and compliance with other policies. This experiment may fit that model; it has not received Play approval. [Google policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en).
 

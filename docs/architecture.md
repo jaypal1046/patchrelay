@@ -27,7 +27,7 @@ Downloaded scripts are limited to 2 MiB. HTTPS transport is bounded. RSA signatu
 
 Stage now, activate on the next process start. Atomic script/metadata writes occur before the accepted version and pending state are committed. Interrupted unaccepted files can be replaced on retry. Active files cannot be replaced by replaying an accepted version. The script is authenticated again before startup execution.
 
-Startup remains unconfirmed until a valid native tree renders. Failures prepare the previous or bundled program; a renderer timeout requires restarting the process. The Activity owns and disposes the WebView and timers. A process killed before confirmation conservatively rolls back next time.
+Startup remains unconfirmed until a validated native tree is constructed and attached. Confirmation is not a guarantee that all later drawing or events will succeed. Failures prepare the previous or bundled program; a renderer timeout requires restarting the process. The Activity owns and disposes the WebView and timers. A process killed before confirmation conservatively rolls back next time.
 
 A signed program has trusted authority over its supported UI; signing keys must be protected. Limits and disabled WebView features reduce exposure but are not a complete isolation guarantee. The prototype has no key rotation/revocation, persistent program state or general transaction rollback.
 
