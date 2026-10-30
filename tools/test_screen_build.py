@@ -1,7 +1,9 @@
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("screen_build", Path(__file__).with_name("screens.py"))
 build = importlib.util.module_from_spec(spec)
@@ -9,6 +11,26 @@ spec.loader.exec_module(build)
 
 
 class CompatibilityTest(unittest.TestCase):
+    def test_release_host_matches_snapshot_and_generated_config(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "native.kt").write_text("native host")
+            native = build.fingerprint(root, ("native.kt",))
+            digest = build.host_hash(native)
+            config = root / "demo/build/generated/source/buildConfig/release/dev/patchrelay/screens/demo/BuildConfig.java"
+            config.parent.mkdir(parents=True)
+            (root / "demo/release-baseline.json").write_text(json.dumps({"nativeFiles": native, "hostSha256": digest}))
+            with patch.object(build, "ROOT", root), patch.object(build, "NATIVE", ("native.kt",)):
+                config.write_text('HOST_SHA256 = "' + digest + '";')
+                build.check_release_host()
+                config.write_text('HOST_SHA256 = "' + "0" * 64 + '";')
+                with self.assertRaises(ValueError):
+                    build.check_release_host()
+                config.write_text('HOST_SHA256 = "' + digest + '";')
+                (root / "native.kt").write_text("different host")
+                with self.assertRaises(ValueError):
+                    build.check_release_host()
+
     def test_host_hash_is_order_independent_and_content_bound(self):
         self.assertEqual(build.host_hash({"b": "2", "a": "1"}), build.host_hash({"a": "1", "b": "2"}))
         self.assertNotEqual(build.host_hash({"a": "1"}), build.host_hash({"a": "2"}))

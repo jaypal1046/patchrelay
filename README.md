@@ -15,7 +15,7 @@ Signed replacement screens for native Android apps, authored through a small Kot
 
 API 2 supports nested columns, rows and cards; styled text; text inputs; checkboxes; enabled/disabled buttons. Stable widget IDs preserve native views, focus and cursor during ordinary updates. Input events queue in order; adjacent changes to the same field are coalesced. Only the latest queued result is rendered.
 
-[Architecture](docs/architecture.md) · [V1 phone proof](docs/screen-engine-verification.md) · [API-2 phone proof](docs/api-2-phone-verification.md) · [Production readiness](docs/production-readiness.md)
+[Architecture](docs/architecture.md) · [Phone proof](docs/api-2-phone-verification.md) · [Production readiness](docs/production-readiness.md)
 
 ## Build and check
 
@@ -26,6 +26,7 @@ Requires JDK 17, Android SDK 35, Python 3, Node 20+ and an Android WebView provi
 node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
 node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
 python tools/test_screen_build.py
+python tools/screens.py check-host
 ```
 
 The demonstration APK uses a development signing key. A new base APK is required when installed renderer capabilities change. API 2 is incompatible with the published v1 base; v1 release assets remain unchanged.
@@ -41,7 +42,7 @@ The demonstration APK uses a development signing key. A new base APK is required
 5. Upload `screens.js` and `patch.json` to that immutable artifact release.
 6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
 
-Current source contains the rich checkout patch. `demo/fixtures/Checkout.v2.baseline.kt` preserves the simpler API-2 base source; `Checkout.baseline.kt` is historical v1. The example's compiled-program checker asserts checkout behavior; change its assertions when intentionally changing that behavior.
+Current source contains the rich checkout patch. `demo/fixtures/Checkout.v2.baseline.kt` preserves the simpler API-2 base source. The example's compiled-program checker asserts checkout behavior; change its assertions when intentionally changing that behavior.
 
 Native source, packaged assets, compiler settings and runtime configuration are hashed. Patches must match the base snapshot. The same host fingerprint is embedded in the APK and signed into each patch, preventing a patch built against another host from activating. This fingerprints the declared source/build contract, not the complete APK binary or a reproducible toolchain. APK hashes are recorded separately.
 

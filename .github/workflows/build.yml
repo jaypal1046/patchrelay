@@ -23,7 +23,7 @@ jobs:
       - run: node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
       - run: node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
       - run: python3 tools/test_screen_build.py
-      - run: python3 tools/check-release-host.py
+      - run: python3 tools/screens.py check-host
       - uses: actions/upload-artifact@v4
         with:
           name: native-screen-engine

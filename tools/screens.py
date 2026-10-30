@@ -46,16 +46,31 @@ def run(*args):
     subprocess.run(list(map(str, args)), cwd=ROOT, check=True)
 
 
+def check_release_host():
+    baseline = json.loads((ROOT / "demo/release-baseline.json").read_text())
+    check_native(baseline["nativeFiles"], fingerprint(ROOT, NATIVE))
+    source = (ROOT / "demo/build/generated/source/buildConfig/release/dev/patchrelay/screens/demo/BuildConfig.java").read_text()
+    actual = re.search(r'HOST_SHA256 = "([a-f0-9]{64})"', source)
+    if not actual or actual[1] != baseline["hostSha256"] or actual[1] != host_hash(baseline["nativeFiles"]):
+        raise ValueError("Native host fingerprint differs between Gradle, Python and release snapshot")
+    print("Native host fingerprint matches release snapshot and Gradle BuildConfig.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("base", "patch"))
-    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("command", choices=("base", "patch", "check-host"))
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--version", type=int, default=1)
     parser.add_argument("--repository", default="jaypal1046/patchrelay")
     parser.add_argument("--tag")
     parser.add_argument("--key", type=Path, default=Path(".keys/patch-signing.key"))
     args = parser.parse_args()
+    if args.command == "check-host":
+        check_release_host()
+        return
+    if args.out is None:
+        parser.error("--out is required for base/patch builds")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     if (out / "baseline.json").exists() or (out / "patch.json").exists():

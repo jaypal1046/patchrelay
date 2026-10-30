@@ -24,7 +24,7 @@ This project follows a release → compatible signed patch → next-launch activ
 
 ## Verification record
 
-- V1: actual RMX2117/API31 download, activation and second restart; APK unchanged. See screen-engine-verification.md.
+- V1: actual RMX2117/API31 download, activation and second restart; APK unchanged. Historical implementation/evidence remains in Git and the v1 GitHub releases.
 - API 2: RMX2117/API31 GitHub download, richer form, invalid/valid email, cursor/focus retention, checkbox gating, quantity, confirmation and second restart passed. APK hash/install timestamps stayed unchanged. See [API-2 phone verification](api-2-phone-verification.md).
 
 No new dependencies, generic native bridge, arbitrary Compose translation, navigation stack or background scheduler were added in this iteration.
