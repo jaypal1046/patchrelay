@@ -16,7 +16,7 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v5
-      - run: chmod +x gradlew && ./gradlew :core:testDebugUnitTest :core:assembleRelease :sdk:testDebugUnitTest :sdk:assembleRelease :react-native-android:assembleRelease :react-native-android:assembleDebugAndroidTest :demo:assembleRelease :demo:assembleReleaseAndroidTest :patch:jar
+      - run: chmod +x gradlew && ./gradlew :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :demo:assembleReleaseAndroidTest :patch:jar
       - run: ./gradlew :demo:assembleStress :demo:assembleStressAndroidTest :patch:stressJar :patch:bundledStressJar :patch:testStressUnitTest :patch:dependencyPatchJar :patch:embeddedUpgradeJar :patch:fileProbeJar :patch:missingProbeJar :patch:fixedMissingProbeJar :patch:imageProbeJar -PtestBuildType=stress
       - run: ./gradlew :visual:assembleRelease
       - uses: actions/upload-artifact@v4
@@ -24,36 +24,6 @@ jobs:
           name: patchrelay-android
           path: |
             sdk/build/outputs/aar/*release.aar
-            core/build/outputs/aar/*release.aar
-            react-native/android/build/outputs/aar/*release.aar
             demo/build/outputs/apk/release/*.apk
             patch/build/libs/patch.jar
             visual/build/outputs/apk/**/release/*.apk
-  react-native:
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: examples/react-native
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: examples/react-native/package-lock.json
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools platforms;android-35 platforms;android-36 build-tools;36.0.0 ndk;27.0.12077973'
-          log-accepted-android-sdk-licenses: false
-      - uses: gradle/actions/setup-gradle@v5
-      - run: npm ci
-      - run: npm test -- --runInBand && npx tsc --noEmit
-      - run: cd android && chmod +x gradlew && ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --max-workers=2
-      - uses: actions/upload-artifact@v4
-        with:
-          name: patchrelay-react-native-android
-          path: examples/react-native/android/app/build/outputs/apk/release/*.apk

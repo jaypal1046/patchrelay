@@ -1,16 +1,14 @@
 # PatchRelay
 
-**Structure:** [architecture and runtime boundaries](docs/architecture.md). `core/` shares download/signature checks. `sdk/` is the Java/Kotlin DEX adapter; `react-native/android/` stages React Native Android JS bundles. `demo/`, `patch/`, and `visual/` contain examples/test fixtures. [React Native Android setup and boundaries](docs/react-native-android.md) includes a separate pinned release example. Flutter and iOS adapters remain pending.
+**Structure:** [architecture and runtime boundaries](docs/architecture.md). `sdk/` contains the Java/Kotlin DEX updater and its verification helpers. `demo/`, `patch/`, and `visual/` contain examples/test fixtures. Build scripts share DEX packaging and signing through `tools/PatchBuild.psm1`. The current target is native Android Java/Kotlin; Flutter and React Native are outside project scope. iOS native support remains unimplemented.
 
-Each runtime test uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
+Native Android testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
 
 [Sequential phone results and original test-case numbering](docs/sequential-phone-tests.md): file changes, bundled new dependencies and R8 patches are verified in the same app. Test 5's missing class was reproduced in patch 9 and fixed by bundling Codec in patch 10, now the normal update. Test 7 still shows that bundling a newer runtime does not replace an APK-embedded runtime. Test numbers and patch versions are tracked separately.
 
 Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
 
 **Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
-
-React Native Android is now [verified on the RMX2117 phone](docs/react-native-android.md#observed-physical-phone-result--2026-10-30): original bundle 0 changed to downloaded bundle 1, with unchanged native APK hash and install timestamp. This is a separate runtime base from the Kotlin demo.
 
 ## Current scope
 
@@ -23,21 +21,21 @@ React Native Android is now [verified on the RMX2117 phone](docs/react-native-an
 - Unconfirmed launch rolls back on the next launch; failed loading restores prior/built-in implementation.
 - GitHub-hosted demo APK, SDK AAR, patch DEX, signed manifest.
 
-This code-patching mode targets **directly distributed Android apps**. Google Play prohibits downloading executable DEX/JAR/native code outside its update mechanism: [policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en). React Native Android uses a separate JS-bundle adapter; iOS and Flutter remain unimplemented.
+This code-patching mode targets **directly distributed Android apps**. Google Play prohibits downloading executable DEX/JAR/native code outside its update mechanism: [policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en). iOS native support remains unimplemented.
 
 ## Build
 
 Requires JDK 17, Android SDK platform 35, build tools 35.0.0. Set `JAVA_HOME` and `ANDROID_HOME`; or set `sdk.dir` in ignored `local.properties`.
 
 ```powershell
-.\gradlew.bat :core:testDebugUnitTest :core:assembleRelease :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
+.\gradlew.bat :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
 ```
 
 The demo release is **non-debuggable but signed with a development key**, for testing only. Production apps need their own release signing configuration.
 
 ## Integrate
 
-Add both the SDK AAR and core AAR, plus `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
+Add the SDK AAR and `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
 
 ```kotlin
 val relay = PatchRelay(context, "your-exact-build-id", publicKeyBase64)
@@ -105,5 +103,5 @@ Instrumentation fixtures are signed using the demo key and embedded only in the 
 
 1. Prove Android prepared-code patching and rollback on release builds.
 2. Add build-time Java/Kotlin instrumentation only after defining compatible changes.
-3. Add React Native bundle integration under the same manifest/signature protocol.
-4. Research iOS and Flutter runtimes separately; no promise of unrestricted native patching or store acceptance.
+3. Investigate a separately designed Play-compatible native-app update model; the current DEX mode remains for direct distribution.
+4. Research iOS native support separately; no promise of unrestricted native patching or store acceptance.

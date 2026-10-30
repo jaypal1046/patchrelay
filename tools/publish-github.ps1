@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$Tag,
     [Parameter(Mandatory=$true)][string]$NotesFile,
     [switch]$PreRelease,
-    [string[]]$Files = @('demo/build/outputs/apk/release/demo-release.apk', 'sdk/build/outputs/aar/sdk-release.aar', 'core/build/outputs/aar/core-release.aar', 'dist/classes.dex', 'dist/patch.json')
+    [string[]]$Files = @('demo/build/outputs/apk/release/demo-release.apk', 'sdk/build/outputs/aar/sdk-release.aar', 'dist/classes.dex', 'dist/patch.json')
 )
 $ErrorActionPreference = 'Stop'
 if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Expected GitHub owner/repository' }

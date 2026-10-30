@@ -20,9 +20,8 @@ public final class Publisher {
             System.out.println("Keys created. Keep private key outside Git.");
             return;
         }
-        boolean javascript = args.length == 9 && args[0].equals("sign-js");
-        if (args.length != 9 || (!args[0].equals("sign") && !javascript)) {
-            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE DEX APP_ID BASE_VERSION PATCH_VERSION ENTRY_POINT HTTPS_URL OUTPUT | sign-js PRIVATE BUNDLE APP_ID BASE_VERSION PATCH_VERSION react-native-android HTTPS_URL OUTPUT");
+        if (args.length != 9 || !args[0].equals("sign")) {
+            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE DEX APP_ID BASE_VERSION PATCH_VERSION ENTRY_POINT HTTPS_URL OUTPUT");
         }
         long version = Long.parseLong(args[5]);
         if (version <= 0) throw new IllegalArgumentException("Positive patch version required");
@@ -30,18 +29,13 @@ public final class Publisher {
         if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null)
             throw new IllegalArgumentException("Public HTTPS artifact URL required");
         byte[] dex = Files.readAllBytes(Path.of(args[2]));
-        if (javascript) {
-            if (!args[6].equals("react-native-android") || dex.length == 0 || dex.length > 16 * 1024 * 1024)
-                throw new IllegalArgumentException("Expected React Native Android JS bundle, maximum 16 MiB");
-            StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(dex));
-        } else if (dex.length < 8 || dex.length > 16 * 1024 * 1024 || dex[0] != 'd' || dex[1] != 'e' || dex[2] != 'x') {
+        if (dex.length < 8 || dex.length > 16 * 1024 * 1024 || dex[0] != 'd' || dex[1] != 'e' || dex[2] != 'x')
             throw new IllegalArgumentException("Expected DEX artifact, maximum 16 MiB");
-        }
         StringBuilder hash = new StringBuilder();
         for (byte b : MessageDigest.getInstance("SHA-256").digest(dex)) hash.append(String.format("%02x", b & 255));
-        String payload = "{\"schema\":" + (javascript ? 2 : 1) + ",\"apiVersion\":1,\"appId\":" + quote(args[3])
+        String payload = "{\"schema\":1,\"apiVersion\":1,\"appId\":" + quote(args[3])
                 + ",\"baseVersion\":" + quote(args[4]) + ",\"version\":" + version
-                + (javascript ? ",\"runtime\":\"react-native-android\",\"artifactType\":\"js-bundle\"" : ",\"entryPoint\":" + quote(args[6])) + ",\"artifactUrl\":" + quote(args[7])
+                + ",\"entryPoint\":" + quote(args[6]) + ",\"artifactUrl\":" + quote(args[7])
                 + ",\"sha256\":" + quote(hash.toString()) + "}";
         PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(
                 Base64.getDecoder().decode(Files.readString(Path.of(args[1])).trim())));
