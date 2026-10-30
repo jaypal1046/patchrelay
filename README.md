@@ -47,6 +47,10 @@ This proof supports asynchronous `(Int, Int) -> Int` calls only. Registration ID
 
 Hooks and matching exports are handwritten in this proof. Automatic source comparison at function level, compiler-generated hooks, arbitrary objects/Android calls and Compose replacement are not implemented. The screen and function runner share one local interpreter.
 
+Phone verification, 2026-10-30, RMX2117/API31: the base displayed 103 through original Kotlin. After verified GitHub download and user restart, the same native label displayed 300 through JS; the unpatched helper remained 15. Repeat native calls, checkout quantity events and email typing also passed. A second force-stop/reopen kept patch 1 active with 300 through JS and 15 through Kotlin. The APK hash and install/update timestamps stayed unchanged during activation.
+
+APK SHA-256: `fc09c301b52d5371f6674ba48b2f3dcaadfe49e393f5ca36f56a2ea105936c88`. Local evidence: ignored `.tools/runner-phone/`. [Runner release](https://github.com/jaypal1046/patchrelay/releases/tag/native-runner-v1-patch-1) · [Passing CI](https://github.com/jaypal1046/patchrelay/actions/runs/41056776491). SDK tests cover native fallback, matched-ID routing, mixed native/JS functions and invalid IDs/results; compiled-program checks cover the actual Kotlin/JS exports.
+
 ## Release workflow
 
 1. Set the new native release identity and channel in `runtime.json`.

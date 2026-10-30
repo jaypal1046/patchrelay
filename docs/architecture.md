@@ -41,7 +41,7 @@ Unknown types or fields, duplicate IDs, incorrect primitive types and malformed 
 
 ## Activation and recovery
 
-Stage now; activate next process start. Storage identity includes base version and host fingerprint. An unconfirmed patched startup rolls back. Health is recorded after the initial validated native tree attaches, not after every future interaction. Runtime event failures may also trigger fallback; no transaction/data rollback is provided. Timeouts prepare fallback and require restart.
+Stage now; activate next process start. Storage identity includes base version and host fingerprint. An unconfirmed patched startup rolls back. The runner demo records health after the initial validated tree attaches and the prepared function routes return successfully, not after every future interaction. Runtime event/function failures may also trigger fallback; no transaction/data rollback is provided. Timeouts prepare fallback and require restart.
 
 The Activity owns and closes its interpreter and timeout callbacks. Native view construction failures take the same recovery path. Resource exhaustion or WebView/provider failures remain operating risks.
 
