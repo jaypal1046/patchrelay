@@ -19,6 +19,10 @@ The interpreter is a hidden, local Android WebView without a JavaScript interfac
 
 Both return a JSON screen tree. Events carry an action plus optional string value. A bounded FIFO coalesces adjacent field changes without crossing clicks. Intermediate queued results are validated but not displayed, preventing old results from resetting newer typing.
 
+The runner proof also exports `patchedFunctionIds(): String` (JSON ID array) and `invokePatch(id, first, second): String` (integer result). `IntPatchRunner` validates the declared IDs against prepared native hooks. Calls without bindings use the installed Kotlin body; bound calls use JS. Native code is not overwritten. Supported arguments/results are two 32-bit integers and one 32-bit integer, delivered through a callback. Hooks are explicit, not compiler-generated.
+
+`ScreenInterpreter` owns one WebView and a bounded serial call queue shared by screen rendering and function calls. It closes with the Activity. A registered patch error takes the program failure path; it does not automatically invoke the native body after possible side effects.
+
 ## UI contract
 
 The root identifies a registered screen and contains a column. Every child has a unique stable ID. Supported nodes:

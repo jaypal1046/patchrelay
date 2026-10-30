@@ -16,6 +16,9 @@ class MainActivity : Activity() {
     private lateinit var screen: FrameLayout
     private lateinit var status: TextView
     private lateinit var download: Button
+    private lateinit var calculation: TextView
+    private lateinit var calculate: Button
+    private var runner: IntPatchRunner? = null
     private var engine: ScreenEngine? = null
     private var recoveryAttempted = false
     private var renderGeneration = 0
@@ -27,6 +30,13 @@ class MainActivity : Activity() {
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         status = TextView(this).apply { text = "Preparing checkout…"; textSize = 15f; setPadding(24, 24, 24, 16) }
         screen = FrameLayout(this)
+        calculation = TextView(this).apply { text = "Preparing native function…"; textSize = 17f; setPadding(24, 8, 24, 8) }
+        calculate = Button(this).apply {
+            text = "Run Kotlin function"
+            isAllCaps = false
+            isEnabled = false
+            setOnClickListener { runNativeCalculation() }
+        }
         download = Button(this).apply {
             text = "Check screen update"
             isAllCaps = false
@@ -39,6 +49,8 @@ class MainActivity : Activity() {
             setOnClickListener { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
         }
         column.addView(status)
+        column.addView(calculation)
+        column.addView(calculate)
         column.addView(screen, LinearLayout.LayoutParams(-1, 0, 1f))
         column.addView(download)
         column.addView(settings)
@@ -59,6 +71,8 @@ class MainActivity : Activity() {
 
     private fun launchEngine(program: ScreenProgram) {
         engine?.close()
+        runner = null
+        calculate.isEnabled = false
         val generation = ++renderGeneration
         var confirmed = false
         val renderer = NativeScreenRenderer(this) { action, value -> engine?.event(action, value) }
@@ -68,16 +82,21 @@ class MainActivity : Activity() {
                 if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
                 if (!confirmed) {
                     confirmed = true
-                    Thread {
-                        try {
-                            app.updates.markHealthy()
-                            runOnUiThread { if (alive() && generation == renderGeneration) {
-                                status.text = "Native checkout · screen patch ${program.version}\n" +
-                                    if (program.version == 0L) "Bundled Kotlin screen" else "Kotlin screen downloaded from GitHub"
-                                download.isEnabled = true
-                            } }
-                        } catch (failure: Exception) { runOnUiThread { if (alive()) failed(program, failure) } }
-                    }.start()
+                    engine!!.prepareIntFunctions(setOf("checkout.total.v1", "checkout.shipping.v1")) { prepared ->
+                        runner = prepared
+                        runNativeCalculation {
+                            Thread {
+                                try {
+                                    app.updates.markHealthy()
+                                    runOnUiThread { if (alive() && generation == renderGeneration) {
+                                        status.text = "Native checkout · screen patch ${program.version}\n" +
+                                            if (program.version == 0L) "Bundled Kotlin screen" else "Kotlin screen downloaded from GitHub"
+                                        download.isEnabled = true
+                                    } }
+                                } catch (failure: Exception) { runOnUiThread { if (alive()) failed(program, failure) } }
+                            }.start()
+                        }
+                    }
                 }
             }
         }, onFailure = { failure -> if (alive() && generation == renderGeneration) failed(program, failure) })
@@ -87,6 +106,7 @@ class MainActivity : Activity() {
 
     private fun failed(program: ScreenProgram, failure: Exception) {
         engine?.close(); engine = null
+        runner = null; calculate.isEnabled = false
         ++renderGeneration
         if (program.version > 0 && !recoveryAttempted) {
             recoveryAttempted = true
@@ -122,5 +142,21 @@ class MainActivity : Activity() {
     }
 
     private fun alive() = !isFinishing && !isDestroyed
+    private fun originalTotal(quantity: Int, price: Int): Int = quantity + price
+    private fun originalShipping(base: Int, extra: Int): Int = base + extra
+
+    private fun runNativeCalculation(onReady: () -> Unit = {}) {
+        val current = runner ?: return
+        calculate.isEnabled = false
+        current.call("checkout.total.v1", 3, 100, ::originalTotal) { total ->
+            current.call("checkout.shipping.v1", 10, 5, ::originalShipping) { shipping ->
+                calculation.text = "3 × 100 = $total · " +
+                    (if (current.isPatched("checkout.total.v1")) "JS patch" else "original Kotlin") +
+                    "\nUnpatched Kotlin shipping: $shipping"
+                calculate.isEnabled = true
+                onReady()
+            }
+        }
+    }
     override fun onDestroy() { ++renderGeneration; engine?.close(); super.onDestroy() }
 }

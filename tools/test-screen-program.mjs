@@ -57,4 +57,11 @@ if (mode === 'fixed') {
 }
 assert.throws(() => call('renderScreen','unknown'));
 assert.throws(() => call('handleEvent','checkout','unsupported',null));
+assert.deepEqual(JSON.parse(call('patchedFunctionIds')), mode === 'fixed' ? ['checkout.total.v1'] : []);
+if (mode === 'fixed') {
+  assert.equal(call('invokePatch','checkout.total.v1',3,100),'300');
+  assert.equal(call('invokePatch','checkout.total.v1',0,100),'0');
+  assert.throws(() => call('invokePatch','checkout.total.v1',101,100));
+} else assert.throws(() => call('invokePatch','checkout.total.v1',3,100));
+assert.throws(() => call('invokePatch','checkout.shipping.v1',10,5));
 console.log('Compiled Kotlin screen verified: ' + mode);

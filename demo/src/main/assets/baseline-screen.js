@@ -1382,6 +1382,13 @@ if (typeof Math.imul === 'undefined') {
     }
     return renderScreen(screenId);
   }
+  function patchedFunctionIds() {
+    return '[]';
+  }
+  function invokePatch(functionId, first, second) {
+    var message = 'No function patch bundled';
+    throw IllegalStateException_init_$Create$_0(toString_2(message));
+  }
   function jsonString(value) {
     // Inline function 'kotlin.text.buildString' call
     // Inline function 'kotlin.contracts.contract' call
@@ -1445,6 +1452,8 @@ if (typeof Math.imul === 'undefined') {
   function $jsExportAll$(_) {
     _.renderScreen = renderScreen;
     _.handleEvent = handleEvent;
+    _.patchedFunctionIds = patchedFunctionIds;
+    _.invokePatch = invokePatch;
   }
   $jsExportAll$(_);
   //endregion

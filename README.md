@@ -29,20 +29,36 @@ python tools/test_screen_build.py
 python tools/screens.py check-host
 ```
 
-The demonstration APK uses a development signing key. A new base APK is required when installed renderer capabilities change. API 2 is incompatible with the published v1 base; v1 release assets remain unchanged.
+The demonstration APK uses a development signing key. A new base APK is required when installed runtime capabilities change. The current runner proof needs version 0.3.0, base `native-runner-v1`. Historical v1/v2 release assets remain unchanged.
+
+## Native function runner proof
+
+The original Kotlin implementation remains in the APK. An explicit hook selects it unless a signed program registers a matching stable function ID:
+
+```kotlin
+runner.call("checkout.total.v1", 3, 100, ::originalTotal) { result ->
+    label.text = result.toString()
+}
+```
+
+The baseline has no function patches: original Kotlin returns 103. The downloaded program binds `checkout.total.v1` and returns 300. An unpatched shipping helper still runs Kotlin and returns 15. The installed native label displays these results.
+
+This proof supports asynchronous `(Int, Int) -> Int` calls only. Registration IDs are validated against the installed host; results must be 32-bit integers. JS failures reject the program rather than silently re-running original code, which could duplicate side effects.
+
+Hooks and matching exports are handwritten in this proof. Automatic source comparison at function level, compiler-generated hooks, arbitrary objects/Android calls and Compose replacement are not implemented. The screen and function runner share one local interpreter.
 
 ## Release workflow
 
 1. Set the new native release identity and channel in `runtime.json`.
 2. With baseline screen source in place, build a base:
-   `python tools/screens.py base --out dist/native-screens-v2-base`.
+   `python tools/screens.py base --out dist/native-runner-v1-base`.
 3. Preserve its APK and `baseline.json`. Install that base once.
 4. Change only supported screen Kotlin. Build:
-   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-screens-v2-patch-1 --version 1 --tag native-screens-v2-patch-1`.
+   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-runner-v1-patch-1 --version 1 --tag native-runner-v1-patch-1`.
 5. Upload `screens.js` and `patch.json` to that immutable artifact release.
 6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
 
-Current source contains the rich checkout patch. `demo/fixtures/Checkout.v2.baseline.kt` preserves the simpler API-2 base source. The example's compiled-program checker asserts checkout behavior; change its assertions when intentionally changing that behavior.
+Current source contains the rich checkout and function patch. `demo/fixtures/Checkout.v2.baseline.kt` and `demo/fixtures/Runner.baseline.kt` preserve the baseline sources; use both when building a new base. The example's compiled-program checker asserts checkout/runner behavior; change its assertions when intentionally changing that behavior.
 
 Native source, packaged assets, compiler settings and runtime configuration are hashed. Patches must match the base snapshot. The same host fingerprint is embedded in the APK and signed into each patch, preventing a patch built against another host from activating. This fingerprints the declared source/build contract, not the complete APK binary or a reproducible toolchain. APK hashes are recorded separately.
 
@@ -54,6 +70,6 @@ One checkout demonstration, complete-program replacement, in-memory screen state
 
 Signed programs are trusted code. WebView network/file/content access and external navigation are disabled; no JavaScript-to-Java interface is exposed. These restrictions are not proof of complete isolation.
 
-Health is confirmed after the initial validated tree is attached. Startup fallback does not undo persistent data or external side effects, and late failures can still require a corrective release. Interpreter timeouts require process restart.
+The current demo confirms health after the initial validated tree is attached and both function routes have returned successfully. Startup fallback does not undo persistent data or external side effects, and late failures can still require a corrective release. Interpreter timeouts require process restart.
 
 Store eligibility remains unverified. See the production-readiness checklist before depending on this system for users.
