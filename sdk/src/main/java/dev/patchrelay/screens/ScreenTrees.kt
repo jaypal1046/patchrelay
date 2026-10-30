@@ -6,14 +6,17 @@ data class ScreenNode(val id: String, val type: String, val text: String = "",
     val action: String = "", val value: String = "", val enabled: Boolean = true,
     val checked: Boolean = false, val style: String = "body", val children: List<ScreenNode> = emptyList())
 
-data class ScreenTree(val screenId: String, val children: List<ScreenNode>)
+data class ScreenTree(val screenId: String, val children: List<ScreenNode>, val backAction: String? = null)
 
 /** API 2: bounded data only; widgets cannot request native APIs. */
 object ScreenTrees {
     fun parse(json: String, expectedScreen: String): ScreenTree {
         require(json.length <= 65536) { "Screen result too large" }
         val root = JSONObject(json)
-        keys(root, setOf("screenId", "type", "children"))
+        keys(root, setOf("screenId", "type", "children", "backAction"))
+        val backAction = if (root.has("backAction")) string(root, "backAction").also {
+            require(it.matches(Regex("[a-z][a-z0-9_-]{0,31}"))) { "Invalid Back action" }
+        } else null
         require(string(root, "screenId") == expectedScreen && string(root, "type") == "column") { "Incompatible screen" }
         val ids = mutableSetOf<String>()
         fun node(value: JSONObject, depth: Int): ScreenNode {
@@ -50,7 +53,7 @@ object ScreenTrees {
         }
         val children = root.getJSONArray("children")
         require(children.length() in 1..32) { "Screen must have 1–32 widgets" }
-        return ScreenTree(expectedScreen, (0 until children.length()).map { node(children.getJSONObject(it), 1) })
+        return ScreenTree(expectedScreen, (0 until children.length()).map { node(children.getJSONObject(it), 1) }, backAction)
     }
 
     private fun string(value: JSONObject, key: String): String = value.get(key) as? String ?: error("Expected string: $key")

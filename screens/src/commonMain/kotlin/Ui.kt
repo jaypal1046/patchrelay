@@ -31,5 +31,6 @@ internal fun toggle(id: String, label: String, checked: Boolean, action: String)
 internal fun layout(id: String, type: String, nodes: List<String>): String =
     widget(id, type, "\"children\":[" + nodes.joinToString(",") + "]")
 
-internal fun column(screenId: String, nodes: List<String>): String =
-    "{\"screenId\":" + jsonString(screenId) + ",\"type\":\"column\",\"children\":[" + nodes.joinToString(",") + "]}"
+internal fun column(screenId: String, nodes: List<String>, backAction: String? = null): String =
+    "{\"screenId\":" + jsonString(screenId) + ",\"type\":\"column\",\"children\":[" + nodes.joinToString(",") + "]" +
+        (if (backAction == null) "" else ",\"backAction\":" + jsonString(backAction)) + "}"

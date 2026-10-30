@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +23,7 @@ class MainActivity : Activity() {
     private var engine: ScreenEngine? = null
     private var recoveryAttempted = false
     private var renderGeneration = 0
+    private var removeBackCallback: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +73,7 @@ class MainActivity : Activity() {
 
     private fun launchEngine(program: ScreenProgram) {
         engine?.close()
+        syncBack(false)
         runner = null
         calculate.isEnabled = false
         val generation = ++renderGeneration
@@ -79,6 +82,7 @@ class MainActivity : Activity() {
         engine = ScreenEngine(this, "checkout", onTree = { tree ->
             if (alive() && generation == renderGeneration) {
                 val view = renderer.build(tree)
+                syncBack(tree.backAction != null)
                 if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
                 if (!confirmed) {
                     confirmed = true
@@ -106,6 +110,7 @@ class MainActivity : Activity() {
 
     private fun failed(program: ScreenProgram, failure: Exception) {
         engine?.close(); engine = null
+        syncBack(false)
         runner = null; calculate.isEnabled = false
         ++renderGeneration
         if (program.version > 0 && !recoveryAttempted) {
@@ -158,5 +163,18 @@ class MainActivity : Activity() {
             }
         }
     }
-    override fun onDestroy() { ++renderGeneration; engine?.close(); super.onDestroy() }
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (engine?.back() != true) super.onBackPressed()
+    }
+
+    private fun syncBack(enabled: Boolean) {
+        if (Build.VERSION.SDK_INT < 33 || (removeBackCallback != null) == enabled) return
+        if (!enabled) { removeBackCallback?.invoke(); removeBackCallback = null; return }
+        val callback = android.window.OnBackInvokedCallback { engine?.back() }
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
+        removeBackCallback = { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(callback) }
+    }
+
+    override fun onDestroy() { ++renderGeneration; syncBack(false); engine?.close(); super.onDestroy() }
 }

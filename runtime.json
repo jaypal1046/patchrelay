@@ -1,14 +1,14 @@
 {
   "format": 1,
   "appId": "dev.patchrelay.screens.demo",
-  "baseVersion": "native-runner-v1",
+  "baseVersion": "native-back-v1",
   "screenApi": 2,
-  "versionCode": 3,
-  "versionName": "0.3.0",
+  "versionCode": 4,
+  "versionName": "0.4.0",
   "screenIds": [
     "checkout"
   ],
-  "manifestUrl": "https://github.com/jaypal1046/patchrelay/releases/download/native-runner-v1/patch.json",
+  "manifestUrl": "https://github.com/jaypal1046/patchrelay/releases/download/native-back-v1/patch.json",
   "nativeInputs": [
     "sdk/src/main",
     "demo/src/main",

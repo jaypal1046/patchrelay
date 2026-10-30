@@ -49,7 +49,11 @@ fun renderScreen(screenId: String): String {
     return column(screenId, listOf(
         text("title", when (page) { "cart" -> "Cart"; "details" -> "Details"; "review" -> "Review"; else -> "Receipt" }, "title"),
         text("step", "Cart → Details → Review → Receipt", "caption")
-    ) + content)
+    ) + content, backAction = when (page) {
+        "details", "receipt" -> "back_cart"
+        "review" -> "back_details"
+        else -> null
+    })
 }
 
 @JsExport

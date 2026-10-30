@@ -1438,8 +1438,9 @@ if (typeof Math.imul === 'undefined') {
     enabled = enabled === VOID ? true : enabled;
     return widget(id, 'button', '"text":' + jsonString(label) + ',"action":' + jsonString(action) + ',"enabled":' + enabled);
   }
-  function column(screenId, nodes) {
-    return '{"screenId":' + jsonString(screenId) + ',"type":"column","children":[' + joinToString_0(nodes, ',') + ']}';
+  function column(screenId, nodes, backAction) {
+    backAction = backAction === VOID ? null : backAction;
+    return '{"screenId":' + jsonString(screenId) + ',"type":"column","children":[' + joinToString_0(nodes, ',') + ']' + (backAction == null ? '' : ',"backAction":' + jsonString(backAction)) + '}';
   }
   //region block: init
   Unit_instance = new Unit();

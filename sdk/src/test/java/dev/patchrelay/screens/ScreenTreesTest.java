@@ -5,6 +5,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ScreenTreesTest {
+    @Test public void validatesOptionalBackAction() {
+        String root = tree(text("title"));
+        assertNull(ScreenTrees.INSTANCE.parse(root, "checkout").getBackAction());
+        assertEquals("back_cart", ScreenTrees.INSTANCE.parse(root.replace("\"children\":[", "\"backAction\":\"back_cart\",\"children\":["), "checkout").getBackAction());
+        for (String invalid : new String[] {"42", "null", "\"../native\"", "\"\""}) {
+            rejects(root.replace("\"children\":[", "\"backAction\":" + invalid + ",\"children\":["));
+        }
+    }
     private static String tree(String children) {
         return "{\"screenId\":\"checkout\",\"type\":\"column\",\"children\":[" + children + "]}";
     }

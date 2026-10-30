@@ -29,7 +29,15 @@ python tools/test_screen_build.py
 python tools/screens.py check-host
 ```
 
-The demonstration APK uses a development signing key. A new base APK is required when installed runtime capabilities change. The current runner proof needs version 0.3.0, base `native-runner-v1`. Historical v1/v2 release assets remain unchanged.
+The demonstration APK uses a development signing key. A new base APK is required when installed runtime capabilities change. The Back integration needs version 0.4.0, base `native-back-v1`. Historical screen/runner releases remain unchanged.
+
+## Android Back integration
+
+The validated root tree may declare an optional `backAction`, such as `back_cart` or `back_details`. `ScreenEngine.back()` dispatches it through the ordinary event queue; while an update is pending, repeated Back is consumed. Without a Back action, the host delegates to Android's normal root behavior.
+
+The example host overrides the legacy Back callback and registers an Android 13+ `OnBackInvokedCallback` only for non-root pages. It unregisters on root, failure and Activity disposal. Keyboard dismissal remains handled by Android. The flow declares Details → Cart, Review → Details and Receipt → Cart. Cart declares no handler. See [Android callback guidance](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture).
+
+This is a new native integration, not a patch for the 0.3.0 host: update the base once, then deliver page/Back-action changes through compatible signed programs.
 
 ## Native function runner proof
 
@@ -57,10 +65,10 @@ Patch 2 adds a program-managed Cart → Details → Review → Receipt flow to t
 
 1. Set the new native release identity and channel in `runtime.json`.
 2. With baseline screen source in place, build a base:
-   `python tools/screens.py base --out dist/native-runner-v1-base`.
+   `python tools/screens.py base --out dist/native-back-v1-base`.
 3. Preserve its APK and `baseline.json`. Install that base once.
 4. Change only supported screen Kotlin. Build:
-   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-runner-v1-patch-2 --version 2 --tag native-runner-v1-patch-2`.
+   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-back-v1-patch-1 --version 1 --tag native-back-v1-patch-1`.
 5. Upload `screens.js` and `patch.json` to that immutable artifact release.
 6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
 

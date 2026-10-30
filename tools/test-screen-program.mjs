@@ -15,6 +15,7 @@ function render(method, ...args) {
   const tree = JSON.parse(call(method, ...args));
   assert.equal(tree.screenId, 'checkout');
   assert.equal(tree.type, 'column');
+  if (tree.backAction !== undefined) assert.match(tree.backAction, /^[a-z][a-z0-9_-]{0,31}$/);
   const all = [];
   const ids = new Set();
   function walk(nodes, depth = 1) {
@@ -28,7 +29,7 @@ function render(method, ...args) {
     }
   }
   walk(tree.children); assert.ok(all.length <= 128);
-  return Object.fromEntries(all.map(n => [n.id, n]));
+  return {...Object.fromEntries(all.map(n => [n.id, n])), backAction: tree.backAction};
 }
 const event = (action, value = null) => render('handleEvent','checkout',action,value);
 let tree = render('renderScreen', 'checkout');
@@ -38,6 +39,7 @@ tree = event('add');
 assert.equal(tree.total.text, 'Total: 200');
 if (mode === 'fixed') {
   assert.equal(tree.title.text, 'Cart');
+  assert.equal(tree.backAction, undefined, 'Root must delegate Back to Android');
   tree = event('remove'); tree = event('remove');
   assert.equal(tree.items.text, 'Items: 1');
   assert.equal(tree.remove.enabled, false);
@@ -50,6 +52,9 @@ if (mode === 'fixed') {
   tree = event('to_review'); assert.equal(tree.title.text, 'Cart');
   tree = event('place_order'); assert.equal(tree.title.text, 'Cart');
   tree = event('to_details'); assert.equal(tree.title.text, 'Details');
+  assert.equal(tree.backAction, 'back_cart');
+  tree = event(tree.backAction); assert.equal(tree.title.text, 'Cart');
+  tree = event('to_details');
   tree = event('to_details'); assert.equal(tree.title.text, 'Details', 'Stale cart tap must not skip details');
   tree = event('to_review'); assert.equal(tree.title.text, 'Details');
   tree = event('email','invalid');
@@ -62,19 +67,22 @@ if (mode === 'fixed') {
 
   tree = event('to_review');
   assert.equal(tree.title.text, 'Review');
+  assert.equal(tree.backAction, 'back_details');
   assert.equal(tree.total.text, 'Total: 200');
   tree = event('email','late@example.com');
   assert.equal(tree.receipt_email.text, 'Receipt: guest@example.com', 'Stale field event must not change review');
-  tree = event('back_details');
+  tree = event(tree.backAction);
   assert.equal(tree.email.value, 'guest@example.com');
   assert.equal(tree.terms.checked, true);
-  tree = event('back_cart'); assert.equal(tree.items.text, 'Items: 2');
+  tree = event(tree.backAction); assert.equal(tree.items.text, 'Items: 2');
+  assert.equal(tree.backAction, undefined);
   tree = event('add'); assert.equal(tree.total.text, 'Total: 300');
   tree = event('to_details'); assert.equal(tree.email.value, 'guest@example.com');
   tree = event('to_review');
   assert.equal(tree.total.text, 'Total: 300');
   tree = event('place_order');
   assert.equal(tree.title.text, 'Receipt');
+  assert.equal(tree.backAction, 'back_cart');
   assert.equal(tree.status.text, 'Payment confirmed: 300');
   assert.equal(tree.orders.text, 'Orders created: 1');
   for (let i = 0; i < 10; i++) tree = event('place_order');

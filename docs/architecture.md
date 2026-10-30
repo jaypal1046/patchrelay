@@ -25,7 +25,9 @@ The runner proof also exports `patchedFunctionIds(): String` (JSON ID array) and
 
 ## UI contract
 
-The root identifies a registered screen and contains a column. Every child has a unique stable ID. Supported nodes:
+The root identifies a registered screen and contains a column. Its optional `backAction` is validated with the same action-ID rules as controls; absent means native root behavior. The engine stores the latest rendered action and exposes `back()` for the host. Back during a pending tree update is consumed to avoid acting on a stale page. The example bridges both legacy Back and Android 13+ platform callbacks, enabling the latter only for non-root trees and disposing registrations with the Activity. This requires the `native-back-v1` host; older host fingerprints remain incompatible.
+
+Every child has a unique stable ID. Supported nodes:
 
 | Node | Fields beyond id/type |
 | --- | --- |

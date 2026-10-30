@@ -8,6 +8,7 @@ class ScreenEngine(context: Context, private val screenId: String,
     private val interpreter = ScreenInterpreter(context) { failure -> closed = true; onFailure(failure) }
     val webView get() = interpreter.webView
     private var busy = true
+    private var backAction: String? = null
     private val events = ScreenEvents()
 
     fun start(script: String) {
@@ -32,6 +33,13 @@ class ScreenEngine(context: Context, private val screenId: String,
         }
     }
 
+    /** True when handled/awaiting a page update; false delegates root Back to Android. */
+    fun back(): Boolean {
+        if (closed) return false
+        if (busy) return true
+        return backAction?.let { event(it) } ?: false
+    }
+
     private fun dispatch(event: ScreenEvent) {
         busy = true
         evaluate("handleEvent", listOf(screenId, event.action, event.value))
@@ -42,7 +50,7 @@ class ScreenEngine(context: Context, private val screenId: String,
             val tree = ScreenTrees.parse(result, screenId)
             val next = events.next()
             if (next != null) dispatch(next)
-            else { busy = false; onTree(tree) }
+            else { busy = false; backAction = tree.backAction; onTree(tree) }
         }
     }
 
