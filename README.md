@@ -39,6 +39,8 @@ The example host overrides the legacy Back callback and registers an Android 13+
 
 This is a new native integration, not a patch for the 0.3.0 host: update the base once, then deliver page/Back-action changes through compatible signed programs.
 
+Verified on RMX2117/API31: first Back dismissed the keyboard without leaving Details; subsequent Back returned Details → Cart. Review → Details retained email/terms, Receipt → Cart worked, and root Back exited normally. Reopening resumed Cart with patch 1 active. After the authorized 0.4.0 setup, the downloaded flow used the same installed APK/hash/timestamps throughout. [Fix release](https://github.com/jaypal1046/patchrelay/releases/tag/native-back-v1-patch-1) · [CI](https://github.com/jaypal1046/patchrelay/actions/runs/41062087592). Android 13+ callback code builds but has not been device-tested.
+
 ## Native function runner proof
 
 The original Kotlin implementation remains in the APK. An explicit hook selects it unless a signed program registers a matching stable function ID:

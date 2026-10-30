@@ -45,7 +45,7 @@ The flow patch is a program-managed Cart → Details → Review → Receipt sequ
 | Native function calls between page events | Exports and routing tests pass separately | Passed on Review: JS total 300, native shipping 15; route, email and total stayed intact |
 | General native function arguments/results | Runner supports only asynchronous `(Int, Int) -> Int` | Objects, general strings, native instances and suspend contracts are not implemented |
 | Background/resume | Not automated | Passed: Home → launcher resume preserved Review, quantity 2 and receipt email |
-| Android system Back | No host integration exists | Failed page-navigation expectation: Back from Details left the app (0 app UI nodes). Launcher resume returned to Details with draft email retained |
+| Android system Back | Back-action schema and host integration added in 0.4.0 | The 0.3.0 host failed this case; see the Back-fix follow-up below |
 | Process death / Activity recreation | State currently lives in JS memory | Not exercised: system Back did not recreate the Activity in this test. Durable cart/route restoration remains unimplemented |
 | Rotation, keyboard, large fonts, accessibility | Input focus tested on previous program | Flow email editing and keyboard dismissal passed; rotation, large fonts and screen-reader coverage pending |
 | Signature, hash, wrong host/API/IDs | SDK tests pass | Deliberate corrupted downloads not tested on phone |
@@ -56,6 +56,24 @@ The flow patch is a program-managed Cart → Details → Review → Receipt sequ
 
 Phone run: RMX2117/API31, 2026-10-30, patch 2 from [native-runner-v1-patch-2](https://github.com/jaypal1046/patchrelay/releases/tag/native-runner-v1-patch-2). [CI passed](https://github.com/jaypal1046/patchrelay/actions/runs/41058407332). Before/after installed APK SHA-256 remained `fc09c301b52d5371f6674ba48b2f3dcaadfe49e393f5ca36f56a2ea105936c88`; version 0.3.0/code 3 and install/update timestamps were unchanged. No APK was installed for this flow patch. Local evidence: ignored `.tools/flow-phone/` UI snapshots and package metadata.
 
-Next integration fix: route Android system Back into the program navigation contract. This needs an updated host/SDK base; the current patch cannot intercept an Android event that the installed host never forwards. Durable state restoration and fault tests are separate follow-up work.
+The missing system Back integration is addressed in the 0.4.0/native-back-v1 host. Its compatibility identity is separate from 0.3.0; the older base cannot receive this native hook through a JS-only update. Durable state restoration and fault tests are separate follow-up work.
 
-No new dependencies, generic native bridge, arbitrary Compose translation, Android navigation integration or background scheduler were added.
+No new dependencies, generic native bridge, arbitrary Compose translation, Android Navigation-component integration or background scheduler were added.
+
+## Back-fix follow-up
+
+Host 0.4.0 / `native-back-v1`, RMX2117/API31, 2026-10-30:
+
+- Authorized one-time native APK update installed the Back integration.
+- Downloaded signed patch 1 added the flow; no further APK install occurred.
+- First Android Back dismissed the keyboard and stayed on Details; IME state was confirmed hidden.
+- Next Back returned Details → Cart and retained the email on re-entry.
+- Review → Details retained email and accepted terms.
+- Receipt → Cart returned to the completed cart.
+- Root Cart Back delegated to Android; no app UI remained visible.
+- Launcher resume returned to Cart with patch 1 active.
+- APK SHA-256 stayed `041a21f002fe9c9416d170bef1d8f03d43331e66bfeee49c9d7a3c2deb9dfd68` throughout patch activation/testing; version 0.4.0/code 4 and install timestamps were unchanged.
+
+Local UI/package evidence: ignored `.tools/back-phone/`. [Release](https://github.com/jaypal1046/patchrelay/releases/tag/native-back-v1-patch-1) · [Passing CI](https://github.com/jaypal1046/patchrelay/actions/runs/41062087592).
+
+Schema tests cover absent/valid/malformed Back actions. Compiled Kotlin/JS tests cover page-specific Back metadata, root delegation and state preservation through the declared actions. Android 13+ platform callback handling builds but remains unverified on a device. Process-death restoration, rotation, fault injection and broader device coverage remain pending.
