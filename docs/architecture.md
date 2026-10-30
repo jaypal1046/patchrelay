@@ -1,36 +1,46 @@
-# Native screen engine
+# Native screen runtime — API 2
 
-Current scope: a native Android host renders supported Kotlin-authored replacement screens. No DEX loading, React Native or Flutter runtime remains in the active project.
+## Build contract
 
-## Build side
+`runtime.json` owns application ID, base version, registered screen IDs, channel and native fingerprint inputs. Gradle and the Python builder compute identical sorted path/content hashes, normalizing text CRLF to LF. The host fingerprint includes the bundled program, renderer, manifest, build settings and public key.
 
-1. The developer supplies the local project and an exact release baseline.
-2. Native/asset/compiler source hashes are compared with the baseline; unsupported changes fail the build. Text line endings are normalized across Windows/Linux.
-3. Changed files under the supported common Kotlin screen module are identified. The whole module is compiled with Kotlin/JS, including its used shared logic.
-4. Tests validate the exported functions, tree contract and intended behavior. A schema-3 manifest signs app/base identity, engine API, stable screen IDs, version, artifact URL and SHA-256.
+A format-3 baseline records native and screen source hashes, host fingerprint and APK/program hashes. A patch build rejects added, changed or removed native inputs. Changed supported Kotlin screen sources compile as one Kotlin/JS program; this is neither a binary delta nor automatic method extraction.
 
-This first tool is explicitly configured for this repository. It is not a compiler plugin that automatically discovers or rewrites arbitrary existing Android screens.
+Schema-3 signed metadata binds runtime `kotlin-screen-js`, API 2, app/base identity, host fingerprint, registered screen IDs, positive version, artifact URL and SHA-256. The runtime authenticates exact payload bytes before using metadata. API-1 manifests do not activate in API 2. The SDK's API version is fixed by its implementation; configuration cannot claim unsupported capabilities.
 
-## Device side
+## Runtime boundaries
 
-The application owns one `ScreenUpdates` instance and prepares a selected `ScreenProgram` on a worker thread. Every Activity, including restored Activities, uses that same selection. It falls back to the packaged program when there is no usable patch.
+One application-owned `ScreenUpdates` selects a program on a worker thread. HTTPS downloads are bounded; scripts are limited to 2 MiB. Atomic script/metadata writes precede accepted-version and pending-state commits. Versions cannot replay over the accepted high-water mark. Persisted scripts are verified again at startup.
 
-`ScreenEngine` executes the program in a hidden local WebView. It calls the compiler's exported `renderScreen` and `handleEvent` functions asynchronously. There is no JavaScript interface exposing Android objects. Network/file/content access and external navigation are disabled.
+The interpreter is a hidden, local Android WebView without a JavaScript interface or network/file/content access. It calls:
 
-The interpreter returns a JSON column containing text and button nodes. `ScreenTrees` rejects wrong screen IDs, unknown widget types/fields, malformed actions, excessive widgets or oversized output. `NativeScreenRenderer` builds a detached native view tree; the host swaps it in only after successful validation/construction. Native clicks invoke program event handling, which returns the next tree.
+- `renderScreen(screenId): String`
+- `handleEvent(screenId, action, value): String`
 
-The baseline screen's Kotlin logic is replaced through the program boundary; installed native methods and renderer implementations are not rewritten. The base contains both renderer and interpreter integration from the first release.
+Both return a JSON screen tree. Events carry an action plus optional string value. A bounded FIFO coalesces adjacent field changes without crossing clicks. Intermediate queued results are validated but not displayed, preventing old results from resetting newer typing.
 
-## Versioning and trust
+## UI contract
 
-Downloaded scripts are limited to 2 MiB. HTTPS transport is bounded. RSA signatures authenticate exact payload bytes before compatibility metadata is trusted; SHA-256 authenticates the script. Schema 3, runtime `kotlin-screen-js`, screen API 1 and the registered screen set are required. Earlier manifest formats are rejected.
+The root identifies a registered screen and contains a column. Every child has a unique stable ID. Supported nodes:
 
-Stage now, activate on the next process start. Atomic script/metadata writes occur before the accepted version and pending state are committed. Interrupted unaccepted files can be replaced on retry. Active files cannot be replaced by replaying an accepted version. The script is authenticated again before startup execution.
+| Node | Fields beyond id/type |
+| --- | --- |
+| column, row, card | children |
+| text | text, style: title/body/caption/error |
+| button | text, action, enabled |
+| input | text (accessible label/hint), value, action, enabled |
+| toggle | text, checked, action, enabled |
 
-Startup remains unconfirmed until a validated native tree is constructed and attached. Confirmation is not a guarantee that all later drawing or events will succeed. Failures prepare the previous or bundled program; a renderer timeout requires restarting the process. The Activity owns and disposes the WebView and timers. A process killed before confirmation conservatively rolls back next time.
+Unknown types or fields, duplicate IDs, incorrect primitive types and malformed actions fail validation. Limits: 64 KiB tree, 128 nodes, depth 8, 32 children/layout, 1,024 characters/text or input. Rows use equal-width children. Layout spacing and card appearance belong to the installed renderer.
 
-A signed program has trusted authority over its supported UI; signing keys must be protected. Limits and disabled WebView features reduce exposure but are not a complete isolation guarantee. The prototype has no key rotation/revocation, persistent program state or general transaction rollback.
+`NativeScreenRenderer` retains views by ID and type, reconciles child ordering and updates properties. Unchanged input text is not assigned again; program-driven replacements clamp selection. Model application suppresses input callbacks. Removing a field or changing its type can lose focus. No state survives process restart.
 
-## Unchanged hard boundary
+## Activation and recovery
 
-A bug in the installed engine, unsupported native widget/capability or an unintegrated native screen still needs a new native base. Kotlin source must use this supported screen API; existing Android Compose/Activity code does not automatically become patchable. Platform/store eligibility remains unverified.
+Stage now; activate next process start. Storage identity includes base version and host fingerprint. An unconfirmed patched startup rolls back. Health is recorded after the initial validated native tree attaches, not after every future interaction. Runtime event failures may also trigger fallback; no transaction/data rollback is provided. Timeouts prepare fallback and require restart.
+
+The Activity owns and closes its interpreter and timeout callbacks. Native view construction failures take the same recovery path. Resource exhaustion or WebView/provider failures remain operating risks.
+
+## Native boundary
+
+The installed renderer cannot fix itself through a screen patch. Unsupported native widgets, dependencies, permissions and unintegrated native screens need a new base APK. Existing Android Compose/Activity source does not automatically compile to this API.

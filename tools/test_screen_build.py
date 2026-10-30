@@ -9,6 +9,15 @@ spec.loader.exec_module(build)
 
 
 class CompatibilityTest(unittest.TestCase):
+    def test_host_hash_is_order_independent_and_content_bound(self):
+        self.assertEqual(build.host_hash({"b": "2", "a": "1"}), build.host_hash({"a": "1", "b": "2"}))
+        self.assertNotEqual(build.host_hash({"a": "1"}), build.host_hash({"a": "2"}))
+
+    def test_missing_input_cannot_silently_disappear(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(ValueError):
+                build.fingerprint(Path(folder), ("missing",))
+
     def test_rejects_modified_added_and_removed_native_files(self):
         original = {"sdk/Renderer.kt": "a", "demo/Manifest.xml": "b"}
         build.check_native(original, original.copy())

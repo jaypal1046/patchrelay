@@ -1,24 +1,25 @@
 # PatchRelay Screens
 
-Experimental replacement screens for native Android apps, authored in Kotlin and delivered from GitHub as signed interpreted programs. React Native, Flutter, downloaded DEX and native-library patching are not implemented targets.
+Signed replacement screens for native Android apps, authored through a small Kotlin screen API. Kotlin/JS produces an interpreted program; installed Android widgets render its validated output. No downloaded DEX, React Native or Flutter runtime.
 
-Verified on the RMX2117/API31 phone: a signed Kotlin-only patch restored the payment button, fixed the total, handled the native button event and survived another process restart with the same APK hash/install timestamps. CI also passed.
+**Experimental.** V1 passed a real-phone download, activation and restart test. API 2 adds richer UI and stronger compatibility checks; its device verification is tracked separately. Existing Activity/Android Compose screens must be integrated with this API; arbitrary Kotlin methods are not patchable.
 
-The current proof replaces a checkout screen with two bugs: a missing payment button and an incorrect total. The developer changes only `screens/src/commonMain/kotlin/Checkout.kt`. Kotlin/JS compiles the supported screen module; the installed interpreter returns a validated widget tree and the Android renderer creates native TextViews and Buttons. Events travel back to the Kotlin-authored program. This is a small supported screen API, not an automatic converter for existing Activity or Android Compose code.
+## Components
 
-## Structure
+- `screens/`: screen logic, JSON screen API and common Kotlin tests.
+- `sdk/`: downloads, signatures, staging/fallback, interpreter, validation and native rendering.
+- `demo/`: native host and bundled baseline program.
+- `runtime.json`: app/base identity, channel, screen IDs and native compatibility inputs.
+- `tools/screens.py`: release snapshots and compatible patch builds.
+- `tools/Publisher.java`: dependency-free RSA signer.
 
-- `screens/`: Kotlin screen logic and the small text/button/column API; compiled to one standalone JS program.
-- `sdk/`: signed staging, compatibility checks, startup fallback, local interpreter and native widget renderer.
-- `demo/`: native screen host. Its checked-in `baseline-screen.js` contains the original buggy screen; current Kotlin source contains the fix.
-- `tools/screens.py`: base snapshot and patch builder. It detects changed screen source files, rejects native/asset/compiler changes, then compiles the supported module.
-- `tools/Publisher.java`: RSA signing; schema 3 explicitly targets `kotlin-screen-js` and registered screen IDs.
+API 2 supports nested columns, rows and cards; styled text; text inputs; checkboxes; enabled/disabled buttons. Stable widget IDs preserve native views, focus and cursor during ordinary updates. Input events queue in order; adjacent changes to the same field are coalesced. Only the latest queued result is rendered.
 
-[Architecture and limitations](docs/architecture.md). [Phone verification](docs/screen-engine-verification.md).
+[Architecture](docs/architecture.md) · [V1 phone proof](docs/screen-engine-verification.md) · [Production readiness](docs/production-readiness.md)
 
 ## Build and check
 
-Requires JDK 17, Android SDK 35, Python 3 and Node 20+. Kotlin 1.9.23, AGP 8.6 and Gradle 8.9 are pinned. The app needs an installed Android WebView provider. No React Native runtime, npm packages or downloaded native engine are used.
+Requires JDK 17, Android SDK 35, Python 3, Node 20+ and an Android WebView provider. Gradle, AGP and Kotlin versions are pinned. No npm runtime dependency.
 
 ```powershell
 .\gradlew.bat :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease
@@ -27,36 +28,31 @@ node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionE
 python tools/test_screen_build.py
 ```
 
-The demo release is non-debuggable and signed with a development key. The native base must be installed once before screen updates work. Its APK still contains normal Android native code; downloaded updates contain interpreted screen code, not DEX.
+The demonstration APK uses a development signing key. A new base APK is required when installed renderer capabilities change. API 2 is incompatible with the published v1 base; v1 release assets remain unchanged.
 
-## Create a screen patch
+## Release workflow
 
-The repository contains the fixed checkout source and the original base's compatibility snapshot at `demo/release-baseline.json`. With the matching private signing key available locally:
+1. Set the new native release identity and channel in `runtime.json`.
+2. With baseline screen source in place, build a base:
+   `python tools/screens.py base --out dist/native-screens-v2-base`.
+3. Preserve its APK and `baseline.json`. Install that base once.
+4. Change only supported screen Kotlin. Build:
+   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-screens-v2-patch-1 --version 1 --tag native-screens-v2-patch-1`.
+5. Upload `screens.js` and `patch.json` to that immutable artifact release.
+6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
 
-```powershell
-python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-screens-patch-1
-```
+Current source contains the rich checkout patch. `demo/fixtures/Checkout.v2.baseline.kt` preserves the simpler API-2 base source; `Checkout.baseline.kt` is historical v1. The example's compiled-program checker asserts checkout behavior; change its assertions when intentionally changing that behavior.
 
-Use a fresh output directory, increasing version and unique release tag for each later patch, for example `--version 2 --tag native-screens-patch-2`. Existing signed outputs are not overwritten. The example's functional checker currently expects the demonstrated checkout fix; adapt its assertions for intentional future behavior changes.
+Native source, packaged assets, compiler settings and runtime configuration are hashed. Patches must match the base snapshot. The same host fingerprint is embedded in the APK and signed into each patch, preventing a patch built against another host from activating. This fingerprints the declared source/build contract, not the complete APK binary or a reproducible toolchain. APK hashes are recorded separately.
 
-The builder checks source content, not filenames alone. It rejects changes to SDK/native host code, manifests, native assets and compiler settings relative to the baseline. Eligible common Kotlin screen code is recompiled as a complete module; this is not a binary delta or arbitrary method extraction.
+Signing key stays outside Git in ignored `.keys/`; the public key is pinned in the base. Generate your own pair with `java tools/Publisher.java keygen PRIVATE PUBLIC`. Changing the pinned key requires a new base.
 
-A new base can be captured with `python tools/screens.py base --out dist/NEW_BASE` while the screen source is in its baseline state. The original demo file is preserved at `demo/fixtures/Checkout.baseline.kt`; current source contains the fix. The example checks expect the deliberately buggy baseline. Allocate a new base compatibility ID in the host and publisher workflow for each incompatible native release; this prototype is pinned to `native-screens-v1`.
+## Boundaries
 
-## Hosting
+One checkout demonstration, complete-program replacement, in-memory screen state. No automatic Compose conversion, images, arbitrary native API bridge, dependency updates or new permissions. Payment confirmation is a local demonstration; no real transaction occurs.
 
-Upload `screens.js` and `patch.json` as immutable assets under the signed release tag. Publish the matching base APK and its snapshot for testing. Only after artifacts are available, publish the signed manifest as `patch.json` in the separate `native-screens-v1` channel release. The demo polls that release URL, separate from historical prototype release channels. Keep `channels/native-screens-v1.json` as the signed source-history mirror; the app does not poll that mirror. The channel manifest is a mutable pointer, while versioned artifacts remain immutable. Future patches use new artifact tags and a newer signed channel manifest. The SDK can use any HTTPS manifest/artifact host.
+Signed programs are trusted code. WebView network/file/content access and external navigation are disabled; no JavaScript-to-Java interface is exposed. These restrictions are not proof of complete isolation.
 
-The private key stays in ignored `.keys/`; the app pins `demo/patch-public-key.txt`. New users must generate their own key pair with `java tools/Publisher.java keygen PRIVATE PUBLIC` and build their base with that public key. Do not replace this repository's demo key without rebuilding the base.
+Health is confirmed after the initial validated tree is attached. Startup fallback does not undo persistent data or external side effects, and late failures can still require a corrective release. Interpreter timeouts require process restart.
 
-## Current boundaries
-
-One screen (`checkout`), one complete program, column/text/button widgets and local click/state behavior. No images, arbitrary native APIs, external navigation, new permissions, dependency updates or general Compose/Activity translation. Demo payment confirmation changes local display state only; it performs no transaction.
-
-WebView is used solely as the local interpreter. It has file/content/network loads disabled, no JavaScript-to-Java interface and no external navigation. Native widgets come from validated program output. Programs are signed trusted code, not arbitrary third-party scripts; this is not a proof of complete sandbox isolation.
-
-Health is confirmed after a validated native tree is constructed and attached; this does not guarantee every later draw or event succeeds. Failed or unconfirmed patched startup falls back, preserving the accepted-version high-water mark. Recovery does not undo persistent app data or external side effects. An interpreter timeout prepares fallback and requires a process restart. State is currently in-memory and resets on restart. One designated process only; key rotation, broad compatibility, resource-exhaustion recovery and production operations need further work.
-
-Google Play has an interpreter/VM exception conditioned on indirect Android API access and compliance with other policies. This experiment may fit that model; it has not received Play approval. [Google policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en).
-
-Earlier updater experiments remain in Git/release history; they are not part of the active SDK.
+Store eligibility remains unverified. See the production-readiness checklist before depending on this system for users.

@@ -14,7 +14,7 @@ data class ScreenProgram(val version: Long, val script: String)
 
 /** One instance per designated process. Programs contain interpreted JS, never DEX. */
 class ScreenUpdates(context: Context, private val baseVersion: String, private val publicKey: String,
-    private val screenIds: Set<String>) {
+    private val screenIds: Set<String>, private val hostHash: String) {
     private val app = context.applicationContext
     private val directory: File
     private val state: SharedPreferences
@@ -22,11 +22,12 @@ class ScreenUpdates(context: Context, private val baseVersion: String, private v
     private var sessionVersion = 0L
 
     init {
-        require(baseVersion.isNotBlank() && screenIds.isNotEmpty())
-        directory = File(app.noBackupFilesDir, "screen-patches/" + UUID.nameUUIDFromBytes(baseVersion.toByteArray(Charsets.UTF_8)))
+        require(baseVersion.isNotBlank() && screenIds.isNotEmpty() && hostHash.matches(Regex("[0-9a-f]{64}")))
+        val identity = "$baseVersion:$hostHash"
+        directory = File(app.noBackupFilesDir, "screen-patches/" + UUID.nameUUIDFromBytes(identity.toByteArray(Charsets.UTF_8)))
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Cannot create patch directory")
         state = app.getSharedPreferences("patchrelay-screens", Context.MODE_PRIVATE)
-        if (state.getString("base", "") != baseVersion) save(state.edit().clear().putString("base", baseVersion))
+        if (state.getString("base", "") != identity) save(state.edit().clear().putString("base", identity))
     }
 
     @Synchronized fun start(bundled: String): ScreenProgram {
@@ -112,7 +113,7 @@ class ScreenUpdates(context: Context, private val baseVersion: String, private v
         return ScreenProgram(version, ScreenManifests.decode(bytes))
     }
 
-    private fun verify(bytes: ByteArray) = ScreenManifests.verify(bytes, publicKey, app.packageName, baseVersion, screenIds)
+    private fun verify(bytes: ByteArray) = ScreenManifests.verify(bytes, publicKey, app.packageName, baseVersion, screenIds, hostHash)
     private fun save(editor: SharedPreferences.Editor) { if (!editor.commit()) throw IOException("Cannot save screen state") }
     private fun workerThread() { check(Looper.myLooper() != Looper.getMainLooper()) { "Use a worker thread" } }
     private fun write(file: File, bytes: ByteArray) {

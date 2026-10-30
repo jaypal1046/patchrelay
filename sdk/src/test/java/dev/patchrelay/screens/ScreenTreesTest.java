@@ -1,23 +1,44 @@
 package dev.patchrelay.screens;
 
+import org.json.*;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ScreenTreesTest {
-    private static final String PREFIX = "{\"screenId\":\"checkout\",\"type\":\"column\",\"children\":[";
-    @Test public void acceptsNativeWidgetContract() {
-        ScreenTree tree = ScreenTrees.INSTANCE.parse(PREFIX + "{\"type\":\"text\",\"text\":\"Checkout\",\"heading\":true},{\"type\":\"button\",\"text\":\"Pay\",\"action\":\"pay\"}]}", "checkout");
-        assertEquals(2, tree.getChildren().size());
-        assertTrue(tree.getChildren().get(0) instanceof ScreenNode.Text);
-        assertTrue(tree.getChildren().get(1) instanceof ScreenNode.Button);
+    private static String tree(String children) {
+        return "{\"screenId\":\"checkout\",\"type\":\"column\",\"children\":[" + children + "]}";
     }
-    @Test public void rejectsUnsupportedCapabilitiesAndMalformedTrees() {
-        rejects(PREFIX + "{\"type\":\"webview\",\"text\":\"Run\"}]}");
-        rejects(PREFIX + "{\"type\":\"button\",\"text\":\"Run\",\"action\":\"pay\",\"intent\":\"evil\"}]}");
-        rejects(PREFIX + "{\"type\":\"text\",\"text\":\"x\",\"heading\":\"true\"}]}");
-        rejects(PREFIX + "]}");
-        rejects(PREFIX + "{\"type\":\"button\",\"text\":\"x\",\"action\":\"../../native\"}]}");
-        rejects("{\"screenId\":\"other\",\"type\":\"column\",\"children\":[{\"type\":\"text\",\"text\":\"x\"}]}");
+    private static String text(String id) { return "{\"id\":\"" + id + "\",\"type\":\"text\",\"text\":\"Hello\"}"; }
+    @Test public void acceptsNestedNativeWidgets() {
+        String card = "{\"id\":\"card\",\"type\":\"card\",\"children\":[" + text("title") + ",{\"id\":\"email\",\"type\":\"input\",\"text\":\"Email\",\"value\":\"\",\"action\":\"email\"}]}";
+        ScreenTree parsed = ScreenTrees.INSTANCE.parse(tree(card), "checkout");
+        assertEquals("input", parsed.getChildren().get(0).getChildren().get(1).getType());
+    }
+    @Test public void rejectsUnsupportedAndMalformedWidgets() {
+        rejects(tree("{\"id\":\"x\",\"type\":\"webview\",\"text\":\"Run\"}"));
+        rejects(tree(text("x") + "," + text("x")));
+        rejects(tree(text("x").replace("\"Hello\"", "42")));
+        rejects(tree(text("x").replace("\"Hello\"", "\"Hello\",\"intent\":\"evil\"")));
+        rejects(tree("{\"id\":\"x\",\"type\":\"button\",\"text\":\"Pay\",\"action\":\"pay\",\"enabled\":\"true\"}"));
+        rejects(tree("{\"id\":\"x\",\"type\":\"button\",\"text\":\"Pay\",\"action\":\"../native\"}"));
+        rejects(tree(""));
+        rejects(tree(text("x")).replace("\"checkout\"", "\"other\""));
+    }
+    @Test public void boundsDepthCountAndPayload() {
+        String nested = text("leaf");
+        for (int i = 0; i < 8; i++) nested = "{\"id\":\"n" + i + "\",\"type\":\"column\",\"children\":[" + nested + "]}";
+        rejects(tree(nested));
+        String[] many = new String[33];
+        for (int i = 0; i < many.length; i++) many[i] = text("n" + i);
+        rejects(tree(String.join(",", many)));
+        String[] groups = new String[5];
+        for (int group = 0; group < groups.length; group++) {
+            String[] leaves = new String[26];
+            for (int i = 0; i < leaves.length; i++) leaves[i] = text("g" + group + "n" + i);
+            groups[group] = "{\"id\":\"g" + group + "\",\"type\":\"column\",\"children\":[" + String.join(",", leaves) + "]}";
+        }
+        rejects(tree(String.join(",", groups)));
+        rejects(tree(text("x").replace("Hello", String.join("", java.util.Collections.nCopies(1025, "a")))));
     }
     private static void rejects(String json) {
         try { ScreenTrees.INSTANCE.parse(json, "checkout"); fail("Accepted unsupported screen"); }

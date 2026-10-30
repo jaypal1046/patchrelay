@@ -20,9 +20,10 @@ public final class Publisher {
             System.out.println("Keys created. Keep private key outside Git.");
             return;
         }
-        if (args.length != 9 || !args[0].equals("sign")) {
-            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE JS APP_ID BASE_VERSION PATCH_VERSION SCREEN_IDS HTTPS_URL OUTPUT");
+        if (args.length != 10 || !args[0].equals("sign")) {
+            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE JS APP_ID BASE_VERSION PATCH_VERSION SCREEN_IDS HTTPS_URL OUTPUT HOST_SHA256");
         }
+        if (!args[9].matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Native host fingerprint required");
         long version = Long.parseLong(args[5]);
         if (version <= 0) throw new IllegalArgumentException("Positive patch version required");
         java.net.URI uri = java.net.URI.create(args[7]);
@@ -39,7 +40,7 @@ public final class Publisher {
         String screenJson = java.util.Arrays.stream(screens).map(Publisher::quote).collect(java.util.stream.Collectors.joining(","));
         StringBuilder hash = new StringBuilder();
         for (byte b : MessageDigest.getInstance("SHA-256").digest(program)) hash.append(String.format("%02x", b & 255));
-        String payload = "{\"schema\":3,\"screenApi\":1,\"runtime\":\"kotlin-screen-js\",\"appId\":" + quote(args[3])
+        String payload = "{\"schema\":3,\"screenApi\":2,\"runtime\":\"kotlin-screen-js\",\"hostSha256\":" + quote(args[9]) + ",\"appId\":" + quote(args[3])
                 + ",\"baseVersion\":" + quote(args[4]) + ",\"version\":" + version
                 + ",\"screenIds\":[" + screenJson + "],\"artifactUrl\":" + quote(args[7])
                 + ",\"sha256\":" + quote(hash.toString()) + "}";

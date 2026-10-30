@@ -1,24 +1,27 @@
 {
-  "format": 2,
+  "format": 3,
   "appId": "dev.patchrelay.screens.demo",
-  "baseVersion": "native-screens-v1",
+  "baseVersion": "native-screens-v2",
+  "screenApi": 2,
+  "hostSha256": "76ad0271fb63466c9c4f2282aa8e8da8e42a2af28931eb6ec7d4f6f262031cf6",
   "screenIds": [
     "checkout"
   ],
   "nativeFiles": {
     "sdk/src/main/AndroidManifest.xml": "678647a824ef7ab16066708585790ab265135d32fdf84bcd918a4b050f8891b9",
     "sdk/src/main/java/dev/patchrelay/core/HttpsDownloads.kt": "c45ef7086d8c9ddb1b6777cc070642aa335fb3a2c4c55e0c78fdf7899580e26d",
-    "sdk/src/main/java/dev/patchrelay/screens/NativeScreenRenderer.kt": "270101a14c44afb1d10c0857f6cce626f082e20da9b0c053b42657fefade4f86",
-    "sdk/src/main/java/dev/patchrelay/screens/ScreenEngine.kt": "802819add002095ca87f7f7c5fd3ca7b06fd90beed56caa1d832459d611b7742",
-    "sdk/src/main/java/dev/patchrelay/screens/ScreenManifests.kt": "9809b7b938e5422c05a09913dac4692a048f0da91d31ac5af602353998aab9a4",
-    "sdk/src/main/java/dev/patchrelay/screens/ScreenTrees.kt": "c571b6d1ad4c5ad686774763d9b59b7004e54d8d65074d5557bc29298d563dd6",
-    "sdk/src/main/java/dev/patchrelay/screens/ScreenUpdates.kt": "15c2ff82d38021d172059e1d081060acd0816dc0bf4f8ce7ef1b4a5f77699458",
+    "sdk/src/main/java/dev/patchrelay/screens/NativeScreenRenderer.kt": "10f66c15fba2bfade24735a5e6a84e55d32ec9d2fbfc717026852d2b5778d82a",
+    "sdk/src/main/java/dev/patchrelay/screens/ScreenEngine.kt": "c11e0111f62241dd19b4824d3bdc896ed9afbf568fce5956d605a971d9387432",
+    "sdk/src/main/java/dev/patchrelay/screens/ScreenEvents.kt": "b4a326bd978499e197d8c296f84228b016ceab99106856cf2985fb26c23ac5bb",
+    "sdk/src/main/java/dev/patchrelay/screens/ScreenManifests.kt": "b7fb3c0ba4cddea4657e66142884ce19cb944bcb033d34a25d1506573982cf95",
+    "sdk/src/main/java/dev/patchrelay/screens/ScreenTrees.kt": "c29952e83488e28951bfffaef438e3d4c460371303ef97df16b350f6ac4b7ca4",
+    "sdk/src/main/java/dev/patchrelay/screens/ScreenUpdates.kt": "b608334e7229bb1aae2abfbb9f5d51d0d81fa449daeb5722a98b1dba3d77c762",
     "sdk/src/main/java/dev/patchrelay/Signatures.kt": "9be95a7afbd230de711fd6fd8e8dddb47d6ffba287971dc90715c347e6096ba6",
-    "demo/src/main/AndroidManifest.xml": "8d82b76ebd0ed43fdb0489ee41d77f47e001741de6ed3abf824b0890da953ce8",
-    "demo/src/main/assets/baseline-screen.js": "7d3ba5df1e9569a7e46b34ea6770d1d7ab3f953ff92a1617067f47665b8fd4f5",
-    "demo/src/main/java/dev/patchrelay/screens/demo/DemoApp.kt": "e83aa91d021a9b04e1004f18386090cdf7aff9a1bc509dae823ffdbc6690180f",
-    "demo/src/main/java/dev/patchrelay/screens/demo/MainActivity.kt": "36ce518659150ae6d4696f94227771e430a3ac04b2ae86374bd1d7425158d293",
-    "demo/build.gradle": "cc1389abb2a6716b4fd02a0245479a5308c694894bd3259c7d77343e1f8b241b",
+    "demo/src/main/AndroidManifest.xml": "a0f92e49b82c5f57e3690c9baac78ca8320bcaeedf4c7dc950b0cde9cbd93d44",
+    "demo/src/main/assets/baseline-screen.js": "b61ebefade24842772eb385a9ccbf3e700a5c3aa10cf1c36824d32aced9717fe",
+    "demo/src/main/java/dev/patchrelay/screens/demo/DemoApp.kt": "e380447438b8abc4863729346c3711b88f50816d11eacf3b6cb7928a922731b2",
+    "demo/src/main/java/dev/patchrelay/screens/demo/MainActivity.kt": "dec23be00f5bc8f77ee3589dda27cbda7db249894198d1ced5057872e74558fa",
+    "demo/build.gradle": "7ec6a204b11a2dc8ef6e1ed43759101df02504e77c3d4e70a8481ce3499f8534",
     "sdk/build.gradle": "ac7517dd27ffbb2b660e31f259999ec1a32a41350bf4ad8bf34079e9e06c3d98",
     "screens/build.gradle": "71a2196812e597cc1fa8ad76ee562ceb90cde57874ab3965129ca94db2a203c0",
     "demo/patch-public-key.txt": "3728b1c27e2bd88b894a199f6dbd66d87b49d51f961dc87f385f9f1634246b0d",
@@ -26,12 +29,13 @@
     "settings.gradle": "814df81d16d40b0ac34ee46de7e6fe5c2df7a87b5f4d5c69a14b9471a4b3cc70",
     "gradle.properties": "0b7a157e55324e3489d906666a0816fc3c4dfb1ca17198dd0668905d11833446",
     "gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
-    "gradle/wrapper/gradle-wrapper.properties": "c9c1004a2b6a12fc94fd7128552098e7e9a2c710605fd134790a56afb92dbe51"
+    "gradle/wrapper/gradle-wrapper.properties": "c9c1004a2b6a12fc94fd7128552098e7e9a2c710605fd134790a56afb92dbe51",
+    "runtime.json": "447959dbac8694345cec2965bc2a1b10369ba7dd2dcdb8a71fd4696a65966605"
   },
   "screenFiles": {
-    "screens/src/commonMain/kotlin/Checkout.kt": "77cefc3a0d2199e05b27785cfdbb8ecb219047e851ae88a20b7d2d985766539e",
-    "screens/src/commonMain/kotlin/Ui.kt": "784dbf3168190c3ffa3587eccd130885fcec22832297e6a4092524561664c710"
+    "screens/src/commonMain/kotlin/Checkout.kt": "3346e405e475bfa5f9200aa87db626660cac2f9e9fda5fc2a9a43c778710a276",
+    "screens/src/commonMain/kotlin/Ui.kt": "3214c8294360f36f5cdc51bbcde9a18929302dddea47f86683813545d295a572"
   },
-  "apkSha256": "68cc047cf76612e9aa29a71e50b8a25c7c0dd776e251cd0125e0a7b8c4a3f6a9",
-  "programSha256": "7d3ba5df1e9569a7e46b34ea6770d1d7ab3f953ff92a1617067f47665b8fd4f5"
+  "apkSha256": "37d0ca8a0d0ae21aa472fc90d39770b0fbc11c5618321c78a862e7c8e3636ea9",
+  "programSha256": "b61ebefade24842772eb385a9ccbf3e700a5c3aa10cf1c36824d32aced9717fe"
 }

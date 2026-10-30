@@ -13,11 +13,23 @@ internal fun jsonString(value: String): String = buildString {
     append('"')
 }
 
-internal fun text(value: String, heading: Boolean = false): String =
-    "{\"type\":\"text\",\"text\":" + jsonString(value) + ",\"heading\":" + heading + "}"
+private fun widget(id: String, type: String, fields: String): String =
+    "{\"id\":" + jsonString(id) + ",\"type\":" + jsonString(type) + "," + fields + "}"
 
-internal fun button(label: String, action: String): String =
-    "{\"type\":\"button\",\"text\":" + jsonString(label) + ",\"action\":" + jsonString(action) + "}"
+internal fun text(id: String, value: String, style: String = "body"): String =
+    widget(id, "text", "\"text\":" + jsonString(value) + ",\"style\":" + jsonString(style))
+
+internal fun button(id: String, label: String, action: String, enabled: Boolean = true): String =
+    widget(id, "button", "\"text\":" + jsonString(label) + ",\"action\":" + jsonString(action) + ",\"enabled\":" + enabled)
+
+internal fun input(id: String, label: String, value: String, action: String): String =
+    widget(id, "input", "\"text\":" + jsonString(label) + ",\"value\":" + jsonString(value) + ",\"action\":" + jsonString(action))
+
+internal fun toggle(id: String, label: String, checked: Boolean, action: String): String =
+    widget(id, "toggle", "\"text\":" + jsonString(label) + ",\"checked\":" + checked + ",\"action\":" + jsonString(action))
+
+internal fun layout(id: String, type: String, nodes: List<String>): String =
+    widget(id, type, "\"children\":[" + nodes.joinToString(",") + "]")
 
 internal fun column(screenId: String, nodes: List<String>): String =
     "{\"screenId\":" + jsonString(screenId) + ",\"type\":\"column\",\"children\":[" + nodes.joinToString(",") + "]}"

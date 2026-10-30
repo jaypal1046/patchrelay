@@ -61,13 +61,11 @@ class MainActivity : Activity() {
         engine?.close()
         val generation = ++renderGeneration
         var confirmed = false
+        val renderer = NativeScreenRenderer(this) { action, value -> engine?.event(action, value) }
         engine = ScreenEngine(this, "checkout", onTree = { tree ->
             if (alive() && generation == renderGeneration) {
-                val view = NativeScreenRenderer(this) { action ->
-                    if (engine?.event(action) == true) buttonsEnabled(screen, false)
-                }.build(tree)
-                screen.removeAllViews()
-                screen.addView(view)
+                val view = renderer.build(tree)
+                if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
                 if (!confirmed) {
                     confirmed = true
                     Thread {
@@ -123,10 +121,6 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun buttonsEnabled(view: View, enabled: Boolean) {
-        if (view is Button) view.isEnabled = enabled
-        if (view is ViewGroup) for (index in 0 until view.childCount) buttonsEnabled(view.getChildAt(index), enabled)
-    }
     private fun alive() = !isFinishing && !isDestroyed
     override fun onDestroy() { ++renderGeneration; engine?.close(); super.onDestroy() }
 }

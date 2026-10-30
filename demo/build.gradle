@@ -1,16 +1,32 @@
 plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
+def runtime = new groovy.json.JsonSlurper().parse(rootProject.file('runtime.json'))
+assert runtime.format == 1 && runtime.screenApi == 2 : 'Unsupported runtime contract'
+def hostFiles = new TreeMap<String, String>()
+runtime.nativeInputs.each { relative ->
+    def target = rootProject.file(relative)
+    def files = target.isFile() ? [target] : fileTree(target).files
+    files.each { input ->
+        byte[] bytes = input.bytes
+        if (runtime.textExtensions.any { input.name.endsWith(it) }) bytes = input.getText('UTF-8').replace('\r\n', '\n').getBytes('UTF-8')
+        def path = rootProject.projectDir.toPath().relativize(input.toPath()).toString().replace('\\', '/')
+        hostFiles[path] = java.security.MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+    }
+}
+def hostHash = java.security.MessageDigest.getInstance('SHA-256').digest(groovy.json.JsonOutput.toJson(hostFiles).getBytes('UTF-8')).encodeHex().toString()
 android {
     namespace 'dev.patchrelay.screens.demo'
     compileSdk 35
     defaultConfig {
-        applicationId 'dev.patchrelay.screens.demo'
+        applicationId runtime.appId
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.1.0'
+        versionCode runtime.versionCode
+        versionName runtime.versionName
         buildConfigField 'String', 'PATCH_PUBLIC_KEY', '"' + file('patch-public-key.txt').text.trim() + '"'
-        buildConfigField 'String', 'BASE_VERSION', '"native-screens-v1"'
-        buildConfigField 'String', 'MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/download/native-screens-v1/patch.json"'
+        buildConfigField 'String', 'BASE_VERSION', groovy.json.JsonOutput.toJson(runtime.baseVersion)
+        buildConfigField 'String', 'MANIFEST_URL', groovy.json.JsonOutput.toJson(runtime.manifestUrl)
+        buildConfigField 'String', 'HOST_SHA256', groovy.json.JsonOutput.toJson(hostHash)
+        buildConfigField 'String', 'SCREEN_IDS', groovy.json.JsonOutput.toJson(runtime.screenIds.join(','))
     }
     buildFeatures { buildConfig true }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }

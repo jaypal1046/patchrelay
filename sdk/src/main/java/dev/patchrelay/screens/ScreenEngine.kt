@@ -18,6 +18,7 @@ class ScreenEngine(context: Context, private val screenId: String,
     private var closed = false
     private var disposed = false
     private var busy = true
+    private val events = ScreenEvents()
     private var sequence = 0
     private var timeout: Runnable? = null
 
@@ -56,21 +57,29 @@ class ScreenEngine(context: Context, private val screenId: String,
         webView.loadDataWithBaseURL("https://patchrelay.invalid/", "<!doctype html><meta http-equiv=Content-Security-Policy content=\"default-src 'none'; script-src 'unsafe-eval'\"><body></body>", "text/html", "UTF-8", null)
     }
 
-    fun event(action: String): Boolean {
-        if (busy || closed) return false
-        busy = true
-        evaluate(call("handleEvent", listOf(screenId, action)))
+    fun event(action: String, value: String? = null): Boolean {
+        if (closed) return false
+        try {
+            require(action.matches(Regex("[a-z][a-z0-9_-]{0,31}")) && (value == null || value.length <= 1024))
+            events.add(ScreenEvent(action, value))
+            if (!busy) dispatch(events.next()!!)
+        } catch (failure: Exception) { fail(failure) }
         return true
     }
 
-    private fun call(function: String, args: List<String>): String {
-        val arguments = args.joinToString(",") { JSONObject.quote(it) }
+    private fun dispatch(event: ScreenEvent) {
+        busy = true
+        evaluate(call("handleEvent", listOf(screenId, event.action, event.value)))
+    }
+
+    private fun call(function: String, args: List<String?>): String {
+        val arguments = args.joinToString(",") { if (it == null) "null" else JSONObject.quote(it) }
         return "(function(){try{return JSON.stringify({ok:true,tree:window['PatchRelay:screens'].$function($arguments)});}catch(e){return JSON.stringify({ok:false,error:String(e)});}})()"
     }
 
     private fun evaluate(source: String) {
         val ticket = armTimeout()
-        webView.evaluateJavascript(source) { encoded ->
+        try { webView.evaluateJavascript(source) { encoded ->
             if (closed || ticket != sequence) return@evaluateJavascript
             timeout?.let(handler::removeCallbacks)
             try {
@@ -78,10 +87,11 @@ class ScreenEngine(context: Context, private val screenId: String,
                 val result = JSONObject(JSONTokener(encoded).nextValue() as? String ?: error("Screen program failed to load"))
                 check(result.getBoolean("ok")) { result.optString("error", "Screen execution failed") }
                 val tree = ScreenTrees.parse(result.getString("tree"), screenId)
-                busy = false
-                onTree(tree)
+                val next = events.next()
+                if (next != null) dispatch(next)
+                else { busy = false; onTree(tree) }
             } catch (failure: Exception) { fail(failure) }
-        }
+        } } catch (failure: Exception) { fail(failure) }
     }
 
     private fun armTimeout(): Int {

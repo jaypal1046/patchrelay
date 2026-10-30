@@ -13,7 +13,7 @@ class DemoApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        updates = ScreenUpdates(this, BuildConfig.BASE_VERSION, BuildConfig.PATCH_PUBLIC_KEY, setOf("checkout"))
+        updates = ScreenUpdates(this, BuildConfig.BASE_VERSION, BuildConfig.PATCH_PUBLIC_KEY, BuildConfig.SCREEN_IDS.split(',').toSet(), BuildConfig.HOST_SHA256)
         prepared = CompletableFuture.supplyAsync {
             bundled = assets.open("baseline-screen.js").bufferedReader().use { it.readText() }
             updates.start(bundled).also { selected = it }

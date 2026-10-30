@@ -1353,10 +1353,10 @@ if (typeof Math.imul === 'undefined') {
       var message = 'Unknown screen';
       throw IllegalArgumentException_init_$Create$_0(toString_2(message));
     }
-    var total = 0;
-    return column(screenId, listOf([text('Checkout', true), text('Items: ' + quantity), text('Total: ' + total), text(status), button('Add item', 'add')]));
+    return column(screenId, listOf([text('title', 'Checkout', 'title'), text('items', 'Items: ' + quantity), text('total', 'Total: ' + imul(quantity, 100)), text('status', status), button('add', 'Add item', 'add'), button('pay', 'Pay ' + imul(quantity, 100), 'pay')]));
   }
-  function handleEvent(screenId, action) {
+  function handleEvent(screenId, action, value) {
+    value = value === VOID ? null : value;
     // Inline function 'kotlin.require' call
     // Inline function 'kotlin.contracts.contract' call
     if (!(screenId === 'checkout')) {
@@ -1364,14 +1364,21 @@ if (typeof Math.imul === 'undefined') {
       var message = 'Unknown screen';
       throw IllegalArgumentException_init_$Create$_0(toString_2(message));
     }
-    if (action === 'add') {
-      if (quantity < 100) {
-        quantity = quantity + 1 | 0;
-      }
-    } else {
-      // Inline function 'kotlin.error' call
-      var message_0 = 'Unsupported action';
-      throw IllegalStateException_init_$Create$_0(toString_2(message_0));
+    switch (action) {
+      case 'add':
+        if (quantity < 100) {
+          quantity = quantity + 1 | 0;
+        }
+
+        break;
+      case 'pay':
+        status = 'Payment confirmed: ' + imul(quantity, 100);
+        break;
+      default:
+        // Inline function 'kotlin.error' call
+
+        var message_0 = 'Unsupported action';
+        throw IllegalStateException_init_$Create$_0(toString_2(message_0));
     }
     return renderScreen(screenId);
   }
@@ -1413,12 +1420,16 @@ if (typeof Math.imul === 'undefined') {
     this_0.v(_Char___init__impl__6a9atx(34));
     return this_0.toString();
   }
-  function text(value, heading) {
-    heading = heading === VOID ? false : heading;
-    return '{"type":"text","text":' + jsonString(value) + ',"heading":' + heading + '}';
+  function widget(id, type, fields) {
+    return '{"id":' + jsonString(id) + ',"type":' + jsonString(type) + ',' + fields + '}';
   }
-  function button(label, action) {
-    return '{"type":"button","text":' + jsonString(label) + ',"action":' + jsonString(action) + '}';
+  function text(id, value, style) {
+    style = style === VOID ? 'body' : style;
+    return widget(id, 'text', '"text":' + jsonString(value) + ',"style":' + jsonString(style));
+  }
+  function button(id, label, action, enabled) {
+    enabled = enabled === VOID ? true : enabled;
+    return widget(id, 'button', '"text":' + jsonString(label) + ',"action":' + jsonString(action) + ',"enabled":' + enabled);
   }
   function column(screenId, nodes) {
     return '{"screenId":' + jsonString(screenId) + ',"type":"column","children":[' + joinToString_0(nodes, ',') + ']}';
@@ -1428,7 +1439,7 @@ if (typeof Math.imul === 'undefined') {
   Companion_instance_2 = new Companion_2();
   EmptyIterator_instance = new EmptyIterator();
   quantity = 1;
-  status = 'Payment button is missing in this release.';
+  status = 'Payment ready.';
   //endregion
   //region block: exports
   function $jsExportAll$(_) {
