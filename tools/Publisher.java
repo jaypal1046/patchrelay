@@ -21,21 +21,27 @@ public final class Publisher {
             return;
         }
         if (args.length != 9 || !args[0].equals("sign")) {
-            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE DEX APP_ID BASE_VERSION PATCH_VERSION ENTRY_POINT HTTPS_URL OUTPUT");
+            throw new IllegalArgumentException("Usage: keygen PRIVATE PUBLIC | sign PRIVATE JS APP_ID BASE_VERSION PATCH_VERSION SCREEN_IDS HTTPS_URL OUTPUT");
         }
         long version = Long.parseLong(args[5]);
         if (version <= 0) throw new IllegalArgumentException("Positive patch version required");
         java.net.URI uri = java.net.URI.create(args[7]);
         if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null)
             throw new IllegalArgumentException("Public HTTPS artifact URL required");
-        byte[] dex = Files.readAllBytes(Path.of(args[2]));
-        if (dex.length < 8 || dex.length > 16 * 1024 * 1024 || dex[0] != 'd' || dex[1] != 'e' || dex[2] != 'x')
-            throw new IllegalArgumentException("Expected DEX artifact, maximum 16 MiB");
+        byte[] program = Files.readAllBytes(Path.of(args[2]));
+        if (program.length == 0 || program.length > 2 * 1024 * 1024)
+            throw new IllegalArgumentException("Expected UTF-8 screen program, maximum 2 MiB");
+        StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(program));
+        String[] screens = args[6].split(",", -1);
+        if (screens.length == 0 || screens.length > 16 || java.util.Arrays.stream(screens).distinct().count() != screens.length)
+            throw new IllegalArgumentException("Invalid screen IDs");
+        for (String screen : screens) if (!screen.matches("[a-z][a-z0-9_.-]{0,63}")) throw new IllegalArgumentException("Invalid screen ID");
+        String screenJson = java.util.Arrays.stream(screens).map(Publisher::quote).collect(java.util.stream.Collectors.joining(","));
         StringBuilder hash = new StringBuilder();
-        for (byte b : MessageDigest.getInstance("SHA-256").digest(dex)) hash.append(String.format("%02x", b & 255));
-        String payload = "{\"schema\":1,\"apiVersion\":1,\"appId\":" + quote(args[3])
+        for (byte b : MessageDigest.getInstance("SHA-256").digest(program)) hash.append(String.format("%02x", b & 255));
+        String payload = "{\"schema\":3,\"screenApi\":1,\"runtime\":\"kotlin-screen-js\",\"appId\":" + quote(args[3])
                 + ",\"baseVersion\":" + quote(args[4]) + ",\"version\":" + version
-                + ",\"entryPoint\":" + quote(args[6]) + ",\"artifactUrl\":" + quote(args[7])
+                + ",\"screenIds\":[" + screenJson + "],\"artifactUrl\":" + quote(args[7])
                 + ",\"sha256\":" + quote(hash.toString()) + "}";
         PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(
                 Base64.getDecoder().decode(Files.readString(Path.of(args[1])).trim())));

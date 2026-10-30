@@ -1,4 +1,4 @@
-name: Android SDK and demo
+name: Native screen engine
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -11,19 +11,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v5
-      - run: chmod +x gradlew && ./gradlew :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :demo:assembleReleaseAndroidTest :patch:jar
-      - run: ./gradlew :demo:assembleStress :demo:assembleStressAndroidTest :patch:stressJar :patch:bundledStressJar :patch:testStressUnitTest :patch:dependencyPatchJar :patch:embeddedUpgradeJar :patch:fileProbeJar :patch:missingProbeJar :patch:fixedMissingProbeJar :patch:imageProbeJar -PtestBuildType=stress
-      - run: ./gradlew :visual:assembleRelease
+      - run: chmod +x gradlew && ./gradlew :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease --max-workers=2
+      - run: node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
+      - run: node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
+      - run: python3 tools/test_screen_build.py
       - uses: actions/upload-artifact@v4
         with:
-          name: patchrelay-android
+          name: native-screen-engine
           path: |
             sdk/build/outputs/aar/*release.aar
             demo/build/outputs/apk/release/*.apk
-            patch/build/libs/patch.jar
-            visual/build/outputs/apk/**/release/*.apk
+            screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js

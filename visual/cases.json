@@ -1,9 +1,0 @@
-[
-  {"id":"r8host","title":"R8 host","artifact":"bundled"},
-  {"id":"r8patch","title":"R8 patch","artifact":"r8"},
-  {"id":"assets","title":"APK assets","artifact":"bundled"},
-  {"id":"filedata","title":"Private file","artifact":"bundled"},
-  {"id":"missingdep","title":"Missing dependency","artifact":"thin"},
-  {"id":"newdep","title":"New dependency","artifact":"bundled"},
-  {"id":"upgrade","title":"Dependency upgrade","artifact":"bundled"}
-]

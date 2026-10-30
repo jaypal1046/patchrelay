@@ -1,36 +1,20 @@
 plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
 android {
-    useLibrary 'android.test.runner'
-    useLibrary 'android.test.base'
-    namespace 'dev.patchrelay.demo'
+    namespace 'dev.patchrelay.screens.demo'
     compileSdk 35
     defaultConfig {
-        applicationId 'dev.patchrelay.demo'
+        applicationId 'dev.patchrelay.screens.demo'
         minSdk 26
         targetSdk 35
-        versionCode 4
-        versionName '0.4.0'
-        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+        versionCode 1
+        versionName '0.1.0'
         buildConfigField 'String', 'PATCH_PUBLIC_KEY', '"' + file('patch-public-key.txt').text.trim() + '"'
-        buildConfigField 'String', 'PATCH_MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/latest/download/patch.json"'
-        buildConfigField 'String', 'IMAGE_MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/download/image-assets-test-v1/patch.json"'
+        buildConfigField 'String', 'BASE_VERSION', '"native-screens-v1"'
+        buildConfigField 'String', 'MANIFEST_URL', '"https://github.com/jaypal1046/patchrelay/releases/download/native-screens-v1/patch.json"'
     }
     buildFeatures { buildConfig true }
-    testBuildType providers.gradleProperty('testBuildType').getOrElse('release')
-    buildTypes {
-        release { minifyEnabled false; signingConfig signingConfigs.debug }
-        stress {
-            initWith release
-            applicationIdSuffix '.stress'
-            minifyEnabled true
-            matchingFallbacks = ['release']
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'stress-rules.pro'
-        }
-    }
+    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
 }
-dependencies {
-    implementation project(':sdk')
-    stressImplementation 'com.google.code.gson:gson:2.8.9'
-}
+dependencies { implementation project(':sdk') }

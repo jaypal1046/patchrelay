@@ -1,0 +1,14 @@
+plugins { id 'org.jetbrains.kotlin.multiplatform' }
+kotlin {
+    jvm { compilations.all { kotlinOptions.jvmTarget = '17' } }
+    js(IR) {
+        moduleName = 'PatchRelayScreens'
+        nodejs()
+        binaries.executable()
+        compilations.all { kotlinOptions.moduleKind = 'plain' }
+    }
+    sourceSets {
+        commonTest { dependencies { implementation kotlin('test') } }
+        jvmTest { dependencies { implementation kotlin('test-junit') } }
+    }
+}

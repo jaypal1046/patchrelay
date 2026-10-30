@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$Tag,
     [Parameter(Mandatory=$true)][string]$NotesFile,
     [switch]$PreRelease,
-    [string[]]$Files = @('demo/build/outputs/apk/release/demo-release.apk', 'sdk/build/outputs/aar/sdk-release.aar', 'dist/classes.dex', 'dist/patch.json')
+    [Parameter(Mandatory=$true)][string[]]$Files
 )
 $ErrorActionPreference = 'Stop'
 if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Expected GitHub owner/repository' }
@@ -19,7 +19,7 @@ if (!$token) {
 if (!$token) { throw 'No GitHub credential available' }
 $headers = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json' }
 $api = "https://api.github.com/repos/$Repository/releases"
-$body = @{ tag_name = $Tag; target_commitish = 'main'; name = "PatchRelay $Tag — Android prototype"; body = $notes; draft = $true; prerelease = [bool]$PreRelease } | ConvertTo-Json
+$body = @{ tag_name = $Tag; target_commitish = 'main'; name = "PatchRelay $Tag — native screen prototype"; body = $notes; draft = $true; prerelease = [bool]$PreRelease } | ConvertTo-Json
 $release = Invoke-RestMethod $api -Method Post -Headers $headers -ContentType application/json -Body $body
 # Failed uploads leave a draft; no incomplete release becomes publicly downloadable.
 foreach ($file in $Files) {

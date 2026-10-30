@@ -1,47 +1,36 @@
-# Architecture
+# Native screen engine
 
-PatchRelay currently targets native Android apps written in Java or Kotlin. Both share Android's DEX runtime and one SDK. React Native and Flutter are outside project scope; iOS native support remains unimplemented.
+Current scope: a native Android host renders supported Kotlin-authored replacement screens. No DEX loading, React Native or Flutter runtime remains in the active project.
 
-The existing DEX updater is an experimental direct-distribution mechanism. Downloading executable DEX outside Play conflicts with Google Play's published restriction. A Play-compatible replacement for arbitrary installed Java/Kotlin code has not been implemented.
+## Build side
 
-## Ownership
+1. The developer supplies the local project and an exact release baseline.
+2. Native/asset/compiler source hashes are compared with the baseline; unsupported changes fail the build. Text line endings are normalized across Windows/Linux.
+3. Changed files under the supported common Kotlin screen module are identified. The whole module is compiled with Kotlin/JS, including its used shared logic.
+4. Tests validate the exported functions, tree contract and intended behavior. A schema-3 manifest signs app/base identity, engine API, stable screen IDs, version, artifact URL and SHA-256.
 
-| Location | Responsibility |
-| --- | --- |
-| `sdk/` | HTTPS download, signature/compatibility verification, DEX staging, activation and startup rollback; distributed as one AAR |
-| `tools/Publisher.java` | Signing keys and schema-1 DEX manifest production |
-| `tools/PatchBuild.psm1` | Shared DEX compilation and signing commands |
-| `tools/build-patch.ps1` | Normal Android patch build entry point |
-| `tools/publish-github.ps1` | Release hosting, separate from on-device activation |
-| `demo/` | Native Android integration and visible image test |
-| `patch/` | Example implementation and stress-test fixtures |
-| `visual/` | Historical separate-app comparison fixtures |
-| Other `tools/build-*.ps1` | Scenario-specific checks using shared build commands |
+This first tool is explicitly configured for this repository. It is not a compiler plugin that automatically discovers or rewrites arbitrary existing Android screens.
 
-Verification helpers live inside `sdk/`; apps do not need a separate core AAR. Existing `dev.patchrelay.Patch` and `PatchRelay` contracts, schema-1 manifests, and native release URLs remain unchanged.
+## Device side
 
-## Update lifecycle
+The application owns one `ScreenUpdates` instance and prepares a selected `ScreenProgram` on a worker thread. Every Activity, including restored Activities, uses that same selection. It falls back to the packaged program when there is no usable patch.
 
-1. Host provides app identity, exact native base compatibility identifier, trusted signing key and HTTPS manifest URL.
-2. Verify the signed payload before trusting metadata; reject incompatible bases and non-increasing versions.
-3. Download bounded DEX bytes, verify SHA-256 and stage durably for the next process launch.
-4. Load the prepared implementation through the stable `Patch` interface. Confirm health only after exercising patched startup.
-5. Restore the previous or built-in implementation after unconfirmed startup or failed loading. Preserve the accepted-version high-water mark.
+`ScreenEngine` executes the program in a hidden local WebView. It calls the compiler's exported `renderScreen` and `handleEvent` functions asynchronously. There is no JavaScript interface exposing Android objects. Network/file/content access and external navigation are disabled.
 
-Schema **1** contains `schema`, `apiVersion`, `appId`, `baseVersion`, `version`, `entryPoint`, `artifactUrl` and `sha256`. The envelope contains Base64 `payload` and `signature`; sign exact UTF-8 payload bytes using SHA256withRSA. Unsupported schemas are rejected.
+The interpreter returns a JSON column containing text and button nodes. `ScreenTrees` rejects wrong screen IDs, unknown widget types/fields, malformed actions, excessive widgets or oversized output. `NativeScreenRenderer` builds a detached native view tree; the host swaps it in only after successful validation/construction. Native clicks invoke program event handling, which returns the next tree.
 
-## Boundaries
+The baseline screen's Kotlin logic is replaced through the program boundary; installed native methods and renderer implementations are not rewritten. The base contains both renderer and interpreter integration from the first release.
 
-This is prepared-interface patching, not arbitrary method replacement. APK-embedded dependencies remain parent-first. New manifest components, permissions and unsupported native changes require a new base app. Image updates use an explicit downloaded overlay rather than mutating APK resources.
+## Versioning and trust
 
-Health confirmation covers startup. Later failures need app-managed handling or a corrective patch. Code rollback does not undo files, databases or external side effects. One designated app process only; key rotation/revocation and broader device compatibility remain pending.
+Downloaded scripts are limited to 2 MiB. HTTPS transport is bounded. RSA signatures authenticate exact payload bytes before compatibility metadata is trusted; SHA-256 authenticates the script. Schema 3, runtime `kotlin-screen-js`, screen API 1 and the registered screen set are required. Earlier manifest formats are rejected.
 
-## Packaging verification
+Stage now, activate on the next process start. Atomic script/metadata writes occur before the accepted version and pending state are committed. Interrupted unaccepted files can be replaced on retry. Active files cannot be replaced by replaying an accepted version. The script is authenticated again before startup execution.
 
-After building `:patch:jar`, run on Windows:
+Startup remains unconfirmed until a valid native tree renders. Failures prepare the previous or bundled program; a renderer timeout requires restarting the process. The Activity owns and disposes the WebView and timers. A process killed before confirmation conservatively rolls back next time.
 
-```powershell
-.\tools\test-patch-build.ps1 -AndroidSdk $env:ANDROID_HOME
-```
+A signed program has trusted authority over its supported UI; signing keys must be protected. Limits and disabled WebView features reduce exposure but are not a complete isolation guarantee. The prototype has no key rotation/revocation, persistent program state or general transaction rollback.
 
-The self-check creates local test keys and verifies DEX generation, signatures, metadata and signed-output overwrite protection. It does not upload releases or install apps.
+## Unchanged hard boundary
+
+A bug in the installed engine, unsupported native widget/capability or an unintegrated native screen still needs a new native base. Kotlin source must use this supported screen API; existing Android Compose/Activity code does not automatically become patchable. Platform/store eligibility remains unverified.

@@ -1,107 +1,60 @@
-# PatchRelay
+# PatchRelay Screens
 
-**Structure:** [architecture and runtime boundaries](docs/architecture.md). `sdk/` contains the Java/Kotlin DEX updater and its verification helpers. `demo/`, `patch/`, and `visual/` contain examples/test fixtures. Build scripts share DEX packaging and signing through `tools/PatchBuild.psm1`. The current target is native Android Java/Kotlin; Flutter and React Native are outside project scope. iOS native support remains unimplemented.
+Experimental replacement screens for native Android apps, authored in Kotlin and delivered from GitHub as signed interpreted programs. React Native, Flutter, downloaded DEX and native-library patching are not implemented targets.
 
-Native Android testing uses **one base app**, with successive patches downloaded from GitHub. Finish and verify one case before publishing the next. The earlier [separate-app comparison pack](docs/visual-pairs.md) is historical testing material.
+The current proof replaces a checkout screen with two bugs: a missing payment button and an incorrect total. The developer changes only `screens/src/commonMain/kotlin/Checkout.kt`. Kotlin/JS compiles the supported screen module; the installed interpreter returns a validated widget tree and the Android renderer creates native TextViews and Buttons. Events travel back to the Kotlin-authored program. This is a small supported screen API, not an automatic converter for existing Activity or Android Compose code.
 
-[Sequential phone results and original test-case numbering](docs/sequential-phone-tests.md): file changes, bundled new dependencies and R8 patches are verified in the same app. Test 5's missing class was reproduced in patch 9 and fixed by bundling Codec in patch 10, now the normal update. Test 7 still shows that bundling a newer runtime does not replace an APK-embedded runtime. Test numbers and patch versions are tracked separately.
+## Structure
 
-Self-hosted app updates, delivered from GitHub Releases or your own HTTPS server.
+- `screens/`: Kotlin screen logic and the small text/button/column API; compiled to one standalone JS program.
+- `sdk/`: signed staging, compatibility checks, startup fallback, local interpreter and native widget renderer.
+- `demo/`: native screen host. Its checked-in `baseline-screen.js` contains the original buggy screen; current Kotlin source contains the fix.
+- `tools/screens.py`: base snapshot and patch builder. It detects changed screen source files, rejects native/asset/compiler changes, then compiles the supported module.
+- `tools/Publisher.java`: RSA signing; schema 3 explicitly targets `kotlin-screen-js` and registered screen IDs.
 
-**Experimental Android prototype written in Kotlin, callable from Java.** Patches replace implementations behind an interface integrated into the original app. No APK installation is needed for these prepared code paths. This is not arbitrary Java/Kotlin method replacement, a compiler plugin, or a universal native patcher.
+[Architecture and limitations](docs/architecture.md). [Phone verification](docs/screen-engine-verification.md).
 
-## Current scope
+## Build and check
 
-- Android 8+ Kotlin SDK, callable from Java.
-- Separate Kotlin patch compilation into DEX; Kotlin runtime dependencies ship in the original app.
-- RSA-3072 signed manifests; SHA-256 artifact verification; pinned public key in the installed app.
-- App ID, exact base build, API version, increasing patch version checks.
-- HTTPS downloads with size/time limits and HTTPS-only redirects.
-- Staging now, activation on next process launch.
-- Unconfirmed launch rolls back on the next launch; failed loading restores prior/built-in implementation.
-- GitHub-hosted demo APK, SDK AAR, patch DEX, signed manifest.
-
-This code-patching mode targets **directly distributed Android apps**. Google Play prohibits downloading executable DEX/JAR/native code outside its update mechanism: [policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en). iOS native support remains unimplemented.
-
-## Build
-
-Requires JDK 17, Android SDK platform 35, build tools 35.0.0. Set `JAVA_HOME` and `ANDROID_HOME`; or set `sdk.dir` in ignored `local.properties`.
+Requires JDK 17, Android SDK 35, Python 3 and Node 20+. Kotlin 1.9.23, AGP 8.6 and Gradle 8.9 are pinned. The app needs an installed Android WebView provider. No React Native runtime, npm packages or downloaded native engine are used.
 
 ```powershell
-.\gradlew.bat :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :patch:jar
+.\gradlew.bat :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease
+node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
+node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
+python tools/test_screen_build.py
 ```
 
-The demo release is **non-debuggable but signed with a development key**, for testing only. Production apps need their own release signing configuration.
+The demo release is non-debuggable and signed with a development key. The native base must be installed once before screen updates work. Its APK still contains normal Android native code; downloaded updates contain interpreted screen code, not DEX.
 
-## Integrate
+## Create a screen patch
 
-Add the SDK AAR and `org.jetbrains.kotlin:kotlin-stdlib:1.9.23` to your Android app (Kotlin projects normally already include the runtime). Define a stable operation contract shared by the built-in implementation and patch. Call from a worker thread, once per process:
-
-```kotlin
-val relay = PatchRelay(context, "your-exact-build-id", publicKeyBase64)
-val logic = relay.start(Patch { operation, input -> originalImplementation(operation, input) })
-val result = logic.invoke("your-operation", input)
-// After the patched startup path has succeeded:
-relay.markHealthy()
-// Stage an update for the next process launch:
-val staged = relay.stage(manifestHttpsUrl)
-```
-
-Use one SDK instance in one designated app process. Persist and retain that instance/implementation across activity recreation. SDK disk/network operations belong on worker threads. `baseVersion` must change whenever native app code or the contract changes. Patch classes must have unique names not already packaged in the app, implement `dev.patchrelay.Patch`, and expose a public no-argument constructor. Do not package another copy of the interface in a patch.
-
-SDK, demo app, and patch implementation use Kotlin. Java interoperability is exercised by the instrumentation tests. The dependency-free signing utility uses Java 17 source-file execution.
-
-## Publish a patch
-
-Generate your own signing keys. The private key must stay outside version control; `.keys/` is ignored. The checked-in demo public key belongs to this repository's demo releases; it cannot sign your patches.
+The repository contains the fixed checkout source and the original base's compatibility snapshot at `demo/release-baseline.json`. With the matching private signing key available locally:
 
 ```powershell
-java tools/Publisher.java keygen .keys/patch-signing.key my-public-key.txt
+python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-screens-patch-1
 ```
 
-Embed your public key in the original app before distribution. To build this demo with a new key, use `demo/patch-public-key.txt` as the public-key output path (move the existing demo public key first; key generation refuses overwrite).
+Use a fresh output directory, increasing version and unique release tag for each later patch, for example `--version 2 --tag native-screens-patch-2`. Existing signed outputs are not overwritten. The example's functional checker currently expects the demonstrated checkout fix; adapt its assertions for intentional future behavior changes.
 
-Change the implementation in `patch/`, then:
+The builder checks source content, not filenames alone. It rejects changes to SDK/native host code, manifests, native assets and compiler settings relative to the baseline. Eligible common Kotlin screen code is recompiled as a complete module; this is not a binary delta or arbitrary method extraction.
 
-```powershell
-.\tools\build-patch.ps1 `
-  -ArtifactUrl https://github.com/OWNER/REPO/releases/download/patch-1/classes.dex `
-  -OutputDirectory dist/patch-1
-```
+A new base can be captured with `python tools/screens.py base --out dist/NEW_BASE` while the screen source is in its baseline state. The example checks expect the deliberately buggy baseline. Allocate a new base compatibility ID in the host and publisher workflow for each incompatible native release; this prototype is pinned to `native-screens-v1`.
 
-Upload `dist/patch-1/classes.dex` and `dist/patch-1/patch.json` to that GitHub release, using GitHub's website or `gh release create`. App fetches `https://github.com/OWNER/REPO/releases/latest/download/patch.json`. A regular HTTPS server can serve the same two files without GitHub. Publish artifacts before exposing the manifest. Keep releases immutable; increment patch versions for fixes and rollbacks.
+## Hosting
 
-`Publisher.java sign` accepts private key, DEX, app ID, exact base version, positive patch version, entry-point class, HTTPS artifact URL, output manifest. Signature covers the exact UTF-8 payload bytes encoded in the envelope; clients verify before interpreting metadata.
+Upload `screens.js` and `patch.json` as immutable assets under the signed release tag. Publish the matching base APK and its snapshot for testing. Only after assets are available, publish the signed manifest to `channels/native-screens-v1.json`. The demo polls that exact raw GitHub channel, separate from historical prototype release channels. Future patches use new artifact tags and a newer signed channel manifest. The SDK can use any HTTPS manifest/artifact host.
 
-## Try the hosted demo
+The private key stays in ignored `.keys/`; the app pins `demo/patch-public-key.txt`. New users must generate their own key pair with `java tools/Publisher.java keygen PRIVATE PUBLIC` and build their base with that public key. Do not replace this repository's demo key without rebuilding the base.
 
-Install the APK from [Releases](https://github.com/jaypal1046/patchrelay/releases). Install once; the patch itself requires no installer.
+## Current boundaries
 
-1. Open PatchRelay Demo. It shows `Original Kotlin logic: hello PatchRelay` and active patch `0`.
-2. Tap **Check for update**. Wait for **Update downloaded and verified**.
-3. Tap **Open app settings to restart**, tap **Force stop**, then reopen PatchRelay Demo from its app icon.
+One screen (`checkout`), one complete program, column/text/button widgets and local click/state behavior. No images, arbitrary native APIs, external navigation, new permissions, dependency updates or general Compose/Activity translation. Demo payment confirmation changes local display state only; it performs no transaction.
 
-The original first patch shows `Patched Kotlin logic: hello PatchRelay`, with active patch `1`. Patch `2` shows a SHA-256 computed by a newly bundled library. Patch `3` shows `Patch 3: R8/ProGuard`, formatted input and the obfuscated helper's runtime name. No second APK installation is needed. The app does not download code until you tap its update button. Install the [v0.3.0 base APK](https://github.com/jaypal1046/patchrelay/releases/download/v0.3.0/demo-release.apk) once; the latest manifest can then move directly to the current compatible patch. The demo's GitHub URL is configured in `demo/build.gradle`; the SDK itself accepts any HTTPS manifest URL.
+WebView is used solely as the local interpreter. It has file/content/network loads disabled, no JavaScript-to-Java interface and no external navigation. Native widgets come from validated program output. Programs are signed trusted code, not arbitrary third-party scripts; this is not a proof of complete sandbox isolation.
 
-## Rollback and limitations
+Health is confirmed after a valid native tree renders. Failed or unconfirmed patched startup falls back, preserving the accepted-version high-water mark. Recovery does not undo persistent app data or external side effects. An interpreter timeout prepares fallback and requires a process restart. State is currently in-memory and resets on restart. One designated process only; key rotation, broad compatibility, resource-exhaustion recovery and production operations need further work.
 
-`markHealthy()` confirms startup only. If a process exits before confirmation, the next launch conservatively treats it as a failed boot, including OS kills. Errors occurring after confirmation require app-managed handling or a newer corrective patch. There is no runtime exception interception or guarantee against every crash. Rollback preserves the highest accepted version so an older downloaded manifest cannot replay a rejected patch.
+Google Play has an interpreter/VM exception conditioned on indirect Android API access and compliance with other policies. This experiment may fit that model; it has not received Play approval. [Google policy](https://support.google.com/googleplay/android-developer/answer/16559646?hl=en).
 
-Patches execute with the app's full privileges; signing keys are a critical trust boundary. Private signing keys are currently unencrypted local files: protect them with OS access controls and back them up securely. HTTPS servers are untrusted for code authenticity; possession of the signing key authorizes code execution. Key rotation/revocation is not implemented; change pinned keys through a full app release.
-
-Single process only. No background scheduler, automatic method instrumentation, native library/permission updates, patch history cleanup, or app-data migration rollback. Patch files remain in internal storage; remove obsolete builds through app maintenance. App state and external side effects are not rolled back. Keep patched operations compatible and avoid destructive migrations.
-
-## Verification
-
-[Complex Kotlin test results](docs/complex-patch-tests.md): R8 host/patch compatibility, APK assets, app-private file changes, new dependencies, and existing dependency upgrades. Seven stress tests confirm both working features and current limits.
-
-Unit tests reject altered metadata and wrong signing keys. Android instrumentation tests exercise actual DEX loading in a non-debuggable app, restart persistence, unconfirmed-boot rollback, tampered DEX/manifest rejection, base-version changes, HTTP rejection, and main-thread protection.
-
-Instrumentation fixtures are signed using the demo key and embedded only in the test APK. Matching fixtures are checked in at `demo/src/androidTest/assets/`. Do not regenerate the demo public key without regenerating these fixtures. `PatchRelayTest` runs offline; `HostedPatchTest` additionally downloads the public demo release.
-
-## Roadmap
-
-1. Prove Android prepared-code patching and rollback on release builds.
-2. Add build-time Java/Kotlin instrumentation only after defining compatible changes.
-3. Investigate a separately designed Play-compatible native-app update model; the current DEX mode remains for direct distribution.
-4. Research iOS native support separately; no promise of unrestricted native patching or store acceptance.
+Earlier updater experiments remain in Git/release history; they are not part of the active SDK.

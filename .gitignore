@@ -9,3 +9,4 @@ dist/
 node_modules/
 # Retired example's ignored local caches and generated files.
 examples/react-native/
+__pycache__/
