@@ -1,52 +1,146 @@
-# Native screen runtime — API 2
+# Architecture and flows
 
-## Build contract
+[README](../README.md) · [Integration](integration.md) · [Release workflow](release-workflow.md) · [Verification](production-readiness.md)
 
-`runtime.json` owns application ID, base version, registered screen IDs, channel and native fingerprint inputs. Gradle and the Python builder compute identical sorted path/content hashes, normalizing text CRLF to LF. The host fingerprint includes the bundled program, renderer, manifest, build settings and public key.
+Current host: `native-back-v1`, APK 0.4.0. Manifest schema 3, screen API 2, runtime `kotlin-screen-js`. The Back-action extension requires the new host fingerprint; it does not retrofit the older 0.3.0 host.
 
-A format-3 baseline records native and screen source hashes, host fingerprint and APK/program hashes. A patch build rejects added, changed or removed native inputs. Changed supported Kotlin screen sources compile as one Kotlin/JS program; this is neither a binary delta nor automatic method extraction.
+## Three separate pieces
 
-Schema-3 signed metadata binds runtime `kotlin-screen-js`, API 2, app/base identity, host fingerprint, registered screen IDs, positive version, artifact URL and SHA-256. The runtime authenticates exact payload bytes before using metadata. API-1 manifests do not activate in API 2. The SDK's API version is fixed by its implementation; configuration cannot claim unsupported capabilities.
+1. **Native host + SDK:** installed Android code owns widgets, platform callbacks, update storage and the interpreter.
+2. **Supported Kotlin module:** compiles to one complete JS program containing screen behavior and selected function replacements.
+3. **Release tooling/host:** compares sources against a base, compiles/tests/signs the program and publishes bytes over HTTPS.
 
-## Runtime boundaries
+The example checkout is a consumer of the SDK. It is not the library API itself. React Native, Flutter, iOS and downloaded DEX/native-library patching are not active targets.
 
-One application-owned `ScreenUpdates` selects a program on a worker thread. HTTPS downloads are bounded; scripts are limited to 2 MiB. Atomic script/metadata writes precede accepted-version and pending-state commits. Versions cannot replay over the accepted high-water mark. Persisted scripts are verified again at startup.
+## Build flow
 
-The interpreter is a hidden, local Android WebView without a JavaScript interface or network/file/content access. It calls:
+```mermaid
+flowchart TD
+    B[Released base snapshot] --> G[Compare declared native files]
+    K[Edited supported Kotlin] --> G
+    G -->|Native host/assets/compiler differ| X[Require new base APK]
+    G -->|Compatible| C[Compile entire Kotlin/JS module]
+    C --> T[Run common and compiled-program checks]
+    T --> S[Hash script and sign metadata]
+    S --> V[Immutable artifact release]
+    V --> M[Publish signed channel manifest last]
+```
 
-- `renderScreen(screenId): String`
-- `handleEvent(screenId, action, value): String`
+`runtime.json` configures the example app ID, base version, registered screens, channel and native fingerprint inputs. Gradle and Python hash the same sorted path/content map, normalizing text CRLF to LF. The host fingerprint includes installed SDK/host sources, packaged baseline, public key and declared build settings.
 
-Both return a JSON screen tree. Events carry an action plus optional string value. A bounded FIFO coalesces adjacent field changes without crossing clicks. Intermediate queued results are validated but not displayed, preventing old results from resetting newer typing.
+The format-3 baseline records native-file hashes, screen-source hashes, host fingerprint and APK/program SHA-256 values. Added, changed or removed native inputs reject a patch build. Changed common Kotlin files are reported, but the **whole module** is compiled. No compiler plugin discovers or rewrites arbitrary functions.
 
-The runner proof also exports `patchedFunctionIds(): String` (JSON ID array) and `invokePatch(id, first, second): String` (integer result). `IntPatchRunner` validates the declared IDs against prepared native hooks. Calls without bindings use the installed Kotlin body; bound calls use JS. Native code is not overwritten. Supported arguments/results are two 32-bit integers and one 32-bit integer, delivered through a callback. Hooks are explicit, not compiler-generated.
+This fingerprint represents declared source/build inputs, not a complete reproducible toolchain or binary APK identity. APK hashes are recorded separately.
 
-`ScreenInterpreter` owns one WebView and a bounded serial call queue shared by screen rendering and function calls. It closes with the Activity. A registered patch error takes the program failure path; it does not automatically invoke the native body after possible side effects.
+## Download and activation
 
-## UI contract
+```mermaid
+sequenceDiagram
+    participant App as Native application
+    participant Store as ScreenUpdates
+    participant Host as GitHub or HTTPS server
+    participant Engine as Interpreter and renderer
+    App->>Store: start(bundled) once on worker
+    Store-->>App: selected program
+    App->>Engine: execute selected program
+    App->>Store: markHealthy after required startup succeeds
+    App->>Store: stage(channel URL) on worker
+    Store->>Host: download signed manifest
+    Store->>Store: verify signature and compatibility
+    Store->>Host: download program
+    Store->>Store: verify hash, UTF-8 and persist atomically
+    Store-->>App: pending version
+    Note over App,Store: Activate on next process start
+```
 
-The root identifies a registered screen and contains a column. Its optional `backAction` is validated with the same action-ID rules as controls; absent means native root behavior. The engine stores the latest rendered action and exposes `back()` for the host. Back during a pending tree update is consumed to avoid acting on a stale page. The example bridges both legacy Back and Android 13+ platform callbacks, enabling the latter only for non-root trees and disposing registrations with the Activity. This requires the `native-back-v1` host; older host fingerprints remain incompatible.
+Signature verification authenticates exact payload bytes before metadata is trusted. Metadata binds app ID, base ID, host SHA-256, screen API, runtime, registered screen set, positive patch version, artifact URL and script SHA-256. Storage is scoped by base ID plus host fingerprint. The screen set must match exactly; IDs are not wildcard permissions.
 
-Every child has a unique stable ID. Supported nodes:
+The accepted-version high-water mark rejects replay/downgrade. Script and metadata files are written with `AtomicFile` before pending/accepted state is committed. Interrupted unaccepted files can be overwritten on retry. Persisted metadata and script are authenticated again before execution. This is not one transactional filesystem/database operation.
 
-| Node | Fields beyond id/type |
+## Screen execution
+
+```mermaid
+flowchart LR
+    E[Native click or input] --> Q[Ordered event queue]
+    Q --> K[Kotlin-authored JS handler]
+    K --> J[JSON tree]
+    J --> V[Strict schema validation]
+    V --> R[Keyed native Android views]
+    R --> E
+```
+
+`ScreenInterpreter` owns one hidden local WebView and a serial request queue. Only the installed wrapper can call its supported exports:
+
+| Export | Result |
+| --- | --- |
+| `renderScreen(screenId)` | JSON screen tree as a string |
+| `handleEvent(screenId, action, value)` | Next JSON screen tree as a string |
+| `patchedFunctionIds()` | JSON array of function IDs as a string |
+| `invokePatch(id, first, second)` | Decimal integer result as a string |
+
+WebView is not the visible UI. File/content/network loads and external navigation are disabled; no JavaScript-to-Java interface is installed. JS arguments are serialized through the wrapper, not interpolated as raw user code. Signed programs are still trusted code; these measures do not prove complete isolation from resource exhaustion or provider bugs.
+
+Native HTTPS downloading is separate from WebView execution. The SDK manifest supplies the Internet permission for that transport; the downloaded JS is not granted a general network or Android-service bridge.
+
+Screen events have an action and optional string value. A separate bounded queue coalesces adjacent updates to the same field without crossing click events. Intermediate results are validated but only the latest queued result is displayed, reducing stale text replacement.
+
+## Native function selection
+
+```mermaid
+flowchart TD
+    C[Native caller with prepared function ID] --> R[IntPatchRunner]
+    R -->|No JS binding| N[Original compiled Kotlin body]
+    R -->|Matching registered binding| J[Interpreted JS replacement]
+    N --> O[Callback result]
+    J --> O
+```
+
+Hooks and matching exports are handwritten. The runner validates unique declared IDs against registered native hooks. The implemented contract is callback-based `(Int, Int) -> Int`, not arbitrary Kotlin objects, native instances or suspend functions. An unpatched call can complete its callback immediately; a JS call completes asynchronously.
+
+The runner does not overwrite native methods or compare source code on the device. JS failure does not silently rerun the original body after possible side effects. It reaches the host's failure/recovery path.
+
+## UI and Back contract
+
+The root contains `screenId`, `type: column`, `children` and optionally `backAction`. Each widget has a stable, globally unique ID.
+
+| Node | Additional fields |
 | --- | --- |
 | column, row, card | children |
 | text | text, style: title/body/caption/error |
-| button | text, action, enabled |
-| input | text (accessible label/hint), value, action, enabled |
-| toggle | text, checked, action, enabled |
+| button | text, action, optional enabled |
+| input | text label/hint, value, action, optional enabled |
+| toggle | text label, action, optional checked/enabled |
 
-Unknown types or fields, duplicate IDs, incorrect primitive types and malformed actions fail validation. Limits: 64 KiB tree, 128 nodes, depth 8, 32 children/layout, 1,024 characters/text or input. Rows use equal-width children. Layout spacing and card appearance belong to the installed renderer.
+Unknown fields/types, duplicate IDs, wrong primitive types and malformed actions fail validation. Limits:
 
-`NativeScreenRenderer` retains views by ID and type, reconciles child ordering and updates properties. Unchanged input text is not assigned again; program-driven replacements clamp selection. Model application suppresses input callbacks. Removing a field or changing its type can lose focus. No state survives process restart.
+| Boundary | Limit |
+| --- | --- |
+| Manifest download | 64 KiB |
+| Program download | 2 MiB |
+| Tree text | 65,536 characters |
+| Nodes / depth / children per layout | 128 / 8 / 32 |
+| Widget text / input value | 1,024 characters |
+| Queued screen events / interpreter requests | 64 each |
+| Function bindings | Up to 64 registered IDs |
+| Interpreter operation timeout | 10 seconds |
+| HTTPS connect/read timeout | 15 / 20 seconds |
 
-## Activation and recovery
+Rows distribute width equally; styling/spacing are installed renderer behavior. The renderer reuses views by ID and type, reconciles children, avoids setting identical input text and suppresses callbacks during model updates. Removing/changing a field can lose its focus or cursor.
 
-Stage now; activate next process start. Storage identity includes base version and host fingerprint. An unconfirmed patched startup rolls back. The runner demo records health after the initial validated tree attaches and the prepared function routes return successfully, not after every future interaction. Runtime event/function failures may also trigger fallback; no transaction/data rollback is provided. Timeouts prepare fallback and require restart.
+A validated `backAction` names an ordinary event. `ScreenEngine.back()` dispatches the latest rendered action, consumes Back while a tree update is pending and returns false for native root handling. The host wires legacy Back and Android 13+ platform callbacks; newer callbacks are enabled only for non-root trees and removed on root, failure or destruction. Keyboard Back is handled by Android before page navigation in the verified phone case.
 
-The Activity owns and closes its interpreter and timeout callbacks. Native view construction failures take the same recovery path. Resource exhaustion or WebView/provider failures remain operating risks.
+The sample flow maps Details → Cart, Review → Details, Receipt → Cart. Cart has no handler. This is program-managed navigation inside one registered screen, not an Android Navigation/Compose back stack.
 
-## Native boundary
+## State, health and failure
 
-The installed renderer cannot fix itself through a screen patch. Unsupported native widgets, dependencies, permissions and unintegrated native screens need a new base APK. Existing Android Compose/Activity source does not automatically compile to this API.
+One application-owned `ScreenUpdates` instance selects the program once per designated process. Activities reuse that selection but own/dispose their interpreters. Closing/recreating the interpreter resets JS globals; patch persistence is different from cart/form persistence.
+
+The demo confirms health only after its first validated native tree attaches and prepared function routes return successfully. This is not proof of all later events or business behavior.
+
+- Unconfirmed patched startup restores previous/bundled code on next start.
+- Runtime failure calls `onFailure`; the host must close the engine, run `reject` on a worker and use the selected fallback.
+- The demo permits one recovery attempt; an interpreter timeout prepares fallback and asks for process restart.
+- Highest accepted version remains preserved. Repointing the channel to an older patch does not remotely roll devices back; a corrective program needs a newer patch version.
+- No recovery undoes database writes, network operations, payments or other external effects.
+
+Key rotation/revocation, durable state migration, multi-process coordination, staged rollout/telemetry and broad failure recovery remain unimplemented or unverified. See the [test matrix](production-readiness.md#broader-test-matrix).

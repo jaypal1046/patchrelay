@@ -1,91 +1,102 @@
-# PatchRelay Screens
+# PatchRelay
 
-Signed replacement screens for native Android apps, authored through a small Kotlin screen API. Kotlin/JS produces an interpreted program; installed Android widgets render its validated output. No downloaded DEX, React Native or Flutter runtime.
+An experimental Android SDK for updating **supported Kotlin-authored screens and prepared function logic** through signed, interpreted JavaScript programs.
 
-**Experimental.** V1 passed a real-phone download, activation and restart test. API 2 adds richer UI and stronger compatibility checks; its form, input/cursor behavior and restart persistence also passed on that phone. Existing Activity/Android Compose screens must be integrated with this API; arbitrary Kotlin methods are not patchable.
+PatchRelay is intended to be a dependency inside a developer's app. The included app is a test host, not the product. Developers keep writing supported Kotlin; Kotlin/JS compiles the patch module, and the installed SDK executes it.
 
-## Components
+**Status:** working prototype, verified on one RMX2117 / Android API 31 phone. Not a general Kotlin/Compose hot-patcher, not production-ready, and not published on Maven Central.
 
-- `screens/`: screen logic, JSON screen API and common Kotlin tests.
-- `sdk/`: downloads, signatures, staging/fallback, interpreter, validation and native rendering.
-- `demo/`: native host and bundled baseline program.
-- `runtime.json`: app/base identity, channel, screen IDs and native compatibility inputs.
-- `tools/screens.py`: release snapshots and compatible patch builds.
-- `tools/Publisher.java`: dependency-free RSA signer.
+## Read the docs
 
-API 2 supports nested columns, rows and cards; styled text; text inputs; checkboxes; enabled/disabled buttons. Stable widget IDs preserve native views, focus and cursor during ordinary updates. Input events queue in order; adjacent changes to the same field are coalesced. Only the latest queued result is rendered.
+| Guide | Contents |
+| --- | --- |
+| [Developer integration](docs/integration.md) | What developers must change, actual SDK APIs, lifecycle, Back and function hooks |
+| [Architecture and flows](docs/architecture.md) | Build/runtime diagrams, contracts, trust, compatibility and recovery |
+| [Build and publishing](docs/release-workflow.md) | Base → patch → GitHub channel, personal hosting, SDK distribution |
+| [Verification and remaining work](docs/production-readiness.md) | Current phone evidence, historical versions, test matrix and limits |
+| [Historical API-2 test](docs/api-2-phone-verification.md) | Archived 0.2.0 form/cursor proof; not the current integration guide |
 
-[Architecture](docs/architecture.md) · [Phone proof](docs/api-2-phone-verification.md) · [Production readiness](docs/production-readiness.md)
+## What we are building
+
+```mermaid
+flowchart LR
+    K[Supported Kotlin module] --> C[Kotlin/JS build]
+    C --> P[Signed JS program on HTTPS host]
+    P --> S[Installed PatchRelay SDK]
+    S --> U[Validated tree rendered as native Android widgets]
+    A[Native app calls prepared function ID] --> R[SDK runner]
+    R --> N[Original Kotlin when no binding exists]
+    R --> J[JS replacement when matching binding exists]
+```
+
+The first APK must include the SDK, original program and required native hooks. Installing the dependency alone does not make existing functions or Compose screens patchable.
+
+| Supported now | Boundary |
+| --- | --- |
+| Columns, rows, cards, styled text, inputs, checkboxes and enabled controls | Installed renderer's supported widgets only |
+| Program-managed Cart → Details → Review → Receipt flow | Inside a registered screen; not Android Navigation/Compose conversion |
+| Stable view IDs, input updates, ordered/coalesced events | Screen state lives in memory; no durable restoration |
+| Android Back routes declared by the program | Requires host Back integration, included in the 0.4.0 demo |
+| Native fallback or JS replacement selected by stable function ID | Handwritten callback hooks; only `(Int, Int) -> Int` |
+| Signed staging, exact host compatibility and startup fallback | Recovery is bounded; no business-data rollback or rollout service |
+
+No downloaded DEX/JAR/native-library updates are used. Assets, dependencies, permissions, installed renderer/SDK changes and unsupported native capabilities are outside the patch scope.
+
+## Current example
+
+| Item | Value |
+| --- | --- |
+| App | PatchRelay Screens — `dev.patchrelay.screens.demo` |
+| Base APK | 0.4.0 / version code 4 |
+| Compatibility ID | `native-back-v1` |
+| Runtime / screen API / manifest schema | `kotlin-screen-js` / 2 / 3 |
+| Base APK and patch 1 | [native-back-v1-patch-1](https://github.com/jaypal1046/patchrelay/releases/tag/native-back-v1-patch-1) |
+| Polled channel | [native-back-v1/patch.json](https://github.com/jaypal1046/patchrelay/releases/download/native-back-v1/patch.json) |
+| Verified runtime commit / CI | `b251eb0` / [passing build](https://github.com/jaypal1046/patchrelay/actions/runs/41062087592) |
+
+The bundled baseline is a simpler checkout with original native calculation `3 + 100 = 103`. The patch adds the multi-page flow and binds `checkout.total.v1` to multiplication, returning 300. An unpatched shipping helper still returns 15 through Kotlin. Payment confirmation is local demo state, not a real payment.
+
+Phone checks passed download/activation, native/JS routing, forms, navigation, state retention within the running program, keyboard dismissal and system Back. One authorized native APK update installed Back support; the subsequent flow download kept that APK hash and install timestamps unchanged.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `sdk/` | Android library: updater, verifier, interpreter, renderer and function runner |
+| `screens/` | Example patchable Kotlin module and screen-building helpers |
+| `demo/` | Example native host, pinned public key, bundled program and base snapshot |
+| `tools/` | Project-specific build/sign/publish commands and checks |
+| `runtime.json` | Example app/base identity, channel, screen IDs and compatibility inputs |
+| `channels/` | Signed manifest audit copies; the app polls GitHub Releases instead |
+| `docs/` | Integration, architecture, publishing and verification |
+
+Only `:sdk`, `:screens` and `:demo` are active Gradle modules. Retired local generated directories, if present, are not part of the product. Signing keys stay in ignored `.keys/`; local test captures/build outputs stay in ignored `.tools/` and `dist/`.
 
 ## Build and check
 
-Requires JDK 17, Android SDK 35, Python 3, Node 20+ and an Android WebView provider. Gradle, AGP and Kotlin versions are pinned. No npm runtime dependency.
+Requires JDK 17, Android SDK 35, Python 3, Node 22+ (CI uses 22) and an installed Android WebView provider. Gradle 8.9, AGP 8.6 and Kotlin 1.9.23 are pinned. Android minimum API is 26. No npm runtime dependency is needed.
+
+From the repository root in PowerShell, with JDK/SDK configured:
 
 ```powershell
-.\gradlew.bat :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease
+.\gradlew.bat :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease --max-workers=2
 node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
 node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
 python tools/test_screen_build.py
 python tools/screens.py check-host
 ```
 
-The demonstration APK uses a development signing key. A new base APK is required when installed runtime capabilities change. The Back integration needs version 0.4.0, base `native-back-v1`. Historical screen/runner releases remain unchanged.
+SDK output: `sdk/build/outputs/aar/sdk-release.aar`. Demo output: `demo/build/outputs/apk/release/demo-release.apk`. The demo uses a development signing key.
 
-## Android Back integration
+The committed asset/snapshot describe the baseline; current Kotlin source describes the patch. Do not overwrite the asset or snapshot during a patch build. Follow the [release guide](docs/release-workflow.md) to reproduce a base safely.
 
-The validated root tree may declare an optional `backAction`, such as `back_cart` or `back_details`. `ScreenEngine.back()` dispatches it through the ordinary event queue; while an update is pending, repeated Back is consumed. Without a Back action, the host delegates to Android's normal root behavior.
+## Where to publish
 
-The example host overrides the legacy Back callback and registers an Android 13+ `OnBackInvokedCallback` only for non-root pages. It unregisters on root, failure and Activity disposal. Keyboard dismissal remains handled by Android. The flow declares Details → Cart, Review → Details and Receipt → Cart. Cart declares no handler. See [Android callback guidance](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture).
+- **Developers' original apps:** their normal Android distribution channel.
+- **Signed patches:** GitHub Releases or a personal HTTPS server.
+- **PatchRelay dependency:** a local module/AAR today; Maven Central is a future distribution target, not configured or published.
+- **Source and tools:** this GitHub repository; no public compiler-plugin/CLI package exists yet.
 
-This is a new native integration, not a patch for the 0.3.0 host: update the base once, then deliver page/Back-action changes through compatible signed programs.
+GitHub stores bytes; the device verifies signatures, compatibility and hashes before activation. No PatchRelay-owned hosting service is required.
 
-Verified on RMX2117/API31: first Back dismissed the keyboard without leaving Details; subsequent Back returned Details → Cart. Review → Details retained email/terms, Receipt → Cart worked, and root Back exited normally. Reopening resumed Cart with patch 1 active. After the authorized 0.4.0 setup, the downloaded flow used the same installed APK/hash/timestamps throughout. [Fix release](https://github.com/jaypal1046/patchrelay/releases/tag/native-back-v1-patch-1) · [CI](https://github.com/jaypal1046/patchrelay/actions/runs/41062087592). Android 13+ callback code builds but has not been device-tested.
-
-## Native function runner proof
-
-The original Kotlin implementation remains in the APK. An explicit hook selects it unless a signed program registers a matching stable function ID:
-
-```kotlin
-runner.call("checkout.total.v1", 3, 100, ::originalTotal) { result ->
-    label.text = result.toString()
-}
-```
-
-The baseline has no function patches: original Kotlin returns 103. The downloaded program binds `checkout.total.v1` and returns 300. An unpatched shipping helper still runs Kotlin and returns 15. The installed native label displays these results.
-
-This proof supports asynchronous `(Int, Int) -> Int` calls only. Registration IDs are validated against the installed host; results must be 32-bit integers. JS failures reject the program rather than silently re-running original code, which could duplicate side effects.
-
-Hooks and matching exports are handwritten in this proof. Automatic source comparison at function level, compiler-generated hooks, arbitrary objects/Android calls and Compose replacement are not implemented. The screen and function runner share one local interpreter.
-
-Phone verification, 2026-10-30, RMX2117/API31: the base displayed 103 through original Kotlin. After verified GitHub download and user restart, the same native label displayed 300 through JS; the unpatched helper remained 15. Repeat native calls, checkout quantity events and email typing also passed. A second force-stop/reopen kept patch 1 active with 300 through JS and 15 through Kotlin. The APK hash and install/update timestamps stayed unchanged during activation.
-
-APK SHA-256: `fc09c301b52d5371f6674ba48b2f3dcaadfe49e393f5ca36f56a2ea105936c88`. Local evidence: ignored `.tools/runner-phone/`. [Runner release](https://github.com/jaypal1046/patchrelay/releases/tag/native-runner-v1-patch-1) · [Passing CI](https://github.com/jaypal1046/patchrelay/actions/runs/41056776491). SDK tests cover native fallback, matched-ID routing, mixed native/JS functions and invalid IDs/results; compiled-program checks cover the actual Kotlin/JS exports.
-
-Patch 2 adds a program-managed Cart → Details → Review → Receipt flow to the same base. Compiled checks cover page-specific actions, back/forward form state, quantity bounds, required fields, new-order reset and duplicate local submission. Phone checks passed forward/back-button flow, form/cart retention, validation, native calls between page events, Home/resume, receipt and reset. Android system Back left the app instead of navigating to the previous page; launcher resume retained Details and the draft. See the [broader test matrix](docs/production-readiness.md#broader-test-matrix) for evidence and unresolved cases. This is navigation inside one registered screen, not Android Navigation/Compose integration.
-
-## Release workflow
-
-1. Set the new native release identity and channel in `runtime.json`.
-2. With baseline screen source in place, build a base:
-   `python tools/screens.py base --out dist/native-back-v1-base`.
-3. Preserve its APK and `baseline.json`. Install that base once.
-4. Change only supported screen Kotlin. Build:
-   `python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-back-v1-patch-1 --version 1 --tag native-back-v1-patch-1`.
-5. Upload `screens.js` and `patch.json` to that immutable artifact release.
-6. After artifacts are available, publish the signed `patch.json` at the channel URL. Stage in the app; activate on next process start.
-
-Current source contains the rich checkout and function patch. `demo/fixtures/Checkout.v2.baseline.kt` and `demo/fixtures/Runner.baseline.kt` preserve the baseline sources; use both when building a new base. The example's compiled-program checker asserts checkout/runner behavior; change its assertions when intentionally changing that behavior.
-
-Native source, packaged assets, compiler settings and runtime configuration are hashed. Patches must match the base snapshot. The same host fingerprint is embedded in the APK and signed into each patch, preventing a patch built against another host from activating. This fingerprints the declared source/build contract, not the complete APK binary or a reproducible toolchain. APK hashes are recorded separately.
-
-Signing key stays outside Git in ignored `.keys/`; the public key is pinned in the base. Generate your own pair with `java tools/Publisher.java keygen PRIVATE PUBLIC`. Changing the pinned key requires a new base.
-
-## Boundaries
-
-One checkout demonstration, complete-program replacement, in-memory screen state. No automatic Compose conversion, images, arbitrary native API bridge, dependency updates or new permissions. Payment confirmation is a local demonstration; no real transaction occurs.
-
-Signed programs are trusted code. WebView network/file/content access and external navigation are disabled; no JavaScript-to-Java interface is exposed. These restrictions are not proof of complete isolation.
-
-The current demo confirms health after the initial validated tree is attached and both function routes have returned successfully. Startup fallback does not undo persistent data or external side effects, and late failures can still require a corrective release. Interpreter timeouts require process restart.
-
-Store eligibility remains unverified. See the production-readiness checklist before depending on this system for users.
+Store eligibility has not been established. The interpreter design is not a guarantee of Google Play approval; see [distribution limits](docs/production-readiness.md#distribution-and-security).

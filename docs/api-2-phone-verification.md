@@ -1,5 +1,9 @@
 # API 2 phone verification
 
+**Historical record: example host 0.2.0, base `native-screens-v2`.** These results and test counts describe that release, not the current 0.4.0 host. They are preserved as evidence, not current installation/publishing instructions.
+
+[README](../README.md) · [Current integration](integration.md) · [Current verification](production-readiness.md) · [Release workflow](release-workflow.md)
+
 Date: 2026-10-30. Device: RMX2117, Android API 31. Commit: `9e5acfd`.
 
 ## Artifacts
