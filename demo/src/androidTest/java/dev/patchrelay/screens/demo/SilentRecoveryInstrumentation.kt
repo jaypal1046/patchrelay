@@ -22,13 +22,44 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Tests the real release Activity; fixture patches use ephemeral keys and isolated artifact paths. */
 class SilentRecoveryInstrumentation : Instrumentation() {
-    override fun onCreate(arguments: Bundle?) { super.onCreate(arguments); start() }
+    private var args: Bundle? = null
+    override fun onCreate(arguments: Bundle?) { this.args = arguments; super.onCreate(arguments); start() }
 
     override fun onStart() {
+        val action = args?.getString("action")
+        if (action == "stage_real_patch") {
+            try {
+                stageRealPatch()
+                finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "STAGED_OK\n") })
+            } catch (failure: Throwable) {
+                finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", android.util.Log.getStackTraceString(failure)) })
+            }
+            return
+        }
         try { runChecks() }
         catch (failure: Throwable) {
             finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", android.util.Log.getStackTraceString(failure)) })
         }
+    }
+
+    private fun stageRealPatch() {
+        val app = targetContext.applicationContext as DemoApp
+        val filesDir = app.getExternalFilesDir(null) ?: File("/sdcard/Android/data/dev.patchrelay.screens.demo/files")
+        val patchScript = File(filesDir, "screens.js").readBytes()
+        val patchJson = File(filesDir, "patch.json").readText()
+        val envelope = JSONObject(patchJson)
+        val payload = JSONObject(String(Base64.getDecoder().decode(envelope.getString("payload"))))
+        val host = payload.getString("hostSha256")
+        val base = payload.getString("baseVersion")
+        val version = payload.getLong("version")
+        val identity = "$base:$host"
+        val directory = File(app.noBackupFilesDir, "screen-patches/" + UUID.nameUUIDFromBytes(identity.toByteArray()))
+        directory.mkdirs()
+        File(directory, "$version.js").writeBytes(patchScript)
+        File(directory, "$version.json").writeText(patchJson)
+        val prefs = app.getSharedPreferences("patchrelay-screens", 0)
+        prefs.edit().putString("base", identity).putLong("pending", version).putLong("highest", version).commit()
+        android.util.Log.i("PatchRelayDemo", "Staged real patch $version successfully for base $identity!")
     }
 
     private fun runChecks() {

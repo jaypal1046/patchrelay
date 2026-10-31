@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "runtimeFile": "runtime.json",
+  "repository": "jaypal1046/patchrelay",
+  "signingKey": ".keys/patch-signing.key",
+  "publicKeyFile": "demo/patch-public-key.txt",
+  "screenInputs": [
+    "screens/src/commonMain"
+  ],
+  "compileTasks": [
+    ":screens:jvmTest",
+    ":screens:compileProductionExecutableKotlinJs"
+  ],
+  "baseTasks": [
+    ":demo:assembleRelease"
+  ],
+  "programFile": "screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js",
+  "baselineAsset": "demo/src/main/assets/baseline-screen.js",
+  "apkFile": "demo/build/outputs/apk/release/demo-release.apk",
+  "buildConfigFile": "demo/build/generated/source/buildConfig/release/dev/patchrelay/screens/demo/BuildConfig.java",
+  "outputDir": ".patchrelay/releases"
+}
