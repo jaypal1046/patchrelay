@@ -73,12 +73,12 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(AbstractMutableCollection, 'AbstractMutableCollection', classMeta, AbstractCollection, [AbstractCollection, Collection]);
   setMetadataFor(IteratorImpl, 'IteratorImpl', classMeta);
   setMetadataFor(List, 'List', interfaceMeta, VOID, [Collection]);
-  setMetadataFor(AbstractMutableList, 'AbstractMutableList', classMeta, AbstractMutableCollection, [AbstractMutableCollection, List, Collection]);
+  setMetadataFor(AbstractMutableList, 'AbstractMutableList', classMeta, AbstractMutableCollection, [AbstractMutableCollection, Collection, List]);
   setMetadataFor(Set, 'Set', interfaceMeta, VOID, [Collection]);
-  setMetadataFor(AbstractMutableSet, 'AbstractMutableSet', classMeta, AbstractMutableCollection, [AbstractMutableCollection, Collection, Set]);
+  setMetadataFor(AbstractMutableSet, 'AbstractMutableSet', classMeta, AbstractMutableCollection, [AbstractMutableCollection, Set, Collection]);
   setMetadataFor(Companion, 'Companion', objectMeta);
-  setMetadataFor(ArrayList, 'ArrayList', classMeta, AbstractMutableList, [AbstractMutableList, List, Collection], ArrayList_init_$Create$);
-  setMetadataFor(HashSet, 'HashSet', classMeta, AbstractMutableSet, [AbstractMutableSet, Collection, Set], HashSet_init_$Create$);
+  setMetadataFor(ArrayList, 'ArrayList', classMeta, AbstractMutableList, [AbstractMutableList, Collection, List], ArrayList_init_$Create$);
+  setMetadataFor(HashSet, 'HashSet', classMeta, AbstractMutableSet, [AbstractMutableSet, Set, Collection], HashSet_init_$Create$);
   setMetadataFor(Companion_0, 'Companion', objectMeta);
   setMetadataFor(Itr, 'Itr', classMeta);
   setMetadataFor(KeysItr, 'KeysItr', classMeta, Itr);
@@ -91,7 +91,7 @@ if (typeof Math.imul === 'undefined') {
       // Inline function 'kotlin.collections.all' call
       var tmp;
       if (isInterface(m, Collection)) {
-        tmp = m.q();
+        tmp = m.n();
       } else {
         tmp = false;
       }
@@ -100,15 +100,15 @@ if (typeof Math.imul === 'undefined') {
         break $l$block_0;
       }
       var tmp0_iterator = m.k();
-      while (tmp0_iterator.l()) {
-        var element = tmp0_iterator.m();
+      while (tmp0_iterator.r()) {
+        var element = tmp0_iterator.s();
         // Inline function 'kotlin.collections.InternalMap.containsAllEntries.<anonymous>' call
         // Inline function 'kotlin.js.unsafeCast' call
         // Inline function 'kotlin.js.asDynamic' call
         var entry = element;
         var tmp_0;
         if (!(entry == null) ? isInterface(entry, Entry) : false) {
-          tmp_0 = this.f3(entry);
+          tmp_0 = this.e3(entry);
         } else {
           tmp_0 = false;
         }
@@ -123,14 +123,13 @@ if (typeof Math.imul === 'undefined') {
   }
   setMetadataFor(InternalMap, 'InternalMap', interfaceMeta);
   setMetadataFor(InternalHashMap, 'InternalHashMap', classMeta, VOID, [InternalMap], InternalHashMap_init_$Create$);
-  setMetadataFor(LinkedHashSet, 'LinkedHashSet', classMeta, HashSet, [HashSet, Collection, Set], LinkedHashSet_init_$Create$);
+  setMetadataFor(LinkedHashSet, 'LinkedHashSet', classMeta, HashSet, [HashSet, Set, Collection], LinkedHashSet_init_$Create$);
   setMetadataFor(StringBuilder, 'StringBuilder', classMeta, VOID, [CharSequence], StringBuilder_init_$Create$_0);
   setMetadataFor(Companion_1, 'Companion', objectMeta);
   setMetadataFor(Regex, 'Regex', classMeta);
   setMetadataFor(Companion_2, 'Companion', objectMeta);
   setMetadataFor(Char, 'Char', classMeta);
   setMetadataFor(Map_0, 'Map', interfaceMeta);
-  setMetadataFor(arrayIterator$1, VOID, classMeta);
   setMetadataFor(Companion_3, 'Companion', objectMeta);
   setMetadataFor(Long, 'Long', classMeta, Number_0);
   setMetadataFor(Exception, 'Exception', classMeta, Error, VOID, Exception_init_$Create$);
@@ -140,14 +139,12 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(IllegalStateException, 'IllegalStateException', classMeta, RuntimeException, VOID, IllegalStateException_init_$Create$);
   setMetadataFor(UnsupportedOperationException, 'UnsupportedOperationException', classMeta, RuntimeException, VOID, UnsupportedOperationException_init_$Create$);
   setMetadataFor(NoSuchElementException, 'NoSuchElementException', classMeta, RuntimeException, VOID, NoSuchElementException_init_$Create$);
-  setMetadataFor(ArithmeticException, 'ArithmeticException', classMeta, RuntimeException, VOID, ArithmeticException_init_$Create$);
   setMetadataFor(ConcurrentModificationException, 'ConcurrentModificationException', classMeta, RuntimeException, VOID, ConcurrentModificationException_init_$Create$);
   setMetadataFor(NullPointerException, 'NullPointerException', classMeta, RuntimeException, VOID, NullPointerException_init_$Create$);
   setMetadataFor(ClassCastException, 'ClassCastException', classMeta, RuntimeException, VOID, ClassCastException_init_$Create$);
   setMetadataFor(Companion_4, 'Companion', objectMeta);
   setMetadataFor(Companion_5, 'Companion', objectMeta);
   setMetadataFor(EmptyList, 'EmptyList', objectMeta, VOID, [List]);
-  setMetadataFor(ArrayAsCollection, 'ArrayAsCollection', classMeta, VOID, [Collection]);
   setMetadataFor(EmptyIterator, 'EmptyIterator', objectMeta);
   setMetadataFor(EmptySet, 'EmptySet', objectMeta, VOID, [Set]);
   //endregion
@@ -203,94 +200,60 @@ if (typeof Math.imul === 'undefined') {
   function collectionToArray(collection) {
     return collectionToArrayCommonImpl(collection);
   }
-  function listOf(element) {
-    return arrayListOf([element]);
-  }
   function setOf(element) {
     return hashSetOf([element]);
   }
   function mapCapacity(expectedSize) {
     return expectedSize;
   }
-  function checkIndexOverflow(index) {
-    if (index < 0) {
-      throwIndexOverflow();
-    }
-    return index;
-  }
-  function copyToArray(collection) {
-    var tmp;
-    // Inline function 'kotlin.js.asDynamic' call
-    if (collection.toArray !== undefined) {
-      // Inline function 'kotlin.js.unsafeCast' call
-      // Inline function 'kotlin.js.asDynamic' call
-      tmp = collection.toArray();
-    } else {
-      // Inline function 'kotlin.js.unsafeCast' call
-      // Inline function 'kotlin.js.asDynamic' call
-      tmp = collectionToArray(collection);
-    }
-    return tmp;
-  }
   function AbstractMutableCollection() {
     AbstractCollection.call(this);
   }
-  protoOf(AbstractMutableCollection).i = function (elements) {
-    this.j();
-    var modified = false;
-    var tmp0_iterator = elements.k();
-    while (tmp0_iterator.l()) {
-      var element = tmp0_iterator.m();
-      if (this.h(element))
-        modified = true;
-    }
-    return modified;
-  };
   protoOf(AbstractMutableCollection).toJSON = function () {
     return this.toArray();
   };
-  protoOf(AbstractMutableCollection).j = function () {
+  protoOf(AbstractMutableCollection).i = function () {
   };
   function IteratorImpl($outer) {
-    this.t_1 = $outer;
-    this.r_1 = 0;
-    this.s_1 = -1;
+    this.q_1 = $outer;
+    this.o_1 = 0;
+    this.p_1 = -1;
   }
-  protoOf(IteratorImpl).l = function () {
-    return this.r_1 < this.t_1.n();
+  protoOf(IteratorImpl).r = function () {
+    return this.o_1 < this.q_1.j();
   };
-  protoOf(IteratorImpl).m = function () {
-    if (!this.l())
+  protoOf(IteratorImpl).s = function () {
+    if (!this.r())
       throw NoSuchElementException_init_$Create$();
     var tmp = this;
-    var tmp1 = this.r_1;
-    this.r_1 = tmp1 + 1 | 0;
-    tmp.s_1 = tmp1;
-    return this.t_1.u(this.s_1);
+    var tmp1 = this.o_1;
+    this.o_1 = tmp1 + 1 | 0;
+    tmp.p_1 = tmp1;
+    return this.q_1.t(this.p_1);
   };
   function AbstractMutableList() {
     AbstractMutableCollection.call(this);
-    this.v_1 = 0;
+    this.u_1 = 0;
   }
   protoOf(AbstractMutableList).h = function (element) {
-    this.j();
-    this.w(this.n(), element);
+    this.i();
+    this.v(this.j(), element);
     return true;
   };
   protoOf(AbstractMutableList).k = function () {
     return new IteratorImpl(this);
   };
-  protoOf(AbstractMutableList).o = function (element) {
-    return this.x(element) >= 0;
+  protoOf(AbstractMutableList).l = function (element) {
+    return this.w(element) >= 0;
   };
-  protoOf(AbstractMutableList).x = function (element) {
+  protoOf(AbstractMutableList).w = function (element) {
     var tmp$ret$1;
     $l$block: {
       // Inline function 'kotlin.collections.indexOfFirst' call
       var index = 0;
       var tmp0_iterator = this.k();
-      while (tmp0_iterator.l()) {
-        var item = tmp0_iterator.m();
+      while (tmp0_iterator.r()) {
+        var item = tmp0_iterator.s();
         // Inline function 'kotlin.collections.AbstractMutableList.indexOf.<anonymous>' call
         if (equals(item, element)) {
           tmp$ret$1 = index;
@@ -307,10 +270,10 @@ if (typeof Math.imul === 'undefined') {
       return true;
     if (!(!(other == null) ? isInterface(other, List) : false))
       return false;
-    return Companion_instance_4.z(this, other);
+    return Companion_instance_4.y(this, other);
   };
   protoOf(AbstractMutableList).hashCode = function () {
-    return Companion_instance_4.a1(this);
+    return Companion_instance_4.z(this);
   };
   function AbstractMutableSet() {
     AbstractMutableCollection.call(this);
@@ -320,10 +283,10 @@ if (typeof Math.imul === 'undefined') {
       return true;
     if (!(!(other == null) ? isInterface(other, Set) : false))
       return false;
-    return Companion_instance_5.b1(this, other);
+    return Companion_instance_5.a1(this, other);
   };
   protoOf(AbstractMutableSet).hashCode = function () {
-    return Companion_instance_5.c1(this);
+    return Companion_instance_5.b1(this);
   };
   function arrayOfUninitializedElements(capacity) {
     // Inline function 'kotlin.require' call
@@ -355,8 +318,8 @@ if (typeof Math.imul === 'undefined') {
     var this_0 = ArrayList_init_$Create$_0(0);
     // Inline function 'kotlin.contracts.contract' call
     // Inline function 'kotlin.collections.Companion.Empty.<anonymous>' call
-    this_0.f1_1 = true;
-    tmp.g1_1 = this_0;
+    this_0.e1_1 = true;
+    tmp.f1_1 = this_0;
   }
   var Companion_instance;
   function Companion_getInstance() {
@@ -389,100 +352,66 @@ if (typeof Math.imul === 'undefined') {
   function ArrayList_init_$Create$_0(initialCapacity) {
     return ArrayList_init_$Init$_0(initialCapacity, objectCreate(protoOf(ArrayList)));
   }
-  function ArrayList_init_$Init$_1(elements, $this) {
-    // Inline function 'kotlin.collections.toTypedArray' call
-    var tmp$ret$0 = copyToArray(elements);
-    ArrayList.call($this, tmp$ret$0);
-    return $this;
-  }
-  function ArrayList_init_$Create$_1(elements) {
-    return ArrayList_init_$Init$_1(elements, objectCreate(protoOf(ArrayList)));
-  }
-  function increaseLength($this, amount) {
-    var previous = $this.n();
-    // Inline function 'kotlin.js.asDynamic' call
-    $this.e1_1.length = $this.n() + amount | 0;
-    return previous;
-  }
   function rangeCheck($this, index) {
     // Inline function 'kotlin.apply' call
     // Inline function 'kotlin.contracts.contract' call
     // Inline function 'kotlin.collections.ArrayList.rangeCheck.<anonymous>' call
-    Companion_instance_4.h1(index, $this.n());
+    Companion_instance_4.g1(index, $this.j());
     return index;
   }
   function insertionRangeCheck($this, index) {
     // Inline function 'kotlin.apply' call
     // Inline function 'kotlin.contracts.contract' call
     // Inline function 'kotlin.collections.ArrayList.insertionRangeCheck.<anonymous>' call
-    Companion_instance_4.i1(index, $this.n());
+    Companion_instance_4.h1(index, $this.j());
     return index;
   }
   function ArrayList(array) {
     Companion_getInstance();
     AbstractMutableList.call(this);
-    this.e1_1 = array;
-    this.f1_1 = false;
+    this.d1_1 = array;
+    this.e1_1 = false;
   }
-  protoOf(ArrayList).n = function () {
-    return this.e1_1.length;
+  protoOf(ArrayList).j = function () {
+    return this.d1_1.length;
   };
-  protoOf(ArrayList).u = function (index) {
-    var tmp = this.e1_1[rangeCheck(this, index)];
+  protoOf(ArrayList).t = function (index) {
+    var tmp = this.d1_1[rangeCheck(this, index)];
     return (tmp == null ? true : !(tmp == null)) ? tmp : THROW_CCE();
   };
   protoOf(ArrayList).h = function (element) {
-    this.j();
+    this.i();
     // Inline function 'kotlin.js.asDynamic' call
-    this.e1_1.push(element);
-    this.v_1 = this.v_1 + 1 | 0;
+    this.d1_1.push(element);
+    this.u_1 = this.u_1 + 1 | 0;
     return true;
   };
-  protoOf(ArrayList).w = function (index, element) {
-    this.j();
+  protoOf(ArrayList).v = function (index, element) {
+    this.i();
     // Inline function 'kotlin.js.asDynamic' call
-    this.e1_1.splice(insertionRangeCheck(this, index), 0, element);
-    this.v_1 = this.v_1 + 1 | 0;
+    this.d1_1.splice(insertionRangeCheck(this, index), 0, element);
+    this.u_1 = this.u_1 + 1 | 0;
   };
-  protoOf(ArrayList).i = function (elements) {
-    this.j();
-    if (elements.q())
-      return false;
-    var offset = increaseLength(this, elements.n());
-    // Inline function 'kotlin.collections.forEachIndexed' call
-    var index = 0;
-    var tmp0_iterator = elements.k();
-    while (tmp0_iterator.l()) {
-      var item = tmp0_iterator.m();
-      // Inline function 'kotlin.collections.ArrayList.addAll.<anonymous>' call
-      var tmp1 = index;
-      index = tmp1 + 1 | 0;
-      var index_0 = checkIndexOverflow(tmp1);
-      this.e1_1[offset + index_0 | 0] = item;
-    }
-    this.v_1 = this.v_1 + 1 | 0;
-    return true;
-  };
-  protoOf(ArrayList).x = function (element) {
-    return indexOf(this.e1_1, element);
+  protoOf(ArrayList).w = function (element) {
+    return indexOf(this.d1_1, element);
   };
   protoOf(ArrayList).toString = function () {
-    return arrayToString(this.e1_1);
+    return arrayToString(this.d1_1);
   };
-  protoOf(ArrayList).j1 = function () {
-    return [].slice.call(this.e1_1);
+  protoOf(ArrayList).i1 = function () {
+    return [].slice.call(this.d1_1);
   };
   protoOf(ArrayList).toArray = function () {
-    return this.j1();
+    return this.i1();
   };
-  protoOf(ArrayList).j = function () {
-    if (this.f1_1)
+  protoOf(ArrayList).i = function () {
+    if (this.e1_1)
       throw UnsupportedOperationException_init_$Create$();
   };
   function HashSet_init_$Init$(map, $this) {
     AbstractMutableSet.call($this);
     HashSet.call($this);
-    $this.k1_1 = map;
+    $this.j1_1 = map;
     return $this;
   }
   function HashSet_init_$Init$_0($this) {
@@ -504,19 +433,19 @@ if (typeof Math.imul === 'undefined') {
     return HashSet_init_$Init$_2(initialCapacity, objectCreate(protoOf(HashSet)));
   }
   protoOf(HashSet).h = function (element) {
-    return this.k1_1.l1(element, true) == null;
+    return this.j1_1.k1(element, true) == null;
   };
-  protoOf(HashSet).o = function (element) {
-    return this.k1_1.m1(element);
-  };
-  protoOf(HashSet).q = function () {
-    return this.k1_1.n() === 0;
-  };
-  protoOf(HashSet).k = function () {
-    return this.k1_1.n1();
+  protoOf(HashSet).l = function (element) {
+    return this.j1_1.l1(element);
   };
   protoOf(HashSet).n = function () {
-    return this.k1_1.n();
+    return this.j1_1.j() === 0;
+  };
+  protoOf(HashSet).k = function () {
+    return this.j1_1.m1();
+  };
+  protoOf(HashSet).j = function () {
+    return this.j1_1.j();
   };
   function HashSet() {
   }
@@ -553,36 +482,36 @@ if (typeof Math.imul === 'undefined') {
     return InternalHashMap_init_$Init$_1(initialCapacity, loadFactor, objectCreate(protoOf(InternalHashMap)));
   }
   function _get_capacity__a9k9f3($this) {
-    return $this.o1_1.length;
+    return $this.n1_1.length;
   }
   function _get_hashSize__tftcho($this) {
-    return $this.r1_1.length;
+    return $this.q1_1.length;
   }
   function registerModification($this) {
-    $this.v1_1 = $this.v1_1 + 1 | 0;
+    $this.u1_1 = $this.u1_1 + 1 | 0;
   }
   function ensureExtraCapacity($this, n) {
     if (shouldCompact($this, n)) {
       rehash($this, _get_hashSize__tftcho($this));
     } else {
-      ensureCapacity($this, $this.t1_1 + n | 0);
+      ensureCapacity($this, $this.s1_1 + n | 0);
     }
   }
   function shouldCompact($this, extraCapacity) {
-    var spareCapacity = _get_capacity__a9k9f3($this) - $this.t1_1 | 0;
-    var gaps = $this.t1_1 - $this.n() | 0;
+    var spareCapacity = _get_capacity__a9k9f3($this) - $this.s1_1 | 0;
+    var gaps = $this.s1_1 - $this.j() | 0;
     return (spareCapacity < extraCapacity ? (gaps + spareCapacity | 0) >= extraCapacity : false) ? gaps >= (_get_capacity__a9k9f3($this) / 4 | 0) : false;
   }
   function ensureCapacity($this, minCapacity) {
     if (minCapacity < 0)
       throw RuntimeException_init_$Create$_0('too many elements');
     if (minCapacity > _get_capacity__a9k9f3($this)) {
-      var newSize = Companion_instance_4.y1(_get_capacity__a9k9f3($this), minCapacity);
-      $this.o1_1 = copyOfUninitializedElements($this.o1_1, newSize);
+      var newSize = Companion_instance_4.x1(_get_capacity__a9k9f3($this), minCapacity);
+      $this.n1_1 = copyOfUninitializedElements($this.n1_1, newSize);
       var tmp = $this;
-      var tmp0_safe_receiver = $this.p1_1;
-      tmp.p1_1 = tmp0_safe_receiver == null ? null : copyOfUninitializedElements(tmp0_safe_receiver, newSize);
-      $this.q1_1 = copyOf($this.q1_1, newSize);
+      var tmp0_safe_receiver = $this.o1_1;
+      tmp.o1_1 = tmp0_safe_receiver == null ? null : copyOfUninitializedElements(tmp0_safe_receiver, newSize);
+      $this.p1_1 = copyOf($this.p1_1, newSize);
       var newHashSize = computeHashSize(Companion_instance_0, newSize);
       if (newHashSize > _get_hashSize__tftcho($this)) {
         rehash($this, newHashSize);
@@ -590,23 +519,23 @@ if (typeof Math.imul === 'undefined') {
     }
   }
   function allocateValuesArray($this) {
-    var curValuesArray = $this.p1_1;
+    var curValuesArray = $this.o1_1;
     if (!(curValuesArray == null))
       return curValuesArray;
     var newValuesArray = arrayOfUninitializedElements(_get_capacity__a9k9f3($this));
-    $this.p1_1 = newValuesArray;
+    $this.o1_1 = newValuesArray;
     return newValuesArray;
   }
   function hash($this, key) {
-    return key == null ? 0 : imul(hashCode(key), -1640531527) >>> $this.u1_1 | 0;
+    return key == null ? 0 : imul(hashCode(key), -1640531527) >>> $this.t1_1 | 0;
   }
   function compact($this) {
     var i = 0;
     var j = 0;
-    var valuesArray = $this.p1_1;
-    while (i < $this.t1_1) {
-      if ($this.q1_1[i] >= 0) {
-        $this.o1_1[j] = $this.o1_1[i];
+    var valuesArray = $this.o1_1;
+    while (i < $this.s1_1) {
+      if ($this.p1_1[i] >= 0) {
+        $this.n1_1[j] = $this.n1_1[i];
         if (!(valuesArray == null)) {
           valuesArray[j] = valuesArray[i];
         }
@@ -614,27 +543,27 @@ if (typeof Math.imul === 'undefined') {
       }
       i = i + 1 | 0;
     }
-    resetRange($this.o1_1, j, $this.t1_1);
+    resetRange($this.n1_1, j, $this.s1_1);
     if (valuesArray == null)
       null;
     else {
-      resetRange(valuesArray, j, $this.t1_1);
+      resetRange(valuesArray, j, $this.s1_1);
     }
-    $this.t1_1 = j;
+    $this.s1_1 = j;
   }
   function rehash($this, newHashSize) {
     registerModification($this);
-    if ($this.t1_1 > $this.w1_1) {
+    if ($this.s1_1 > $this.v1_1) {
       compact($this);
     }
     if (!(newHashSize === _get_hashSize__tftcho($this))) {
-      $this.r1_1 = new Int32Array(newHashSize);
-      $this.u1_1 = computeShift(Companion_instance_0, newHashSize);
+      $this.q1_1 = new Int32Array(newHashSize);
+      $this.t1_1 = computeShift(Companion_instance_0, newHashSize);
     } else {
-      fill($this.r1_1, 0, 0, _get_hashSize__tftcho($this));
+      fill($this.q1_1, 0, 0, _get_hashSize__tftcho($this));
     }
     var i = 0;
-    while (i < $this.t1_1) {
+    while (i < $this.s1_1) {
       var tmp0 = i;
       i = tmp0 + 1 | 0;
       if (!putRehash($this, tmp0)) {
@@ -643,13 +572,13 @@ if (typeof Math.imul === 'undefined') {
     }
   }
   function putRehash($this, i) {
-    var hash_0 = hash($this, $this.o1_1[i]);
-    var probesLeft = $this.s1_1;
+    var hash_0 = hash($this, $this.n1_1[i]);
+    var probesLeft = $this.r1_1;
     while (true) {
-      var index = $this.r1_1[hash_0];
+      var index = $this.q1_1[hash_0];
       if (index === 0) {
-        $this.r1_1[hash_0] = i + 1 | 0;
-        $this.q1_1[i] = hash_0;
+        $this.q1_1[hash_0] = i + 1 | 0;
+        $this.p1_1[i] = hash_0;
         return true;
       }
       probesLeft = probesLeft - 1 | 0;
@@ -663,12 +592,12 @@ if (typeof Math.imul === 'undefined') {
   }
   function findKey($this, key) {
     var hash_0 = hash($this, key);
-    var probesLeft = $this.s1_1;
+    var probesLeft = $this.r1_1;
     while (true) {
-      var index = $this.r1_1[hash_0];
+      var index = $this.q1_1[hash_0];
       if (index === 0)
         return -1;
-      if (index > 0 ? equals($this.o1_1[index - 1 | 0], key) : false)
+      if (index > 0 ? equals($this.n1_1[index - 1 | 0], key) : false)
         return index - 1 | 0;
       probesLeft = probesLeft - 1 | 0;
       if (probesLeft < 0)
@@ -680,31 +609,31 @@ if (typeof Math.imul === 'undefined') {
     }
   }
   function addKey($this, key) {
-    $this.j();
+    $this.i();
     retry: while (true) {
       var hash_0 = hash($this, key);
-      var tentativeMaxProbeDistance = coerceAtMost(imul($this.s1_1, 2), _get_hashSize__tftcho($this) / 2 | 0);
+      var tentativeMaxProbeDistance = coerceAtMost(imul($this.r1_1, 2), _get_hashSize__tftcho($this) / 2 | 0);
       var probeDistance = 0;
       while (true) {
-        var index = $this.r1_1[hash_0];
+        var index = $this.q1_1[hash_0];
         if (index <= 0) {
-          if ($this.t1_1 >= _get_capacity__a9k9f3($this)) {
+          if ($this.s1_1 >= _get_capacity__a9k9f3($this)) {
             ensureExtraCapacity($this, 1);
             continue retry;
           }
-          var tmp1 = $this.t1_1;
-          $this.t1_1 = tmp1 + 1 | 0;
+          var tmp1 = $this.s1_1;
+          $this.s1_1 = tmp1 + 1 | 0;
           var putIndex = tmp1;
-          $this.o1_1[putIndex] = key;
-          $this.q1_1[putIndex] = hash_0;
-          $this.r1_1[hash_0] = putIndex + 1 | 0;
-          $this.w1_1 = $this.w1_1 + 1 | 0;
+          $this.n1_1[putIndex] = key;
+          $this.p1_1[putIndex] = hash_0;
+          $this.q1_1[hash_0] = putIndex + 1 | 0;
+          $this.v1_1 = $this.v1_1 + 1 | 0;
           registerModification($this);
-          if (probeDistance > $this.s1_1)
-            $this.s1_1 = probeDistance;
+          if (probeDistance > $this.r1_1)
+            $this.r1_1 = probeDistance;
           return putIndex;
         }
-        if (equals($this.o1_1[index - 1 | 0], key)) {
+        if (equals($this.n1_1[index - 1 | 0], key)) {
           return -index | 0;
         }
         probeDistance = probeDistance + 1 | 0;
@@ -720,127 +649,127 @@ if (typeof Math.imul === 'undefined') {
     }
   }
   function contentEquals($this, other) {
-    return $this.w1_1 === other.n() ? $this.a2(other.z1()) : false;
+    return $this.v1_1 === other.j() ? $this.z1(other.y1()) : false;
   }
   function Companion_0() {
-    this.b2_1 = -1640531527;
-    this.c2_1 = 8;
-    this.d2_1 = 2;
-    this.e2_1 = -1;
+    this.a2_1 = -1640531527;
+    this.b2_1 = 8;
+    this.c2_1 = 2;
+    this.d2_1 = -1;
   }
   var Companion_instance_0;
   function Companion_getInstance_0() {
     return Companion_instance_0;
   }
   function Itr(map) {
-    this.f2_1 = map;
-    this.g2_1 = 0;
-    this.h2_1 = -1;
-    this.i2_1 = this.f2_1.v1_1;
-    this.j2();
+    this.e2_1 = map;
+    this.f2_1 = 0;
+    this.g2_1 = -1;
+    this.h2_1 = this.e2_1.u1_1;
+    this.i2();
   }
-  protoOf(Itr).j2 = function () {
-    while (this.g2_1 < this.f2_1.t1_1 ? this.f2_1.q1_1[this.g2_1] < 0 : false) {
-      this.g2_1 = this.g2_1 + 1 | 0;
+  protoOf(Itr).i2 = function () {
+    while (this.f2_1 < this.e2_1.s1_1 ? this.e2_1.p1_1[this.f2_1] < 0 : false) {
+      this.f2_1 = this.f2_1 + 1 | 0;
     }
   };
-  protoOf(Itr).l = function () {
-    return this.g2_1 < this.f2_1.t1_1;
+  protoOf(Itr).r = function () {
+    return this.f2_1 < this.e2_1.s1_1;
   };
-  protoOf(Itr).k2 = function () {
-    if (!(this.f2_1.v1_1 === this.i2_1))
+  protoOf(Itr).j2 = function () {
+    if (!(this.e2_1.u1_1 === this.h2_1))
       throw ConcurrentModificationException_init_$Create$();
   };
   function KeysItr(map) {
     Itr.call(this, map);
   }
-  protoOf(KeysItr).m = function () {
-    this.k2();
-    if (this.g2_1 >= this.f2_1.t1_1)
+  protoOf(KeysItr).s = function () {
+    this.j2();
+    if (this.f2_1 >= this.e2_1.s1_1)
       throw NoSuchElementException_init_$Create$();
     var tmp = this;
-    var tmp1 = this.g2_1;
-    this.g2_1 = tmp1 + 1 | 0;
-    tmp.h2_1 = tmp1;
-    var result = this.f2_1.o1_1[this.h2_1];
-    this.j2();
+    var tmp1 = this.f2_1;
+    this.f2_1 = tmp1 + 1 | 0;
+    tmp.g2_1 = tmp1;
+    var result = this.e2_1.n1_1[this.g2_1];
+    this.i2();
     return result;
   };
   function EntriesItr(map) {
     Itr.call(this, map);
   }
-  protoOf(EntriesItr).m = function () {
-    this.k2();
-    if (this.g2_1 >= this.f2_1.t1_1)
+  protoOf(EntriesItr).s = function () {
+    this.j2();
+    if (this.f2_1 >= this.e2_1.s1_1)
       throw NoSuchElementException_init_$Create$();
     var tmp = this;
-    var tmp1 = this.g2_1;
-    this.g2_1 = tmp1 + 1 | 0;
-    tmp.h2_1 = tmp1;
-    var result = new EntryRef(this.f2_1, this.h2_1);
-    this.j2();
+    var tmp1 = this.f2_1;
+    this.f2_1 = tmp1 + 1 | 0;
+    tmp.g2_1 = tmp1;
+    var result = new EntryRef(this.e2_1, this.g2_1);
+    this.i2();
     return result;
   };
-  protoOf(EntriesItr).t2 = function () {
-    if (this.g2_1 >= this.f2_1.t1_1)
+  protoOf(EntriesItr).s2 = function () {
+    if (this.f2_1 >= this.e2_1.s1_1)
       throw NoSuchElementException_init_$Create$();
     var tmp = this;
-    var tmp1 = this.g2_1;
-    this.g2_1 = tmp1 + 1 | 0;
-    tmp.h2_1 = tmp1;
+    var tmp1 = this.f2_1;
+    this.f2_1 = tmp1 + 1 | 0;
+    tmp.g2_1 = tmp1;
     // Inline function 'kotlin.hashCode' call
-    var tmp0_safe_receiver = this.f2_1.o1_1[this.h2_1];
+    var tmp0_safe_receiver = this.e2_1.n1_1[this.g2_1];
     var tmp1_elvis_lhs = tmp0_safe_receiver == null ? null : hashCode(tmp0_safe_receiver);
     var tmp_0 = tmp1_elvis_lhs == null ? 0 : tmp1_elvis_lhs;
     // Inline function 'kotlin.hashCode' call
-    var tmp0_safe_receiver_0 = ensureNotNull(this.f2_1.p1_1)[this.h2_1];
+    var tmp0_safe_receiver_0 = ensureNotNull(this.e2_1.o1_1)[this.g2_1];
     var tmp1_elvis_lhs_0 = tmp0_safe_receiver_0 == null ? null : hashCode(tmp0_safe_receiver_0);
     var result = tmp_0 ^ (tmp1_elvis_lhs_0 == null ? 0 : tmp1_elvis_lhs_0);
-    this.j2();
+    this.i2();
     return result;
   };
-  protoOf(EntriesItr).u2 = function (sb) {
-    if (this.g2_1 >= this.f2_1.t1_1)
+  protoOf(EntriesItr).t2 = function (sb) {
+    if (this.f2_1 >= this.e2_1.s1_1)
       throw NoSuchElementException_init_$Create$();
     var tmp = this;
-    var tmp1 = this.g2_1;
-    this.g2_1 = tmp1 + 1 | 0;
-    tmp.h2_1 = tmp1;
-    var key = this.f2_1.o1_1[this.h2_1];
-    if (equals(key, this.f2_1)) {
-      sb.x2('(this Map)');
+    var tmp1 = this.f2_1;
+    this.f2_1 = tmp1 + 1 | 0;
+    tmp.g2_1 = tmp1;
+    var key = this.e2_1.n1_1[this.g2_1];
+    if (equals(key, this.e2_1)) {
+      sb.w2('(this Map)');
     } else {
-      sb.w2(key);
+      sb.v2(key);
     }
-    sb.y2(_Char___init__impl__6a9atx(61));
-    var value = ensureNotNull(this.f2_1.p1_1)[this.h2_1];
-    if (equals(value, this.f2_1)) {
-      sb.x2('(this Map)');
+    sb.x2(_Char___init__impl__6a9atx(61));
+    var value = ensureNotNull(this.e2_1.o1_1)[this.g2_1];
+    if (equals(value, this.e2_1)) {
+      sb.w2('(this Map)');
     } else {
-      sb.w2(value);
+      sb.v2(value);
     }
-    this.j2();
+    this.i2();
   };
   function EntryRef(map, index) {
-    this.z2_1 = map;
-    this.a3_1 = index;
+    this.y2_1 = map;
+    this.z2_1 = index;
   }
-  protoOf(EntryRef).b3 = function () {
-    return this.z2_1.o1_1[this.a3_1];
+  protoOf(EntryRef).a3 = function () {
+    return this.y2_1.n1_1[this.z2_1];
   };
-  protoOf(EntryRef).c3 = function () {
-    return ensureNotNull(this.z2_1.p1_1)[this.a3_1];
+  protoOf(EntryRef).b3 = function () {
+    return ensureNotNull(this.y2_1.o1_1)[this.z2_1];
   };
   protoOf(EntryRef).equals = function (other) {
     var tmp;
     var tmp_0;
     if (!(other == null) ? isInterface(other, Entry) : false) {
-      tmp_0 = equals(other.b3(), this.b3());
+      tmp_0 = equals(other.a3(), this.a3());
     } else {
       tmp_0 = false;
     }
     if (tmp_0) {
-      tmp = equals(other.c3(), this.c3());
+      tmp = equals(other.b3(), this.b3());
     } else {
       tmp = false;
     }
@@ -848,36 +777,36 @@ if (typeof Math.imul === 'undefined') {
   };
   protoOf(EntryRef).hashCode = function () {
     // Inline function 'kotlin.hashCode' call
-    var tmp0_safe_receiver = this.b3();
+    var tmp0_safe_receiver = this.a3();
     var tmp1_elvis_lhs = tmp0_safe_receiver == null ? null : hashCode(tmp0_safe_receiver);
     var tmp = tmp1_elvis_lhs == null ? 0 : tmp1_elvis_lhs;
     // Inline function 'kotlin.hashCode' call
-    var tmp0_safe_receiver_0 = this.c3();
+    var tmp0_safe_receiver_0 = this.b3();
     var tmp1_elvis_lhs_0 = tmp0_safe_receiver_0 == null ? null : hashCode(tmp0_safe_receiver_0);
     return tmp ^ (tmp1_elvis_lhs_0 == null ? 0 : tmp1_elvis_lhs_0);
   };
   protoOf(EntryRef).toString = function () {
-    return '' + this.b3() + '=' + this.c3();
+    return '' + this.a3() + '=' + this.b3();
   };
   function InternalHashMap(keysArray, valuesArray, presenceArray, hashArray, maxProbeDistance, length) {
-    this.o1_1 = keysArray;
-    this.p1_1 = valuesArray;
-    this.q1_1 = presenceArray;
-    this.r1_1 = hashArray;
-    this.s1_1 = maxProbeDistance;
-    this.t1_1 = length;
-    this.u1_1 = computeShift(Companion_instance_0, _get_hashSize__tftcho(this));
+    this.n1_1 = keysArray;
+    this.o1_1 = valuesArray;
+    this.p1_1 = presenceArray;
+    this.q1_1 = hashArray;
+    this.r1_1 = maxProbeDistance;
+    this.s1_1 = length;
+    this.t1_1 = computeShift(Companion_instance_0, _get_hashSize__tftcho(this));
+    this.u1_1 = 0;
     this.v1_1 = 0;
-    this.w1_1 = 0;
-    this.x1_1 = false;
+    this.w1_1 = false;
   }
-  protoOf(InternalHashMap).n = function () {
-    return this.w1_1;
+  protoOf(InternalHashMap).j = function () {
+    return this.v1_1;
   };
-  protoOf(InternalHashMap).m1 = function (key) {
+  protoOf(InternalHashMap).l1 = function (key) {
     return findKey(this, key) >= 0;
   };
-  protoOf(InternalHashMap).l1 = function (key, value) {
+  protoOf(InternalHashMap).k1 = function (key, value) {
     var index = addKey(this, key);
     var valuesArray = allocateValuesArray(this);
     if (index < 0) {
@@ -906,44 +835,44 @@ if (typeof Math.imul === 'undefined') {
   };
   protoOf(InternalHashMap).hashCode = function () {
     var result = 0;
-    var it = this.d3();
-    while (it.l()) {
-      result = result + it.t2() | 0;
+    var it = this.c3();
+    while (it.r()) {
+      result = result + it.s2() | 0;
     }
     return result;
   };
   protoOf(InternalHashMap).toString = function () {
-    var sb = StringBuilder_init_$Create$(2 + imul(this.w1_1, 3) | 0);
-    sb.x2('{');
+    var sb = StringBuilder_init_$Create$(2 + imul(this.v1_1, 3) | 0);
+    sb.w2('{');
     var i = 0;
-    var it = this.d3();
-    while (it.l()) {
+    var it = this.c3();
+    while (it.r()) {
       if (i > 0) {
-        sb.x2(', ');
+        sb.w2(', ');
       }
-      it.u2(sb);
+      it.t2(sb);
       i = i + 1 | 0;
     }
-    sb.x2('}');
+    sb.w2('}');
     return sb.toString();
   };
-  protoOf(InternalHashMap).j = function () {
-    if (this.x1_1)
+  protoOf(InternalHashMap).i = function () {
+    if (this.w1_1)
       throw UnsupportedOperationException_init_$Create$();
   };
-  protoOf(InternalHashMap).e3 = function (entry) {
-    var index = findKey(this, entry.b3());
+  protoOf(InternalHashMap).d3 = function (entry) {
+    var index = findKey(this, entry.a3());
     if (index < 0)
       return false;
-    return equals(ensureNotNull(this.p1_1)[index], entry.c3());
+    return equals(ensureNotNull(this.o1_1)[index], entry.b3());
   };
-  protoOf(InternalHashMap).f3 = function (entry) {
-    return this.e3(isInterface(entry, Entry) ? entry : THROW_CCE());
+  protoOf(InternalHashMap).e3 = function (entry) {
+    return this.d3(isInterface(entry, Entry) ? entry : THROW_CCE());
   };
-  protoOf(InternalHashMap).n1 = function () {
+  protoOf(InternalHashMap).m1 = function () {
     return new KeysItr(this);
   };
-  protoOf(InternalHashMap).d3 = function () {
+  protoOf(InternalHashMap).c3 = function () {
     return new EntriesItr(this);
   };
   function InternalMap() {
@@ -968,9 +897,6 @@ if (typeof Math.imul === 'undefined') {
   function LinkedHashSet_init_$Create$_0(initialCapacity) {
     return LinkedHashSet_init_$Init$_1(initialCapacity, objectCreate(protoOf(LinkedHashSet)));
   }
-  protoOf(LinkedHashSet).j = function () {
-    return this.k1_1.j();
-  };
   function LinkedHashSet() {
   }
   function reset(_this__u8e3s4) {
@@ -991,15 +917,15 @@ if (typeof Math.imul === 'undefined') {
     return StringBuilder_init_$Init$_0(objectCreate(protoOf(StringBuilder)));
   }
   function StringBuilder(content) {
-    this.v2_1 = !(content === undefined) ? content : '';
+    this.u2_1 = !(content === undefined) ? content : '';
   }
   protoOf(StringBuilder).a = function () {
     // Inline function 'kotlin.js.asDynamic' call
-    return this.v2_1.length;
+    return this.u2_1.length;
   };
   protoOf(StringBuilder).b = function (index) {
     // Inline function 'kotlin.text.getOrElse' call
-    var this_0 = this.v2_1;
+    var this_0 = this.u2_1;
     var tmp;
     if (index >= 0 ? index <= get_lastIndex(this_0) : false) {
       tmp = charSequenceGet(this_0, index);
@@ -1011,28 +937,28 @@ if (typeof Math.imul === 'undefined') {
   protoOf(StringBuilder).c = function (startIndex, endIndex) {
     // Inline function 'kotlin.text.substring' call
     // Inline function 'kotlin.js.asDynamic' call
-    return this.v2_1.substring(startIndex, endIndex);
+    return this.u2_1.substring(startIndex, endIndex);
   };
-  protoOf(StringBuilder).y2 = function (value) {
-    this.v2_1 = this.v2_1 + toString_0(value);
+  protoOf(StringBuilder).x2 = function (value) {
+    this.u2_1 = this.u2_1 + toString_0(value);
     return this;
   };
-  protoOf(StringBuilder).h3 = function (value) {
-    this.v2_1 = this.v2_1 + toString_1(value);
+  protoOf(StringBuilder).f3 = function (value) {
+    this.u2_1 = this.u2_1 + toString_1(value);
+    return this;
+  };
+  protoOf(StringBuilder).v2 = function (value) {
+    this.u2_1 = this.u2_1 + toString_1(value);
     return this;
   };
   protoOf(StringBuilder).w2 = function (value) {
-    this.v2_1 = this.v2_1 + toString_1(value);
-    return this;
-  };
-  protoOf(StringBuilder).x2 = function (value) {
     var tmp = this;
-    var tmp_0 = this.v2_1;
-    tmp.v2_1 = tmp_0 + (value == null ? 'null' : value);
+    var tmp_0 = this.u2_1;
+    tmp.u2_1 = tmp_0 + (value == null ? 'null' : value);
     return this;
   };
   protoOf(StringBuilder).toString = function () {
-    return this.v2_1;
+    return this.u2_1;
   };
   function toString(_this__u8e3s4, radix) {
     // Inline function 'kotlin.js.asDynamic' call
@@ -1053,9 +979,9 @@ if (typeof Math.imul === 'undefined') {
   }
   function Companion_1() {
     Companion_instance_1 = this;
-    this.i3_1 = new RegExp('[\\\\^$*+?.()|[\\]{}]', 'g');
-    this.j3_1 = new RegExp('[\\\\$]', 'g');
-    this.k3_1 = new RegExp('\\$', 'g');
+    this.g3_1 = new RegExp('[\\\\^$*+?.()|[\\]{}]', 'g');
+    this.h3_1 = new RegExp('[\\\\$]', 'g');
+    this.i3_1 = new RegExp('\\$', 'g');
   }
   var Companion_instance_1;
   function Companion_getInstance_1() {
@@ -1065,28 +991,35 @@ if (typeof Math.imul === 'undefined') {
   }
   function Regex(pattern, options) {
     Companion_getInstance_1();
-    this.l3_1 = pattern;
-    this.m3_1 = toSet(options);
-    this.n3_1 = new RegExp(pattern, toFlags(options, 'gu'));
-    this.o3_1 = null;
-    this.p3_1 = null;
+    this.j3_1 = pattern;
+    this.k3_1 = toSet(options);
+    this.l3_1 = new RegExp(pattern, toFlags(options, 'gu'));
+    this.m3_1 = null;
+    this.n3_1 = null;
   }
-  protoOf(Regex).q3 = function (input) {
-    reset(this.n3_1);
-    var match = this.n3_1.exec(toString_2(input));
-    return (!(match == null) ? match.index === 0 : false) ? this.n3_1.lastIndex === charSequenceLength(input) : false;
+  protoOf(Regex).o3 = function (input) {
+    reset(this.l3_1);
+    var match = this.l3_1.exec(toString_2(input));
+    return (!(match == null) ? match.index === 0 : false) ? this.l3_1.lastIndex === charSequenceLength(input) : false;
   };
   protoOf(Regex).toString = function () {
-    return this.n3_1.toString();
+    return this.l3_1.toString();
   };
   function toFlags(_this__u8e3s4, prepend) {
     return joinToString_0(_this__u8e3s4, '', prepend, VOID, VOID, VOID, toFlags$lambda);
   }
   function toFlags$lambda(it) {
-    return it.t3_1;
+    return it.r3_1;
   }
-  function contains(_this__u8e3s4, element) {
-    return indexOf(_this__u8e3s4, element) >= 0;
+  function toCollection(_this__u8e3s4, destination) {
+    var inductionVariable = 0;
+    var last = _this__u8e3s4.length;
+    while (inductionVariable < last) {
+      var item = _this__u8e3s4[inductionVariable];
+      inductionVariable = inductionVariable + 1 | 0;
+      destination.h(item);
+    }
+    return destination;
   }
   function indexOf(_this__u8e3s4, element) {
     if (element == null) {
@@ -1116,16 +1049,6 @@ if (typeof Math.imul === 'undefined') {
     }
     return -1;
   }
-  function toCollection(_this__u8e3s4, destination) {
-    var inductionVariable = 0;
-    var last = _this__u8e3s4.length;
-    while (inductionVariable < last) {
-      var item = _this__u8e3s4[inductionVariable];
-      inductionVariable = inductionVariable + 1 | 0;
-      destination.h(item);
-    }
-    return destination;
-  }
   function joinToString(_this__u8e3s4, separator, prefix, postfix, limit, truncated, transform) {
     separator = separator === VOID ? ', ' : separator;
     prefix = prefix === VOID ? '' : prefix;
@@ -1142,7 +1065,7 @@ if (typeof Math.imul === 'undefined') {
     limit = limit === VOID ? -1 : limit;
     truncated = truncated === VOID ? '...' : truncated;
     transform = transform === VOID ? null : transform;
-    buffer.h3(prefix);
+    buffer.f3(prefix);
     var count = 0;
     var inductionVariable = 0;
     var last = _this__u8e3s4.length;
@@ -1151,7 +1074,7 @@ if (typeof Math.imul === 'undefined') {
       inductionVariable = inductionVariable + 1 | 0;
       count = count + 1 | 0;
       if (count > 1) {
-        buffer.h3(separator);
+        buffer.f3(separator);
       }
       if (limit < 0 ? true : count <= limit) {
         appendElement(buffer, element, transform);
@@ -1159,9 +1082,9 @@ if (typeof Math.imul === 'undefined') {
         break $l$loop;
     }
     if (limit >= 0 ? count > limit : false) {
-      buffer.h3(truncated);
+      buffer.f3(truncated);
     }
-    buffer.h3(postfix);
+    buffer.f3(postfix);
     return buffer;
   }
   function joinToString_0(_this__u8e3s4, separator, prefix, postfix, limit, truncated, transform) {
@@ -1180,14 +1103,14 @@ if (typeof Math.imul === 'undefined') {
     limit = limit === VOID ? -1 : limit;
     truncated = truncated === VOID ? '...' : truncated;
     transform = transform === VOID ? null : transform;
-    buffer.h3(prefix);
+    buffer.f3(prefix);
     var count = 0;
     var tmp0_iterator = _this__u8e3s4.k();
-    $l$loop: while (tmp0_iterator.l()) {
-      var element = tmp0_iterator.m();
+    $l$loop: while (tmp0_iterator.r()) {
+      var element = tmp0_iterator.s();
       count = count + 1 | 0;
       if (count > 1) {
-        buffer.h3(separator);
+        buffer.f3(separator);
       }
       if (limit < 0 ? true : count <= limit) {
         appendElement(buffer, element, transform);
@@ -1195,42 +1118,30 @@ if (typeof Math.imul === 'undefined') {
         break $l$loop;
     }
     if (limit >= 0 ? count > limit : false) {
-      buffer.h3(truncated);
+      buffer.f3(truncated);
     }
-    buffer.h3(postfix);
+    buffer.f3(postfix);
     return buffer;
-  }
-  function plus(_this__u8e3s4, elements) {
-    if (isInterface(elements, Collection)) {
-      var result = ArrayList_init_$Create$_0(_this__u8e3s4.n() + elements.n() | 0);
-      result.i(_this__u8e3s4);
-      result.i(elements);
-      return result;
-    } else {
-      var result_0 = ArrayList_init_$Create$_1(_this__u8e3s4);
-      addAll(result_0, elements);
-      return result_0;
-    }
   }
   function toSet(_this__u8e3s4) {
     if (isInterface(_this__u8e3s4, Collection)) {
       var tmp;
-      switch (_this__u8e3s4.n()) {
+      switch (_this__u8e3s4.j()) {
         case 0:
           tmp = emptySet();
           break;
         case 1:
           var tmp_0;
           if (isInterface(_this__u8e3s4, List)) {
-            tmp_0 = _this__u8e3s4.u(0);
+            tmp_0 = _this__u8e3s4.t(0);
           } else {
-            tmp_0 = _this__u8e3s4.k().m();
+            tmp_0 = _this__u8e3s4.k().s();
           }
 
           tmp = setOf(tmp_0);
           break;
         default:
-          tmp = toCollection_0(_this__u8e3s4, LinkedHashSet_init_$Create$_0(mapCapacity(_this__u8e3s4.n())));
+          tmp = toCollection_0(_this__u8e3s4, LinkedHashSet_init_$Create$_0(mapCapacity(_this__u8e3s4.j())));
           break;
       }
       return tmp;
@@ -1239,8 +1150,8 @@ if (typeof Math.imul === 'undefined') {
   }
   function toCollection_0(_this__u8e3s4, destination) {
     var tmp0_iterator = _this__u8e3s4.k();
-    while (tmp0_iterator.l()) {
-      var item = tmp0_iterator.m();
+    while (tmp0_iterator.r()) {
+      var item = tmp0_iterator.s();
       destination.h(item);
     }
     return destination;
@@ -1271,16 +1182,16 @@ if (typeof Math.imul === 'undefined') {
   }
   function Companion_2() {
     Companion_instance_2 = this;
-    this.u3_1 = _Char___init__impl__6a9atx(0);
-    this.v3_1 = _Char___init__impl__6a9atx(65535);
-    this.w3_1 = _Char___init__impl__6a9atx(55296);
-    this.x3_1 = _Char___init__impl__6a9atx(56319);
-    this.y3_1 = _Char___init__impl__6a9atx(56320);
+    this.s3_1 = _Char___init__impl__6a9atx(0);
+    this.t3_1 = _Char___init__impl__6a9atx(65535);
+    this.u3_1 = _Char___init__impl__6a9atx(55296);
+    this.v3_1 = _Char___init__impl__6a9atx(56319);
+    this.w3_1 = _Char___init__impl__6a9atx(56320);
+    this.x3_1 = _Char___init__impl__6a9atx(57343);
+    this.y3_1 = _Char___init__impl__6a9atx(55296);
     this.z3_1 = _Char___init__impl__6a9atx(57343);
-    this.a4_1 = _Char___init__impl__6a9atx(55296);
-    this.b4_1 = _Char___init__impl__6a9atx(57343);
-    this.c4_1 = 2;
-    this.d4_1 = 16;
+    this.a4_1 = 2;
+    this.b4_1 = 16;
   }
   var Companion_instance_2;
   function Companion_getInstance_2() {
@@ -1388,27 +1299,6 @@ if (typeof Math.imul === 'undefined') {
        while (!(i === last));
     return array;
   }
-  function arrayIterator(array) {
-    return new arrayIterator$1(array);
-  }
-  function arrayIterator$1($array) {
-    this.f4_1 = $array;
-    this.e4_1 = 0;
-  }
-  protoOf(arrayIterator$1).l = function () {
-    return !(this.e4_1 === this.f4_1.length);
-  };
-  protoOf(arrayIterator$1).m = function () {
-    var tmp;
-    if (!(this.e4_1 === this.f4_1.length)) {
-      var tmp1 = this.e4_1;
-      this.e4_1 = tmp1 + 1 | 0;
-      tmp = this.f4_1[tmp1];
-    } else {
-      throw NoSuchElementException_init_$Create$_0('' + this.e4_1);
-    }
-    return tmp;
-  };
   function get_buf() {
     _init_properties_bitUtils_kt__nfcg4k();
     return buf;
@@ -1787,10 +1677,10 @@ if (typeof Math.imul === 'undefined') {
   }
   function Companion_3() {
     Companion_instance_3 = this;
-    this.g4_1 = new Long(0, -2147483648);
-    this.h4_1 = new Long(-1, 2147483647);
-    this.i4_1 = 8;
-    this.j4_1 = 64;
+    this.c4_1 = new Long(0, -2147483648);
+    this.d4_1 = new Long(-1, 2147483647);
+    this.e4_1 = 8;
+    this.f4_1 = 64;
   }
   var Companion_instance_3;
   function Companion_getInstance_3() {
@@ -1801,29 +1691,29 @@ if (typeof Math.imul === 'undefined') {
   function Long(low, high) {
     Companion_getInstance_3();
     Number_0.call(this);
-    this.k4_1 = low;
-    this.l4_1 = high;
+    this.g4_1 = low;
+    this.h4_1 = high;
   }
-  protoOf(Long).m4 = function (other) {
+  protoOf(Long).i4 = function (other) {
     return add(this, other);
   };
-  protoOf(Long).n4 = function (other) {
+  protoOf(Long).j4 = function (other) {
     return divide(this, other);
   };
-  protoOf(Long).o4 = function () {
-    return this.p4().m4(new Long(1, 0));
+  protoOf(Long).k4 = function () {
+    return this.l4().i4(new Long(1, 0));
   };
-  protoOf(Long).p4 = function () {
-    return new Long(~this.k4_1, ~this.l4_1);
+  protoOf(Long).l4 = function () {
+    return new Long(~this.g4_1, ~this.h4_1);
   };
-  protoOf(Long).q4 = function () {
-    return this.k4_1;
+  protoOf(Long).m4 = function () {
+    return this.g4_1;
   };
-  protoOf(Long).r4 = function () {
+  protoOf(Long).n4 = function () {
     return toNumber(this);
   };
   protoOf(Long).valueOf = function () {
-    return this.r4();
+    return this.n4();
   };
   protoOf(Long).equals = function (other) {
     var tmp;
@@ -1881,14 +1771,14 @@ if (typeof Math.imul === 'undefined') {
   }
   function add(_this__u8e3s4, other) {
     _init_properties_longjs_kt__tqrzid();
-    var a48 = _this__u8e3s4.l4_1 >>> 16 | 0;
-    var a32 = _this__u8e3s4.l4_1 & 65535;
-    var a16 = _this__u8e3s4.k4_1 >>> 16 | 0;
-    var a00 = _this__u8e3s4.k4_1 & 65535;
-    var b48 = other.l4_1 >>> 16 | 0;
-    var b32 = other.l4_1 & 65535;
-    var b16 = other.k4_1 >>> 16 | 0;
-    var b00 = other.k4_1 & 65535;
+    var a48 = _this__u8e3s4.h4_1 >>> 16 | 0;
+    var a32 = _this__u8e3s4.h4_1 & 65535;
+    var a16 = _this__u8e3s4.g4_1 >>> 16 | 0;
+    var a00 = _this__u8e3s4.g4_1 & 65535;
+    var b48 = other.h4_1 >>> 16 | 0;
+    var b32 = other.h4_1 & 65535;
+    var b16 = other.g4_1 >>> 16 | 0;
+    var b00 = other.g4_1 & 65535;
     var c48 = 0;
     var c32 = 0;
     var c16 = 0;
@@ -1908,7 +1798,7 @@ if (typeof Math.imul === 'undefined') {
   }
   function subtract(_this__u8e3s4, other) {
     _init_properties_longjs_kt__tqrzid();
-    return add(_this__u8e3s4, other.o4());
+    return add(_this__u8e3s4, other.k4());
   }
   function multiply(_this__u8e3s4, other) {
     _init_properties_longjs_kt__tqrzid();
@@ -1936,14 +1826,14 @@ if (typeof Math.imul === 'undefined') {
     if (lessThan(_this__u8e3s4, get_TWO_PWR_24_()) ? lessThan(other, get_TWO_PWR_24_()) : false) {
       return fromNumber(toNumber(_this__u8e3s4) * toNumber(other));
     }
-    var a48 = _this__u8e3s4.l4_1 >>> 16 | 0;
-    var a32 = _this__u8e3s4.l4_1 & 65535;
-    var a16 = _this__u8e3s4.k4_1 >>> 16 | 0;
-    var a00 = _this__u8e3s4.k4_1 & 65535;
-    var b48 = other.l4_1 >>> 16 | 0;
-    var b32 = other.l4_1 & 65535;
-    var b16 = other.k4_1 >>> 16 | 0;
-    var b00 = other.k4_1 & 65535;
+    var a48 = _this__u8e3s4.h4_1 >>> 16 | 0;
+    var a32 = _this__u8e3s4.h4_1 & 65535;
+    var a16 = _this__u8e3s4.g4_1 >>> 16 | 0;
+    var a00 = _this__u8e3s4.g4_1 & 65535;
+    var b48 = other.h4_1 >>> 16 | 0;
+    var b32 = other.h4_1 & 65535;
+    var b16 = other.g4_1 >>> 16 | 0;
+    var b00 = other.g4_1 & 65535;
     var c48 = 0;
     var c32 = 0;
     var c16 = 0;
@@ -1984,12 +1874,12 @@ if (typeof Math.imul === 'undefined') {
         return get_ONE();
       } else {
         var halfThis = shiftRight(_this__u8e3s4, 1);
-        var approx = shiftLeft(halfThis.n4(other), 1);
+        var approx = shiftLeft(halfThis.j4(other), 1);
         if (equalsLong(approx, get_ZERO())) {
           return isNegative(other) ? get_ONE() : get_NEG_ONE();
         } else {
           var rem = subtract(_this__u8e3s4, multiply(other, approx));
-          return add(approx, rem.n4(other));
+          return add(approx, rem.j4(other));
         }
       }
     } else if (equalsLong(other, get_MIN_VALUE())) {
@@ -1998,13 +1888,13 @@ if (typeof Math.imul === 'undefined') {
     if (isNegative(_this__u8e3s4)) {
       var tmp;
       if (isNegative(other)) {
-        tmp = negate(_this__u8e3s4).n4(negate(other));
+        tmp = negate(_this__u8e3s4).j4(negate(other));
       } else {
-        tmp = negate(negate(_this__u8e3s4).n4(other));
+        tmp = negate(negate(_this__u8e3s4).j4(other));
       }
       return tmp;
     } else if (isNegative(other)) {
-      return negate(_this__u8e3s4.n4(negate(other)));
+      return negate(_this__u8e3s4.j4(negate(other)));
     }
     var res = get_ZERO();
     var rem_0 = _this__u8e3s4;
@@ -2035,9 +1925,9 @@ if (typeof Math.imul === 'undefined') {
       return _this__u8e3s4;
     } else {
       if (numBits_0 < 32) {
-        return new Long(_this__u8e3s4.k4_1 << numBits_0, _this__u8e3s4.l4_1 << numBits_0 | (_this__u8e3s4.k4_1 >>> (32 - numBits_0 | 0) | 0));
+        return new Long(_this__u8e3s4.g4_1 << numBits_0, _this__u8e3s4.h4_1 << numBits_0 | (_this__u8e3s4.g4_1 >>> (32 - numBits_0 | 0) | 0));
       } else {
-        return new Long(0, _this__u8e3s4.k4_1 << (numBits_0 - 32 | 0));
+        return new Long(0, _this__u8e3s4.g4_1 << (numBits_0 - 32 | 0));
       }
     }
   }
@@ -2048,23 +1938,23 @@ if (typeof Math.imul === 'undefined') {
       return _this__u8e3s4;
     } else {
       if (numBits_0 < 32) {
-        return new Long(_this__u8e3s4.k4_1 >>> numBits_0 | 0 | _this__u8e3s4.l4_1 << (32 - numBits_0 | 0), _this__u8e3s4.l4_1 >> numBits_0);
+        return new Long(_this__u8e3s4.g4_1 >>> numBits_0 | 0 | _this__u8e3s4.h4_1 << (32 - numBits_0 | 0), _this__u8e3s4.h4_1 >> numBits_0);
       } else {
-        return new Long(_this__u8e3s4.l4_1 >> (numBits_0 - 32 | 0), _this__u8e3s4.l4_1 >= 0 ? 0 : -1);
+        return new Long(_this__u8e3s4.h4_1 >> (numBits_0 - 32 | 0), _this__u8e3s4.h4_1 >= 0 ? 0 : -1);
       }
     }
   }
   function toNumber(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.l4_1 * 4.294967296E9 + getLowBitsUnsigned(_this__u8e3s4);
+    return _this__u8e3s4.h4_1 * 4.294967296E9 + getLowBitsUnsigned(_this__u8e3s4);
   }
   function equalsLong(_this__u8e3s4, other) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.l4_1 === other.l4_1 ? _this__u8e3s4.k4_1 === other.k4_1 : false;
+    return _this__u8e3s4.h4_1 === other.h4_1 ? _this__u8e3s4.g4_1 === other.g4_1 : false;
   }
   function hashCode_0(l) {
     _init_properties_longjs_kt__tqrzid();
-    return l.k4_1 ^ l.l4_1;
+    return l.g4_1 ^ l.h4_1;
   }
   function toStringImpl(_this__u8e3s4, radix) {
     _init_properties_longjs_kt__tqrzid();
@@ -2077,8 +1967,8 @@ if (typeof Math.imul === 'undefined') {
     if (isNegative(_this__u8e3s4)) {
       if (equalsLong(_this__u8e3s4, get_MIN_VALUE())) {
         var radixLong = fromInt(radix);
-        var div = _this__u8e3s4.n4(radixLong);
-        var rem = subtract(multiply(div, radixLong), _this__u8e3s4).q4();
+        var div = _this__u8e3s4.j4(radixLong);
+        var rem = subtract(multiply(div, radixLong), _this__u8e3s4).m4();
         var tmp = toStringImpl(div, radix);
         // Inline function 'kotlin.js.unsafeCast' call
         // Inline function 'kotlin.js.asDynamic' call
@@ -2092,8 +1982,8 @@ if (typeof Math.imul === 'undefined') {
     var rem_0 = _this__u8e3s4;
     var result = '';
     while (true) {
-      var remDiv = rem_0.n4(radixToPower);
-      var intval = subtract(rem_0, multiply(remDiv, radixToPower)).q4();
+      var remDiv = rem_0.j4(radixToPower);
+      var intval = subtract(rem_0, multiply(remDiv, radixToPower)).m4();
       // Inline function 'kotlin.js.unsafeCast' call
       // Inline function 'kotlin.js.asDynamic' call
       var digits = intval.toString(radix);
@@ -2114,19 +2004,19 @@ if (typeof Math.imul === 'undefined') {
   }
   function isNegative(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.l4_1 < 0;
+    return _this__u8e3s4.h4_1 < 0;
   }
   function isZero(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.l4_1 === 0 ? _this__u8e3s4.k4_1 === 0 : false;
+    return _this__u8e3s4.h4_1 === 0 ? _this__u8e3s4.g4_1 === 0 : false;
   }
   function isOdd(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return (_this__u8e3s4.k4_1 & 1) === 1;
+    return (_this__u8e3s4.g4_1 & 1) === 1;
   }
   function negate(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.o4();
+    return _this__u8e3s4.k4();
   }
   function lessThan(_this__u8e3s4, other) {
     _init_properties_longjs_kt__tqrzid();
@@ -2161,7 +2051,7 @@ if (typeof Math.imul === 'undefined') {
   }
   function getLowBitsUnsigned(_this__u8e3s4) {
     _init_properties_longjs_kt__tqrzid();
-    return _this__u8e3s4.k4_1 >= 0 ? _this__u8e3s4.k4_1 : 4.294967296E9 + _this__u8e3s4.k4_1;
+    return _this__u8e3s4.g4_1 >= 0 ? _this__u8e3s4.g4_1 : 4.294967296E9 + _this__u8e3s4.g4_1;
   }
   var properties_initialized_longjs_kt_5aju7t;
   function _init_properties_longjs_kt__tqrzid() {
@@ -2213,7 +2103,7 @@ if (typeof Math.imul === 'undefined') {
   function numberToInt(a) {
     var tmp;
     if (a instanceof Long) {
-      tmp = a.q4();
+      tmp = a.m4();
     } else {
       tmp = doubleToInt(a);
     }
@@ -2314,7 +2204,7 @@ if (typeof Math.imul === 'undefined') {
   function fill(_this__u8e3s4, element, fromIndex, toIndex) {
     fromIndex = fromIndex === VOID ? 0 : fromIndex;
     toIndex = toIndex === VOID ? _this__u8e3s4.length : toIndex;
-    Companion_instance_4.s4(fromIndex, toIndex, _this__u8e3s4.length);
+    Companion_instance_4.o4(fromIndex, toIndex, _this__u8e3s4.length);
     // Inline function 'kotlin.js.nativeFill' call
     // Inline function 'kotlin.js.asDynamic' call
     _this__u8e3s4.fill(element, fromIndex, toIndex);
@@ -2482,41 +2372,8 @@ if (typeof Math.imul === 'undefined') {
     captureStack(tmp, NoSuchElementException_init_$Create$);
     return tmp;
   }
-  function NoSuchElementException_init_$Init$_0(message, $this) {
-    RuntimeException_init_$Init$_0(message, $this);
-    NoSuchElementException.call($this);
-    return $this;
-  }
-  function NoSuchElementException_init_$Create$_0(message) {
-    var tmp = NoSuchElementException_init_$Init$_0(message, objectCreate(protoOf(NoSuchElementException)));
-    captureStack(tmp, NoSuchElementException_init_$Create$_0);
-    return tmp;
-  }
   function NoSuchElementException() {
     captureStack(this, NoSuchElementException);
-  }
-  function ArithmeticException_init_$Init$($this) {
-    RuntimeException_init_$Init$($this);
-    ArithmeticException.call($this);
-    return $this;
-  }
-  function ArithmeticException_init_$Create$() {
-    var tmp = ArithmeticException_init_$Init$(objectCreate(protoOf(ArithmeticException)));
-    captureStack(tmp, ArithmeticException_init_$Create$);
-    return tmp;
-  }
-  function ArithmeticException_init_$Init$_0(message, $this) {
-    RuntimeException_init_$Init$_0(message, $this);
-    ArithmeticException.call($this);
-    return $this;
-  }
-  function ArithmeticException_init_$Create$_0(message) {
-    var tmp = ArithmeticException_init_$Init$_0(message, objectCreate(protoOf(ArithmeticException)));
-    captureStack(tmp, ArithmeticException_init_$Create$_0);
-    return tmp;
-  }
-  function ArithmeticException() {
-    captureStack(this, ArithmeticException);
   }
   function ConcurrentModificationException_init_$Init$($this) {
     RuntimeException_init_$Init$($this);
@@ -2564,13 +2421,13 @@ if (typeof Math.imul === 'undefined') {
   }
   function AbstractCollection() {
   }
-  protoOf(AbstractCollection).o = function (element) {
+  protoOf(AbstractCollection).l = function (element) {
     var tmp$ret$0;
     $l$block_0: {
       // Inline function 'kotlin.collections.any' call
       var tmp;
       if (isInterface(this, Collection)) {
-        tmp = this.q();
+        tmp = this.n();
       } else {
         tmp = false;
       }
@@ -2579,8 +2436,8 @@ if (typeof Math.imul === 'undefined') {
         break $l$block_0;
       }
       var tmp0_iterator = this.k();
-      while (tmp0_iterator.l()) {
-        var element_0 = tmp0_iterator.m();
+      while (tmp0_iterator.r()) {
+        var element_0 = tmp0_iterator.s();
         // Inline function 'kotlin.collections.AbstractCollection.contains.<anonymous>' call
         if (equals(element_0, element)) {
           tmp$ret$0 = true;
@@ -2591,13 +2448,13 @@ if (typeof Math.imul === 'undefined') {
     }
     return tmp$ret$0;
   };
-  protoOf(AbstractCollection).p = function (elements) {
+  protoOf(AbstractCollection).m = function (elements) {
     var tmp$ret$0;
     $l$block_0: {
       // Inline function 'kotlin.collections.all' call
       var tmp;
       if (isInterface(elements, Collection)) {
-        tmp = elements.q();
+        tmp = elements.n();
       } else {
         tmp = false;
       }
@@ -2606,10 +2463,10 @@ if (typeof Math.imul === 'undefined') {
         break $l$block_0;
       }
       var tmp0_iterator = elements.k();
-      while (tmp0_iterator.l()) {
-        var element = tmp0_iterator.m();
+      while (tmp0_iterator.r()) {
+        var element = tmp0_iterator.s();
         // Inline function 'kotlin.collections.AbstractCollection.containsAll.<anonymous>' call
-        if (!this.o(element)) {
+        if (!this.l(element)) {
           tmp$ret$0 = false;
           break $l$block_0;
         }
@@ -2618,8 +2475,8 @@ if (typeof Math.imul === 'undefined') {
     }
     return tmp$ret$0;
   };
-  protoOf(AbstractCollection).q = function () {
-    return this.n() === 0;
+  protoOf(AbstractCollection).n = function () {
+    return this.j() === 0;
   };
   protoOf(AbstractCollection).toString = function () {
     return joinToString_0(this, ', ', '[', ']', VOID, VOID, AbstractCollection$toString$lambda(this));
@@ -2628,19 +2485,19 @@ if (typeof Math.imul === 'undefined') {
     return collectionToArray(this);
   };
   function Companion_4() {
-    this.y_1 = 2147483639;
+    this.x_1 = 2147483639;
   }
-  protoOf(Companion_4).h1 = function (index, size) {
+  protoOf(Companion_4).g1 = function (index, size) {
     if (index < 0 ? true : index >= size) {
       throw IndexOutOfBoundsException_init_$Create$_0('index: ' + index + ', size: ' + size);
     }
   };
-  protoOf(Companion_4).i1 = function (index, size) {
+  protoOf(Companion_4).h1 = function (index, size) {
     if (index < 0 ? true : index > size) {
       throw IndexOutOfBoundsException_init_$Create$_0('index: ' + index + ', size: ' + size);
     }
   };
-  protoOf(Companion_4).s4 = function (fromIndex, toIndex, size) {
+  protoOf(Companion_4).o4 = function (fromIndex, toIndex, size) {
     if (fromIndex < 0 ? true : toIndex > size) {
       throw IndexOutOfBoundsException_init_$Create$_0('fromIndex: ' + fromIndex + ', toIndex: ' + toIndex + ', size: ' + size);
     }
@@ -2648,7 +2505,7 @@ if (typeof Math.imul === 'undefined') {
       throw IllegalArgumentException_init_$Create$_0('fromIndex: ' + fromIndex + ' > toIndex: ' + toIndex);
     }
   };
-  protoOf(Companion_4).y1 = function (oldCapacity, minCapacity) {
+  protoOf(Companion_4).x1 = function (oldCapacity, minCapacity) {
     var newCapacity = oldCapacity + (oldCapacity >> 1) | 0;
     if ((newCapacity - minCapacity | 0) < 0)
       newCapacity = minCapacity;
@@ -2656,25 +2513,25 @@ if (typeof Math.imul === 'undefined') {
       newCapacity = minCapacity > 2147483639 ? IntCompanionObject_instance.MAX_VALUE : 2147483639;
     return newCapacity;
   };
-  protoOf(Companion_4).a1 = function (c) {
+  protoOf(Companion_4).z = function (c) {
     var hashCode_0 = 1;
     var tmp0_iterator = c.k();
-    while (tmp0_iterator.l()) {
-      var e = tmp0_iterator.m();
+    while (tmp0_iterator.r()) {
+      var e = tmp0_iterator.s();
       var tmp = imul(31, hashCode_0);
       var tmp2_elvis_lhs = e == null ? null : hashCode(e);
       hashCode_0 = tmp + (tmp2_elvis_lhs == null ? 0 : tmp2_elvis_lhs) | 0;
     }
     return hashCode_0;
   };
-  protoOf(Companion_4).z = function (c, other) {
-    if (!(c.n() === other.n()))
+  protoOf(Companion_4).y = function (c, other) {
+    if (!(c.j() === other.j()))
       return false;
     var otherIterator = other.k();
     var tmp0_iterator = c.k();
-    while (tmp0_iterator.l()) {
-      var elem = tmp0_iterator.m();
-      var elemOther = otherIterator.m();
+    while (tmp0_iterator.r()) {
+      var elem = tmp0_iterator.s();
+      var elemOther = otherIterator.s();
       if (!equals(elem, elemOther)) {
         return false;
       }
@@ -2687,61 +2544,58 @@ if (typeof Math.imul === 'undefined') {
   }
   function Companion_5() {
   }
-  protoOf(Companion_5).c1 = function (c) {
+  protoOf(Companion_5).b1 = function (c) {
     var hashCode_0 = 0;
     var tmp0_iterator = c.k();
-    while (tmp0_iterator.l()) {
-      var element = tmp0_iterator.m();
+    while (tmp0_iterator.r()) {
+      var element = tmp0_iterator.s();
       var tmp = hashCode_0;
       var tmp2_elvis_lhs = element == null ? null : hashCode(element);
       hashCode_0 = tmp + (tmp2_elvis_lhs == null ? 0 : tmp2_elvis_lhs) | 0;
     }
     return hashCode_0;
   };
-  protoOf(Companion_5).b1 = function (c, other) {
-    if (!(c.n() === other.n()))
+  protoOf(Companion_5).a1 = function (c, other) {
+    if (!(c.j() === other.j()))
       return false;
     // Inline function 'kotlin.collections.containsAll' call
-    return c.p(other);
+    return c.m(other);
   };
   var Companion_instance_5;
   function Companion_getInstance_5() {
     return Companion_instance_5;
   }
   function collectionToArrayCommonImpl(collection) {
-    if (collection.q()) {
+    if (collection.n()) {
       // Inline function 'kotlin.emptyArray' call
       return [];
     }
     // Inline function 'kotlin.arrayOfNulls' call
-    var size = collection.n();
+    var size = collection.j();
     var destination = fillArrayVal(Array(size), null);
     var iterator = collection.k();
     var index = 0;
-    while (iterator.l()) {
+    while (iterator.r()) {
       var tmp0 = index;
       index = tmp0 + 1 | 0;
-      destination[tmp0] = iterator.m();
+      destination[tmp0] = iterator.s();
     }
     return destination;
+  }
+  function listOf(elements) {
+    return elements.length > 0 ? asList(elements) : emptyList();
   }
   function emptyList() {
     return EmptyList_getInstance();
   }
-  function listOf_0(elements) {
-    return elements.length > 0 ? asList(elements) : emptyList();
-  }
-  function arrayListOf(elements) {
-    return elements.length === 0 ? ArrayList_init_$Create$() : ArrayList_init_$Create$_1(new ArrayAsCollection(elements, true));
-  }
   function EmptyList() {
     EmptyList_instance = this;
-    this.v4_1 = new Long(-1478467534, -1720727600);
+    this.r4_1 = new Long(-1478467534, -1720727600);
   }
   protoOf(EmptyList).equals = function (other) {
     var tmp;
     if (!(other == null) ? isInterface(other, List) : false) {
-      tmp = other.q();
+      tmp = other.n();
     } else {
       tmp = false;
     }
@@ -2753,19 +2607,19 @@ if (typeof Math.imul === 'undefined') {
   protoOf(EmptyList).toString = function () {
     return '[]';
   };
-  protoOf(EmptyList).n = function () {
+  protoOf(EmptyList).j = function () {
     return 0;
   };
-  protoOf(EmptyList).q = function () {
+  protoOf(EmptyList).n = function () {
     return true;
   };
-  protoOf(EmptyList).w4 = function (elements) {
-    return elements.q();
+  protoOf(EmptyList).s4 = function (elements) {
+    return elements.n();
   };
-  protoOf(EmptyList).p = function (elements) {
-    return this.w4(elements);
+  protoOf(EmptyList).m = function (elements) {
+    return this.s4(elements);
   };
-  protoOf(EmptyList).u = function (index) {
+  protoOf(EmptyList).t = function (index) {
     throw IndexOutOfBoundsException_init_$Create$_0("Empty list doesn't contain element at index " + index + '.');
   };
   protoOf(EmptyList).k = function () {
@@ -2777,91 +2631,27 @@ if (typeof Math.imul === 'undefined') {
       new EmptyList();
     return EmptyList_instance;
   }
-  function ArrayAsCollection(values, isVarargs) {
-    this.x4_1 = values;
-    this.y4_1 = isVarargs;
-  }
-  protoOf(ArrayAsCollection).n = function () {
-    return this.x4_1.length;
-  };
-  protoOf(ArrayAsCollection).q = function () {
-    // Inline function 'kotlin.collections.isEmpty' call
-    return this.x4_1.length === 0;
-  };
-  protoOf(ArrayAsCollection).z4 = function (element) {
-    return contains(this.x4_1, element);
-  };
-  protoOf(ArrayAsCollection).a5 = function (elements) {
-    var tmp$ret$0;
-    $l$block_0: {
-      // Inline function 'kotlin.collections.all' call
-      var tmp;
-      if (isInterface(elements, Collection)) {
-        tmp = elements.q();
-      } else {
-        tmp = false;
-      }
-      if (tmp) {
-        tmp$ret$0 = true;
-        break $l$block_0;
-      }
-      var tmp0_iterator = elements.k();
-      while (tmp0_iterator.l()) {
-        var element = tmp0_iterator.m();
-        // Inline function 'kotlin.collections.ArrayAsCollection.containsAll.<anonymous>' call
-        if (!this.z4(element)) {
-          tmp$ret$0 = false;
-          break $l$block_0;
-        }
-      }
-      tmp$ret$0 = true;
-    }
-    return tmp$ret$0;
-  };
-  protoOf(ArrayAsCollection).p = function (elements) {
-    return this.a5(elements);
-  };
-  protoOf(ArrayAsCollection).k = function () {
-    return arrayIterator(this.x4_1);
-  };
   function EmptyIterator() {
   }
-  protoOf(EmptyIterator).l = function () {
+  protoOf(EmptyIterator).r = function () {
     return false;
   };
-  protoOf(EmptyIterator).m = function () {
+  protoOf(EmptyIterator).s = function () {
     throw NoSuchElementException_init_$Create$();
   };
   var EmptyIterator_instance;
   function EmptyIterator_getInstance() {
     return EmptyIterator_instance;
   }
-  function throwIndexOverflow() {
-    throw ArithmeticException_init_$Create$_0('Index overflow has happened.');
-  }
-  function addAll(_this__u8e3s4, elements) {
-    if (isInterface(elements, Collection))
-      return _this__u8e3s4.i(elements);
-    else {
-      var result = false;
-      var tmp1_iterator = elements.k();
-      while (tmp1_iterator.l()) {
-        var item = tmp1_iterator.m();
-        if (_this__u8e3s4.h(item))
-          result = true;
-      }
-      return result;
-    }
-  }
   function emptySet() {
     return EmptySet_getInstance();
   }
   function optimizeReadOnlySet(_this__u8e3s4) {
-    switch (_this__u8e3s4.n()) {
+    switch (_this__u8e3s4.j()) {
       case 0:
         return emptySet();
       case 1:
-        return setOf(_this__u8e3s4.k().m());
+        return setOf(_this__u8e3s4.k().s());
       default:
         return _this__u8e3s4;
     }
@@ -2871,12 +2661,12 @@ if (typeof Math.imul === 'undefined') {
   }
   function EmptySet() {
     EmptySet_instance = this;
-    this.b5_1 = new Long(1993859828, 793161749);
+    this.t4_1 = new Long(1993859828, 793161749);
   }
   protoOf(EmptySet).equals = function (other) {
     var tmp;
     if (!(other == null) ? isInterface(other, Set) : false) {
-      tmp = other.q();
+      tmp = other.n();
     } else {
       tmp = false;
     }
@@ -2888,17 +2678,17 @@ if (typeof Math.imul === 'undefined') {
   protoOf(EmptySet).toString = function () {
     return '[]';
   };
-  protoOf(EmptySet).n = function () {
+  protoOf(EmptySet).j = function () {
     return 0;
   };
-  protoOf(EmptySet).q = function () {
+  protoOf(EmptySet).n = function () {
     return true;
   };
-  protoOf(EmptySet).w4 = function (elements) {
-    return elements.q();
+  protoOf(EmptySet).s4 = function (elements) {
+    return elements.n();
   };
-  protoOf(EmptySet).p = function (elements) {
-    return this.w4(elements);
+  protoOf(EmptySet).m = function (elements) {
+    return this.s4(elements);
   };
   protoOf(EmptySet).k = function () {
     return EmptyIterator_instance;
@@ -2911,15 +2701,15 @@ if (typeof Math.imul === 'undefined') {
   }
   function appendElement(_this__u8e3s4, element, transform) {
     if (!(transform == null)) {
-      _this__u8e3s4.h3(transform(element));
+      _this__u8e3s4.f3(transform(element));
     } else {
       if (element == null ? true : isCharSequence(element)) {
-        _this__u8e3s4.h3(element);
+        _this__u8e3s4.f3(element);
       } else {
         if (element instanceof Char) {
-          _this__u8e3s4.y2(element.c5_1);
+          _this__u8e3s4.x2(element.u4_1);
         } else {
-          _this__u8e3s4.h3(toString_1(element));
+          _this__u8e3s4.f3(toString_1(element));
         }
       }
     }
@@ -2944,10 +2734,10 @@ if (typeof Math.imul === 'undefined') {
       do {
         var i = inductionVariable;
         inductionVariable = inductionVariable + 1 | 0;
-        sb.y2(padChar);
+        sb.x2(padChar);
       }
        while (!(i === last));
-    sb.h3(_this__u8e3s4);
+    sb.f3(_this__u8e3s4);
     return sb;
   }
   function _UShort___init__impl__jigrne(data) {
@@ -2956,12 +2746,30 @@ if (typeof Math.imul === 'undefined') {
   function _UShort___get_data__impl__g0245($this) {
     return $this;
   }
+  var page;
+  var catalogSearch;
+  var catalogCategory;
+  var selectedItem;
+  var itemPrice;
+  var warrantyChecked;
+  var priorityShipping;
   var quantity;
   var email;
+  var address;
+  var promoCode;
+  var promoDiscount;
   var accepted;
   var confirmed;
   var orders;
-  var page;
+  var profileName;
+  var profileEmail;
+  var darkTheme;
+  var patchAlerts;
+  var telemetry;
+  var profileStatus;
+  var trackingStatus;
+  var supportFeedback;
+  var ticketStatus;
   function renderScreen(screenId) {
     // Inline function 'kotlin.require' call
     // Inline function 'kotlin.contracts.contract' call
@@ -2972,60 +2780,94 @@ if (typeof Math.imul === 'undefined') {
     }
     var tmp;
     switch (page) {
-      case 'cart':
-        tmp = plus(listOf_0([summary(), layout('quantity', 'row', listOf_0([button('remove', 'Remove', 'remove', quantity > 1 ? !confirmed : false), button('add', 'Add item', 'add', quantity < 100 ? !confirmed : false)])), button('next', 'Continue to details', 'to_details', !confirmed), layout('repository_api', 'card', listOf_0([text('api_status', get_apiStatus(), 'caption'), button('api_load', 'Check repository API', 'load_repository', !get_apiBusy())]))]), confirmed ? listOf(button('new_order', 'Start new order', 'new_order')) : emptyList());
+      case 'dashboard':
+        tmp = listOf([layout('dash_hero', 'card', listOf([text('dash_title', 'PatchRelay Android Hub', 'title'), text('dash_sub', 'High-performance interpreted UI engine with dynamic hot-patching.', 'caption'), text('dash_device', 'Target Host: Realme RMX2117 (Android 11/12)', 'caption')])), navBar(), layout('dash_stats', 'card', listOf([text('stats_title', 'Live Application Metrics', 'title'), text('stat_orders', 'Total Orders Placed: ' + orders), text('stat_items', 'Cart Items: ' + quantity + ' (' + selectedItem + ')'), text('stat_theme', 'Dark Mode: ' + (darkTheme ? 'Enabled' : 'Standard')), text('stat_api', 'API Bridge: ' + get_apiStatus(), 'caption')])), layout('dash_actions', 'row', listOf([button('go_shop', 'Shop Catalog', 'to_catalog'), button('go_api', 'Query Live API', 'to_api')]))]);
         break;
-      case 'details':
-        var tmp_0 = input('email', 'Receipt email', email, 'email');
-        var tmp_1;
-        // Inline function 'kotlin.text.isEmpty' call
-
-        var this_0 = email;
-        if (charSequenceLength(this_0) === 0) {
-          tmp_1 = 'Enter an email for your receipt.';
-        } else {
-          if (validEmail()) {
-            tmp_1 = 'Email ready.';
+      case 'catalog':
+        tmp = listOf([text('cat_title', 'Product Catalog (3 Items)', 'title'), text('cat_desc', 'Browse hardware modules with on-device telemetry.', 'caption'), layout('cat_filter_row', 'row', listOf([button('cat_all', 'All Items', 'cat_filter_all', !(catalogCategory === 'all')), button('cat_ctrl', 'Controllers', 'cat_filter_controllers', !(catalogCategory === 'controllers')), button('cat_sensors', 'Sensors', 'cat_filter_sensors', !(catalogCategory === 'sensors'))])), (catalogCategory === 'all' ? true : catalogCategory === 'controllers') ? layout('item1', 'card', listOf([text('item1_name', 'Orbital AI Controller Node', 'title'), text('item1_price', 'Price: $199 USD', 'caption'), text('item1_desc', 'ARM64 micro-controller for low-latency automation.'), layout('item1_btns', 'row', listOf([button('item1_sel', 'Inspect Specs', 'select_item1'), button('item1_add', 'Quick Add', 'add_item1')]))])) : layout('empty1', 'row', emptyList()), (catalogCategory === 'all' ? true : catalogCategory === 'controllers') ? layout('item2', 'card', listOf([text('item2_name', 'Shizuku Wireless Bridge', 'title'), text('item2_price', 'Price: $79 USD', 'caption'), text('item2_desc', 'Ultra-fast privileged IPC gateway adapter.'), layout('item2_btns', 'row', listOf([button('item2_sel', 'Inspect Specs', 'select_item2'), button('item2_add', 'Quick Add', 'add_item2')]))])) : layout('empty2', 'row', emptyList()), (catalogCategory === 'all' ? true : catalogCategory === 'sensors') ? layout('item3', 'card', listOf([text('item3_name', 'Telemetry Sensor Module', 'title'), text('item3_price', 'Price: $119 USD', 'caption'), text('item3_desc', 'Multi-axis motion & hardware voltage tracker.'), layout('item3_btns', 'row', listOf([button('item3_sel', 'Inspect Specs', 'select_item3'), button('item3_add', 'Quick Add', 'add_item3')]))])) : layout('empty3', 'row', emptyList()), layout('cat_footer', 'row', listOf([button('cat_back', 'Back to Home', 'to_dashboard'), button('cat_checkout', 'Go to Checkout (' + quantity + ')', 'to_checkout')]))]);
+        break;
+      case 'detail':
+        tmp = listOf([text('det_title', 'Product Detail: ' + selectedItem, 'title'), layout('det_specs_card', 'card', listOf([text('det_heading', 'Hardware Specifications', 'caption'), text('det_p1', 'Item: ' + selectedItem), text('det_p2', 'Base Unit Price: $' + itemPrice + ' USD'), text('det_p3', 'Availability: In Stock (Dispatched within 24h)')])), layout('det_addons_card', 'card', listOf([text('addons_title', 'Add-On Upgrades', 'caption'), toggle('toggle_warranty', 'Add 2-Year Extended Care (+$29)', warrantyChecked, 'toggle_warranty'), toggle('toggle_priority', 'Add Priority Courier Delivery (+$15)', priorityShipping, 'toggle_priority')])), layout('det_qty_card', 'card', listOf([text('qty_label', 'Selected Quantity: ' + quantity), layout('qty_buttons', 'row', listOf([button('qty_minus', 'Remove (-1)', 'remove', quantity > 1), button('qty_plus', 'Add (+1)', 'add', quantity < 100)]))])), layout('det_actions', 'row', listOf([button('det_back', 'Back to Catalog', 'to_catalog'), button('det_checkout', 'Checkout ($' + calculateTotal() + ')', 'to_checkout')]))]);
+        break;
+      case 'checkout':
+        var tmp_0;
+        if (!confirmed) {
+          var tmp_1 = text('chk_title', 'Cart & Multi-Step Checkout', 'title');
+          var tmp_2 = layout('chk_summary', 'card', listOf([text('sum_title', 'Order Breakdown', 'caption'), text('sum_item', 'Product: ' + selectedItem + ' (x' + quantity + ')'), text('sum_sub', 'Subtotal: $' + imul(quantity, itemPrice)), warrantyChecked ? text('sum_war', 'Extended Warranty: +$29') : text('sum_war_no', 'Warranty: None', 'caption'), priorityShipping ? text('sum_ship', 'Priority Shipping: +$15') : text('sum_ship_no', 'Standard Shipping: Free', 'caption'), promoDiscount > 0 ? text('sum_disc', 'Discount Applied: -' + promoDiscount) : text('sum_disc_no', 'Promo: None', 'caption'), text('sum_total', 'Grand Total: $' + calculateTotal(), 'title')]));
+          var tmp_3 = text('form_title', 'Contact & Delivery', 'caption');
+          var tmp_4 = input('chk_email', 'Enter receipt email', email, 'email');
+          var tmp_5;
+          // Inline function 'kotlin.text.isEmpty' call
+          var this_0 = email;
+          if (charSequenceLength(this_0) === 0) {
+            tmp_5 = 'Receipt email is required.';
           } else {
-            tmp_1 = 'Enter a valid email.';
+            if (validEmail()) {
+              tmp_5 = 'Email valid.';
+            } else {
+              tmp_5 = 'Invalid email address.';
+            }
           }
+          var tmp_6 = tmp_5;
+          var tmp_7;
+          var tmp_8;
+          // Inline function 'kotlin.text.isNotEmpty' call
+          var this_1 = email;
+          if (charSequenceLength(this_1) > 0) {
+            tmp_8 = !validEmail();
+          } else {
+            tmp_8 = false;
+          }
+          if (tmp_8) {
+            tmp_7 = 'error';
+          } else {
+            tmp_7 = 'caption';
+          }
+          var tmp_9 = layout('chk_form', 'card', listOf([tmp_3, tmp_4, text('chk_email_val', tmp_6, tmp_7), input('chk_address', 'Shipping address', address, 'address'), toggle('chk_terms', 'I accept the checkout & warranty terms', accepted, 'terms')]));
+          var tmp_10 = 'Place Order ($' + calculateTotal() + ')';
+          var tmp_11;
+          if (validEmail() ? accepted : false) {
+            // Inline function 'kotlin.text.isNotEmpty' call
+            var this_2 = address;
+            tmp_11 = charSequenceLength(this_2) > 0;
+          } else {
+            tmp_11 = false;
+          }
+          tmp_0 = listOf([tmp_1, tmp_2, tmp_9, layout('chk_actions', 'row', listOf([button('chk_pay', tmp_10, 'place_order', tmp_11), button('chk_back', 'Back to Home', 'to_dashboard')]))]);
+        } else {
+          tmp_0 = listOf([layout('rec_card', 'card', listOf([text('rec_title', 'Order Confirmed!', 'title'), text('rec_id', 'Order Reference: #PR-88' + imul(orders, 17)), text('rec_items', 'Purchased: ' + quantity + ' x ' + selectedItem), text('rec_amount', 'Total Paid: $' + calculateTotal()), text('rec_dest', 'Receipt dispatched to: ' + email), text('rec_status', 'Status: Processing in fulfillment queue.', 'caption')])), layout('rec_btns', 'row', listOf([button('rec_new', 'Start New Order', 'new_order'), button('rec_orders', 'View Order Tracking', 'to_orders')]))]);
         }
 
-        var tmp_2 = tmp_1;
-        var tmp_3;
-        var tmp_4;
+        tmp = tmp_0;
+        break;
+      case 'api_explorer':
+        tmp = listOf([text('api_page_title', 'Live Host API Bridge', 'title'), text('api_desc', 'Direct bounded IPC request to native Android host HTTPS client.', 'caption'), layout('api_card', 'card', listOf([text('api_target', 'Target: JetBrains/kotlin on GitHub API', 'caption'), text('api_live_status', get_apiStatus()), button('api_fetch_btn', 'Execute API Call', 'load_repository', !get_apiBusy())])), layout('api_info_card', 'card', listOf([text('info_heading', 'Bridge Architecture Info', 'caption'), text('info_p1', "Calls MainActivity.registerHostFunction('github.repository.v1')"), text('info_p2', 'Native Android downloads payload over TLS using HttpsDownloads engine.'), text('info_p3', 'Result returns asynchronously to screen JS runtime.')])), button('api_back', 'Back to Dashboard', 'to_dashboard')]);
+        break;
+      case 'profile':
+        tmp = listOf([text('prof_title', 'User Profile & Preferences', 'title'), layout('prof_inputs_card', 'card', listOf([text('prof_head', 'Personal Information', 'caption'), input('prof_name_input', 'Full Name', profileName, 'profile_name'), input('prof_email_input', 'Account Email', profileEmail, 'profile_email')])), layout('prof_settings_card', 'card', listOf([text('settings_head', 'Preferences & Features', 'caption'), toggle('prof_toggle_dark', 'Dark Theme Mode', darkTheme, 'toggle_dark'), toggle('prof_toggle_alerts', 'Instant OTA Patch Alerts', patchAlerts, 'toggle_alerts'), toggle('prof_toggle_telem', 'Telemetry Diagnostics', telemetry, 'toggle_telemetry')])), text('prof_feedback', profileStatus, 'caption'), layout('prof_btns', 'row', listOf([button('prof_save', 'Save Preferences', 'save_profile'), button('prof_back', 'Back to Dashboard', 'to_dashboard')]))]);
+        break;
+      case 'orders':
+        tmp = listOf([text('ord_title', 'Order History & Live Tracking', 'title'), layout('ord_active_card', 'card', listOf([text('ord_active_h', 'Latest Active Delivery', 'caption'), text('ord_active_desc', trackingStatus), text('ord_active_step', 'Dispatched -> Bengaluru Customs -> Out for Delivery', 'caption'), button('ord_refresh', 'Check Real-Time Tracking', 'refresh_tracking')])), layout('ord_past_card', 'card', listOf([text('ord_past_h', 'Completed Transactions', 'caption'), text('ord_item1', 'Order #PR-8817: 1x Orbital Controller - $199 [Delivered]'), text('ord_item2', 'Order #PR-8704: 2x Shizuku Bridge - $158 [Delivered]')])), layout('ord_nav_row', 'row', listOf([button('ord_home', 'Back to Dashboard', 'to_dashboard'), button('ord_shop', 'Shop More Items', 'to_catalog')]))]);
+        break;
+      case 'support':
+        var tmp_12 = text('sup_title', 'Customer Help & FAQ Support', 'title');
+        var tmp_13 = layout('faq_card1', 'card', listOf([text('faq_q1', 'Q: How do patches update my phone without reinstalling?', 'caption'), text('faq_a1', 'A: PatchRelay compiles Kotlin screens into signed JavaScript executed inside a sandboxed native WebView interpreter.')]));
+        var tmp_14 = layout('faq_card2', 'card', listOf([text('faq_q2', 'Q: Can patches break native Android code or permissions?', 'caption'), text('faq_a2', 'A: No. Native files are cryptographically locked in baseline.json. The native contract cannot be altered by patches.')]));
+        var tmp_15 = text('sup_form_head', 'Submit Support Inquiry', 'caption');
+        var tmp_16 = input('sup_input', 'Describe your question or issue', supportFeedback, 'support_input');
+        var tmp_17 = text('sup_status', ticketStatus, 'caption');
         // Inline function 'kotlin.text.isNotEmpty' call
 
-        var this_1 = email;
-        if (charSequenceLength(this_1) > 0) {
-          tmp_4 = !validEmail();
-        } else {
-          tmp_4 = false;
-        }
-
-        if (tmp_4) {
-          tmp_3 = 'error';
-        } else {
-          tmp_3 = 'caption';
-        }
-
-        tmp = listOf_0([tmp_0, text('validation', tmp_2, tmp_3), toggle('terms', 'I agree to the order terms', accepted, 'terms'), button('next', 'Review order', 'to_review', validEmail() ? accepted : false), button('back', 'Back to cart', 'back_cart')]);
-        break;
-      case 'review':
-        tmp = listOf_0([summary(), text('receipt_email', 'Receipt: ' + email), button('pay', 'Place demo order', 'place_order'), button('back', 'Back to details', 'back_details')]);
-        break;
-      case 'receipt':
-        tmp = listOf_0([summary(), text('receipt_email', 'Receipt: ' + email), text('status', 'Payment confirmed: ' + imul(quantity, 100)), text('orders', 'Orders created: ' + orders), button('back', 'Return to cart', 'back_cart')]);
+        var this_3 = supportFeedback;
+        var tmp$ret$4 = charSequenceLength(this_3) > 0;
+        tmp = listOf([tmp_12, tmp_13, tmp_14, layout('sup_form_card', 'card', listOf([tmp_15, tmp_16, tmp_17, button('sup_submit', 'Submit Support Ticket', 'submit_ticket', tmp$ret$4)])), button('sup_back', 'Back to Dashboard', 'to_dashboard')]);
         break;
       default:
-        var message_0 = 'Unknown page';
+        var message_0 = 'Unknown page: ' + page;
         throw IllegalStateException_init_$Create$_0(toString_2(message_0));
     }
     var content = tmp;
-    var tmp1_subject = page;
-    var tmp_5 = plus(listOf_0([text('title', tmp1_subject === 'cart' ? 'Cart' : tmp1_subject === 'details' ? 'Details' : tmp1_subject === 'review' ? 'Review' : 'Receipt', 'title'), text('step', 'Cart \u2192 Details \u2192 Review \u2192 Receipt', 'caption')]), content);
-    var tmp2_subject = page;
-    return column(screenId, tmp_5, (tmp2_subject === 'details' ? true : tmp2_subject === 'receipt') ? 'back_cart' : tmp2_subject === 'review' ? 'back_details' : null);
+    return column(screenId, content, page === 'dashboard' ? null : 'to_dashboard');
   }
   function handleEvent(screenId, action, value) {
     value = value === VOID ? null : value;
@@ -3037,20 +2879,114 @@ if (typeof Math.imul === 'undefined') {
       throw IllegalArgumentException_init_$Create$_0(toString_2(message));
     }
     switch (action) {
-      case 'load_repository':
-        if (page === 'cart') {
-          requestRepository();
+      case 'to_dashboard':
+        page = 'dashboard';
+        break;
+      case 'to_catalog':
+        page = 'catalog';
+        break;
+      case 'to_detail':
+        page = 'detail';
+        break;
+      case 'to_checkout':
+        page = 'checkout';
+        break;
+      case 'to_api':
+        page = 'api_explorer';
+        break;
+      case 'to_profile':
+        page = 'profile';
+        break;
+      case 'to_orders':
+        page = 'orders';
+        break;
+      case 'to_support':
+        page = 'support';
+        break;
+      case 'cat_filter_all':
+        catalogCategory = 'all';
+        break;
+      case 'cat_filter_controllers':
+        catalogCategory = 'controllers';
+        break;
+      case 'cat_filter_sensors':
+        catalogCategory = 'sensors';
+        break;
+      case 'select_item1':
+        selectedItem = 'Orbital AI Controller Node';
+        itemPrice = 199;
+        page = 'detail';
+        break;
+      case 'select_item2':
+        selectedItem = 'Shizuku Wireless Bridge';
+        itemPrice = 79;
+        page = 'detail';
+        break;
+      case 'select_item3':
+        selectedItem = 'Telemetry Sensor Module';
+        itemPrice = 119;
+        page = 'detail';
+        break;
+      case 'add_item1':
+        selectedItem = 'Orbital AI Controller Node';
+        itemPrice = 199;
+        quantity = 1;
+        page = 'checkout';
+        break;
+      case 'add_item2':
+        selectedItem = 'Shizuku Wireless Bridge';
+        itemPrice = 79;
+        quantity = 1;
+        page = 'checkout';
+        break;
+      case 'add_item3':
+        selectedItem = 'Telemetry Sensor Module';
+        itemPrice = 119;
+        quantity = 1;
+        page = 'checkout';
+        break;
+      case 'toggle_warranty':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(value === 'true' ? true : value === 'false')) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_0 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_0));
         }
 
+        warrantyChecked = value === 'true';
+        break;
+      case 'toggle_priority':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(value === 'true' ? true : value === 'false')) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_1 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_1));
+        }
+
+        priorityShipping = value === 'true';
         break;
       case 'add':
-        if ((page === 'cart' ? !confirmed : false) ? quantity < 100 : false) {
+        if (quantity < 100) {
           quantity = quantity + 1 | 0;
         }
 
         break;
       case 'remove':
-        if ((page === 'cart' ? !confirmed : false) ? quantity > 1 : false) {
+        if (quantity > 1) {
           quantity = quantity - 1 | 0;
         }
 
@@ -3066,12 +3002,28 @@ if (typeof Math.imul === 'undefined') {
 
         if (!(!(value == null) ? value.length <= 1024 : false)) {
           // Inline function 'kotlin.require.<anonymous>' call
-          var message_0 = 'Failed requirement.';
-          throw IllegalArgumentException_init_$Create$_0(toString_2(message_0));
+          var message_2 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_2));
         }
 
-        if (page === 'details' ? !confirmed : false)
-          email = value;
+        email = value;
+        break;
+      case 'address':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(!(value == null) ? value.length <= 1024 : false)) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_3 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_3));
+        }
+
+        address = value;
         break;
       case 'terms':
         // Inline function 'kotlin.require' call
@@ -3084,51 +3036,156 @@ if (typeof Math.imul === 'undefined') {
 
         if (!(value === 'true' ? true : value === 'false')) {
           // Inline function 'kotlin.require.<anonymous>' call
-          var message_1 = 'Failed requirement.';
-          throw IllegalArgumentException_init_$Create$_0(toString_2(message_1));
+          var message_4 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_4));
         }
 
-        if (page === 'details' ? !confirmed : false)
-          accepted = value === 'true';
-        break;
-      case 'to_details':
-        if (page === 'cart' ? !confirmed : false)
-          page = 'details';
-        break;
-      case 'to_review':
-        if (((page === 'details' ? !confirmed : false) ? validEmail() : false) ? accepted : false)
-          page = 'review';
-        break;
-      case 'back_details':
-        if (page === 'review' ? !confirmed : false)
-          page = 'details';
-        break;
-      case 'back_cart':
-        if (page === 'details' ? true : page === 'receipt')
-          page = 'cart';
+        accepted = value === 'true';
         break;
       case 'place_order':
-        if (((page === 'review' ? !confirmed : false) ? validEmail() : false) ? accepted : false) {
+        var tmp;
+        if (validEmail() ? accepted : false) {
+          // Inline function 'kotlin.text.isNotEmpty' call
+          var this_0 = address;
+          tmp = charSequenceLength(this_0) > 0;
+        } else {
+          tmp = false;
+        }
+
+        if (tmp) {
           confirmed = true;
           orders = orders + 1 | 0;
-          page = 'receipt';
         }
 
         break;
       case 'new_order':
-        if (page === 'cart' ? confirmed : false) {
-          quantity = 1;
-          email = '';
-          accepted = false;
-          confirmed = false;
+        confirmed = false;
+        quantity = 1;
+        warrantyChecked = false;
+        priorityShipping = false;
+        promoDiscount = 0;
+        page = 'catalog';
+        break;
+      case 'load_repository':
+        requestRepository('JetBrains/kotlin');
+        break;
+      case 'profile_name':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(!(value == null) ? value.length <= 1024 : false)) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_5 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_5));
         }
 
+        profileName = value;
+        break;
+      case 'profile_email':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(!(value == null) ? value.length <= 1024 : false)) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_6 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_6));
+        }
+
+        profileEmail = value;
+        break;
+      case 'toggle_dark':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(value === 'true' ? true : value === 'false')) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_7 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_7));
+        }
+
+        darkTheme = value === 'true';
+        break;
+      case 'toggle_alerts':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(value === 'true' ? true : value === 'false')) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_8 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_8));
+        }
+
+        patchAlerts = value === 'true';
+        break;
+      case 'toggle_telemetry':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(value === 'true' ? true : value === 'false')) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_9 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_9));
+        }
+
+        telemetry = value === 'true';
+        break;
+      case 'save_profile':
+        profileStatus = 'Saved: ' + profileName + ' (' + profileEmail + ')';
+        break;
+      case 'refresh_tracking':
+        trackingStatus = 'Tracking updated at ' + (1000 + imul(orders, 37) | 0) + ' ms: In Transit';
+        break;
+      case 'support_input':
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        // Inline function 'kotlin.require' call
+
+        // Inline function 'kotlin.contracts.contract' call
+
+        if (!(!(value == null) ? value.length <= 1024 : false)) {
+          // Inline function 'kotlin.require.<anonymous>' call
+          var message_10 = 'Failed requirement.';
+          throw IllegalArgumentException_init_$Create$_0(toString_2(message_10));
+        }
+
+        supportFeedback = value;
+        break;
+      case 'submit_ticket':
+        ticketStatus = 'Ticket #PR-' + (2000 + orders | 0) + ' submitted successfully!';
+        supportFeedback = '';
         break;
       default:
         // Inline function 'kotlin.error' call
 
-        var message_2 = 'Unsupported action';
-        throw IllegalStateException_init_$Create$_0(toString_2(message_2));
+        var message_11 = 'Unsupported action: ' + action;
+        throw IllegalStateException_init_$Create$_0(toString_2(message_11));
     }
     return renderScreen(screenId);
   }
@@ -3137,14 +3194,21 @@ if (typeof Math.imul === 'undefined') {
     if (email.length <= 254) {
       // Inline function 'kotlin.text.matches' call
       var this_0 = email;
-      tmp = Regex_init_$Create$('[^\\s@]+@[^\\s@]+\\.[^\\s@]+').q3(this_0);
+      tmp = Regex_init_$Create$('[^\\s@]+@[^\\s@]+\\.[^\\s@]+').o3(this_0);
     } else {
       tmp = false;
     }
     return tmp;
   }
-  function summary() {
-    return layout('summary', 'card', listOf_0([text('items', 'Items: ' + quantity), text('total', 'Total: ' + imul(quantity, 100))]));
+  function calculateTotal() {
+    var base = imul(quantity, itemPrice);
+    var warranty = warrantyChecked ? 29 : 0;
+    var shipping = priorityShipping ? 15 : 0;
+    var discount = promoDiscount;
+    return coerceAtLeast(((base + warranty | 0) + shipping | 0) - discount | 0, 0);
+  }
+  function navBar() {
+    return layout('nav_bar', 'card', listOf([text('nav_title', 'PatchRelay Navigation Hub', 'caption'), layout('nav_row1', 'row', listOf([button('nav_home', 'Dashboard', 'to_dashboard', !(page === 'dashboard')), button('nav_cat', 'Catalog', 'to_catalog', !(page === 'catalog')), button('nav_det', 'Detail', 'to_detail', !(page === 'detail'))])), layout('nav_row2', 'row', listOf([button('nav_chk', 'Checkout', 'to_checkout', !(page === 'checkout')), button('nav_api', 'API Feed', 'to_api', !(page === 'api_explorer')), button('nav_prf', 'Profile', 'to_profile', !(page === 'profile'))])), layout('nav_row3', 'row', listOf([button('nav_ord', 'Orders', 'to_orders', !(page === 'orders')), button('nav_sup', 'Support', 'to_support', !(page === 'support'))]))]));
   }
   function get_apiStatus() {
     return apiStatus;
@@ -3178,15 +3242,16 @@ if (typeof Math.imul === 'undefined') {
       apiBusy = false;
       var tmp;
       if (!(error == null)) {
-        tmp = 'API unavailable. Try again.';
+        tmp = 'API unavailable: ' + error;
       } else {
-        tmp = 'Kotlin API result: ' + (result == null ? 'No result' : result);
+        tmp = 'API result: ' + (result == null ? 'No result' : result);
       }
       apiStatus = tmp;
     }
     return renderScreen(screenId);
   }
-  function requestRepository() {
+  function requestRepository(target) {
+    target = target === VOID ? 'JetBrains/kotlin' : target;
     if (apiBusy)
       return Unit_instance;
     // Inline function 'kotlin.check' call
@@ -3200,8 +3265,8 @@ if (typeof Math.imul === 'undefined') {
     }
     requestId = requestId + 1 | 0;
     apiBusy = true;
-    apiStatus = 'Loading repository through Kotlin\u2026';
-    pendingHostRequest = '[{"id":' + requestId + ',"function":"github.repository.v1","argument":"JetBrains/kotlin"}]';
+    apiStatus = 'Loading repository through Kotlin...';
+    pendingHostRequest = '[{"id":' + requestId + ',"function":"github.repository.v1","argument":"' + target + '"}]';
   }
   function patchedFunctionIds() {
     return '["checkout.total.v1"]';
@@ -3230,7 +3295,7 @@ if (typeof Math.imul === 'undefined') {
     var this_0 = StringBuilder_init_$Create$_0();
     // Inline function 'kotlin.contracts.contract' call
     // Inline function 'jsonString.<anonymous>' call
-    this_0.y2(_Char___init__impl__6a9atx(34));
+    this_0.x2(_Char___init__impl__6a9atx(34));
     // Inline function 'kotlin.text.forEach' call
     var inductionVariable = 0;
     while (inductionVariable < charSequenceLength(value)) {
@@ -3238,27 +3303,27 @@ if (typeof Math.imul === 'undefined') {
       inductionVariable = inductionVariable + 1 | 0;
       // Inline function 'jsonString.<anonymous>.<anonymous>' call
       if (element === _Char___init__impl__6a9atx(34)) {
-        this_0.x2('\\"');
+        this_0.w2('\\"');
       } else if (element === _Char___init__impl__6a9atx(92)) {
-        this_0.x2('\\\\');
+        this_0.w2('\\\\');
       } else if (element === _Char___init__impl__6a9atx(10)) {
-        this_0.x2('\\n');
+        this_0.w2('\\n');
       } else if (element === _Char___init__impl__6a9atx(13)) {
-        this_0.x2('\\r');
+        this_0.w2('\\r');
       } else if (element === _Char___init__impl__6a9atx(9)) {
-        this_0.x2('\\t');
+        this_0.w2('\\t');
       } else {
         // Inline function 'kotlin.code' call
         if (Char__toInt_impl_vasixd(element) < 32) {
           // Inline function 'kotlin.code' call
           var tmp$ret$1 = Char__toInt_impl_vasixd(element);
-          this_0.x2('\\u' + padStart(toString(tmp$ret$1, 16), 4, _Char___init__impl__6a9atx(48)));
+          this_0.w2('\\u' + padStart(toString(tmp$ret$1, 16), 4, _Char___init__impl__6a9atx(48)));
         } else {
-          this_0.y2(element);
+          this_0.x2(element);
         }
       }
     }
-    this_0.y2(_Char___init__impl__6a9atx(34));
+    this_0.x2(_Char___init__impl__6a9atx(34));
     return this_0.toString();
   }
   function widget(id, type, fields) {
@@ -3286,7 +3351,7 @@ if (typeof Math.imul === 'undefined') {
     return '{"screenId":' + jsonString(screenId) + ',"type":"column","children":[' + joinToString_0(nodes, ',') + ']' + (backAction == null ? '' : ',"backAction":' + jsonString(backAction)) + '}';
   }
   //region block: post-declaration
-  protoOf(InternalHashMap).a2 = containsAllEntries;
+  protoOf(InternalHashMap).z1 = containsAllEntries;
   //endregion
   //region block: init
   Unit_instance = new Unit();
@@ -3295,12 +3360,30 @@ if (typeof Math.imul === 'undefined') {
   Companion_instance_4 = new Companion_4();
   Companion_instance_5 = new Companion_5();
   EmptyIterator_instance = new EmptyIterator();
+  page = 'dashboard';
+  catalogSearch = '';
+  catalogCategory = 'all';
+  selectedItem = 'Orbital AI Controller Node';
+  itemPrice = 199;
+  warrantyChecked = false;
+  priorityShipping = false;
   quantity = 1;
   email = '';
+  address = '';
+  promoCode = '';
+  promoDiscount = 0;
   accepted = false;
   confirmed = false;
-  orders = 0;
-  page = 'cart';
+  orders = 1;
+  profileName = 'Developer Jay';
+  profileEmail = 'jaypal@developer.com';
+  darkTheme = false;
+  patchAlerts = true;
+  telemetry = false;
+  profileStatus = 'Profile is up to date.';
+  trackingStatus = 'Order #PR-9802: Out for delivery in Bengaluru';
+  supportFeedback = '';
+  ticketStatus = 'Submit a message to reach developer support.';
   apiStatus = 'Repository API has not been called.';
   apiBusy = false;
   requestId = 0;
