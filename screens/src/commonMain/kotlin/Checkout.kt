@@ -173,14 +173,15 @@ fun renderScreen(screenId: String): String {
         )
 
         "checkout" -> if (!confirmed) listOf(
-            text("chk_title", "Checkout & Instant Discount", "title"),
+            text("chk_title", "Checkout & Instant Discount [v2]", "title"),
             layout("chk_summary", "card", listOf(
-                text("sum_title", "Order Breakdown", "caption"),
+                text("sum_title", "Order Breakdown & Loyalty Rewards", "caption"),
                 text("sum_item", "Item: $selectedItem (x$quantity)"),
                 text("sum_sub", "Subtotal: $${quantity * itemPrice}"),
                 if (warrantyChecked) text("sum_war", "Extended Care: +$29") else text("sum_war_no", "Warranty: Standard", "caption"),
                 if (vipExpressDelivery) text("sum_drone", "VIP Drone Shipping: +$25") else if (priorityShipping) text("sum_ship", "Priority Shipping: +$15") else text("sum_ship_no", "Standard Shipping: Free", "caption"),
                 if (promoDiscount > 0) text("sum_disc", "PROMO 'PATCH50' APPLIED: -$promoDiscount USD") else text("sum_disc_no", "Promo: None", "caption"),
+                text("sum_tax", "Estimated GST / Sales Tax: $0.00 (Zero-Tax Promotion)"),
                 text("sum_total", "Grand Total: $${calculateTotal()}", "title")
             )),
             layout("chk_promo_card", "card", listOf(
