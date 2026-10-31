@@ -2,12 +2,17 @@ plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android' }
 android {
     namespace 'dev.patchrelay'
     compileSdk 35
-    defaultConfig { minSdk 26 }
+    defaultConfig {
+        minSdk 26
+        testInstrumentationRunner 'dev.patchrelay.screens.SandboxInstrumentation'
+    }
+    sourceSets { androidTest.assets.srcDirs += '../demo/src/main/assets' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
-    testOptions { unitTests.returnDefaultValues = true }
+    testOptions { targetSdk = 35; unitTests.returnDefaultValues = true; unitTests.includeAndroidResources = true }
 }
 dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.11'
 }

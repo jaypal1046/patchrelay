@@ -11,8 +11,10 @@ import org.json.JSONTokener
 
 /** One local interpreter shared by screen events and prepared function calls. */
 @SuppressLint("SetJavaScriptEnabled")
+@Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
 internal class ScreenInterpreter(context: Context, private val onFailure: (Exception) -> Unit) {
     val webView = WebView(context)
+    private val page = context.assets.open("patchrelay-interpreter.html").bufferedReader().use { it.readText() }
     private val handler = Handler(Looper.getMainLooper())
     private val requests = java.util.ArrayDeque<Pair<String, (String) -> Unit>>()
     private var closed = false
@@ -21,6 +23,7 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
     private var busy = false
     private var sequence = 0
     private var timeout: Runnable? = null
+    private var poll: Runnable? = null
 
     init {
         check(Looper.myLooper() == Looper.getMainLooper())
@@ -32,9 +35,31 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
             allowContentAccess = false
             blockNetworkLoads = true
             domStorageEnabled = false
+            databaseEnabled = false
+            setGeolocationEnabled(false)
+            setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest) = request.deny()
+            override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) =
+                callback.invoke(origin, false, false)
+            override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<android.net.Uri>>, params: FileChooserParams): Boolean {
+                callback.onReceiveValue(null)
+                return true
+            }
+            override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                result.cancel(); return true
+            }
+            override fun onJsConfirm(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                result.cancel(); return true
+            }
+            override fun onJsPrompt(view: WebView, url: String, message: String, defaultValue: String, result: JsPromptResult): Boolean {
+                result.cancel(); return true
+            }
+        }
+        webView.setDownloadListener { _, _, _, _, _ -> }
     }
 
     fun start(script: String, onReady: () -> Unit) {
@@ -43,6 +68,8 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
         armTimeout()
         webView.webViewClient = object : WebViewClient() {
             private var initialized = false
+            @Suppress("DEPRECATION")
+            override fun shouldOverrideUrlLoading(view: WebView, url: String) = true
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest) =
                 WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
@@ -51,12 +78,16 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
                 initialized = true
                 enqueue(script + "\n;" + wrap("'ready'")) { onReady() }
             }
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (request.isForMainFrame) fail(IllegalStateException("Screen interpreter page failed"))
+            }
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 fail(IllegalStateException("Screen interpreter stopped"))
                 return true
             }
         }
-        webView.loadDataWithBaseURL("https://patchrelay.invalid/", "<!doctype html><meta http-equiv=Content-Security-Policy content=\"default-src 'none'; script-src 'unsafe-eval'\"><body></body>", "text/html", "UTF-8", null)
+        // An opaque origin also denies IndexedDB/other origin-backed storage in the worker.
+        webView.loadDataWithBaseURL(null, page, "text/html", "UTF-8", null)
     }
 
     fun call(function: String, args: List<Any?>, onResult: (String) -> Unit) {
@@ -64,7 +95,7 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
         val arguments = args.joinToString(",") {
             when (it) { null -> "null"; is Int -> it.toString(); is String -> JSONObject.quote(it); else -> error("Unsupported argument") }
         }
-        enqueue(wrap("window['PatchRelay:screens'].$function($arguments)"), onResult)
+        enqueue(wrap("self['PatchRelay:screens'].$function($arguments)"), onResult)
     }
 
     private fun wrap(expression: String) =
@@ -83,12 +114,25 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
         busy = true
         val (source, onResult) = requests.removeFirst()
         val ticket = armTimeout()
-        try { webView.evaluateJavascript(source) { encoded ->
+        try {
+            webView.evaluateJavascript("window.__relay.send($ticket,${JSONObject.quote(source)})") {
+                if (!closed && ticket == sequence) readReply(ticket, onResult)
+            }
+        } catch (failure: Exception) { fail(failure) }
+    }
+
+    private fun readReply(ticket: Int, onResult: (String) -> Unit) {
+        try { webView.evaluateJavascript("window.__relay.take($ticket)") { encoded ->
             if (closed || ticket != sequence) return@evaluateJavascript
+            if (encoded == "null") {
+                poll = Runnable { if (!closed && ticket == sequence) readReply(ticket, onResult) }
+                handler.postDelayed(poll!!, 16)
+                return@evaluateJavascript
+            }
             timeout?.let(handler::removeCallbacks)
             try {
                 require(encoded != null && encoded.length <= 128 * 1024) { "Invalid interpreter response" }
-                val result = JSONObject(JSONTokener(encoded).nextValue() as? String ?: error("Program failed to load"))
+                val result = BoundedJson.objectValue(JSONTokener(encoded).nextValue() as? String ?: error("Program failed to load"), 128 * 1024)
                 check(result.getBoolean("ok")) { result.optString("error", "Execution failed") }
                 val value = result.get("value") as? String ?: error("Expected string result")
                 busy = false
@@ -111,6 +155,8 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
         closed = true
         requests.clear()
         timeout?.let(handler::removeCallbacks)
+        poll?.let(handler::removeCallbacks)
+        stopWorker()
         onFailure(failure)
     }
 
@@ -120,7 +166,15 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
         closed = true
         requests.clear()
         timeout?.let(handler::removeCallbacks)
+        poll?.let(handler::removeCallbacks)
+        stopWorker()
         (webView.parent as? ViewGroup)?.removeView(webView)
         webView.destroy()
+    }
+
+    private fun stopWorker() {
+        // A renderer crash may make evaluateJavascript throw; recovery must still run.
+        try { webView.evaluateJavascript("window.__relay && window.__relay.stop()", null) }
+        catch (_: Exception) { }
     }
 }

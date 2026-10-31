@@ -18,6 +18,8 @@ The SDK is the product; the APK demonstrates/tests it. Publishing an example APK
 
 ## Current release identities
 
+The block below describes the last published host. Working source/snapshot now target **0.5.0 / code 5 / `native-sandbox-v1`**. Its channel is not published yet. Do not serve the new worker/security program to the old base or overwrite old snapshots/releases.
+
 ```text
 Base: native-back-v1
 Example APK: 0.4.0 / code 4
@@ -58,7 +60,7 @@ java tools/Publisher.java keygen .keys/my-app-private.key my-app-public.txt
 
 Never commit the private key or bundle it in the app. The demo pins `demo/patch-public-key.txt`; substituting a public key changes the native contract and requires a new base. The builder defaults to `.keys/patch-signing.key`; pass `--key` for another key.
 
-Protect release credentials and private keys. Rotation/revocation is not implemented. Demo APK signing uses a development key and is separate from patch signing.
+Protect release credentials and private keys; use separate keys for each developer/application. The SDK supports a host-owned set of 1–8 trusted public keys for overlap during rotation. Removal/revocation requires a trusted host release; there is no independent remote revocation service. Never let a patch supply its own trusted keys. Demo APK signing uses a development key and is separate from patch signing.
 
 ## 2. Create a native base deliberately
 
@@ -106,13 +108,13 @@ The baseline command's behavior checks are example-specific. A different app/mod
 
 ## 3. Build a compatible patch
 
-Keep the native base/snapshot unchanged. Edit only supported common Kotlin, then use an unused tag/output directory and increasing version. Example for a future patch 2 on the current base:
+Keep the native base/snapshot unchanged. Edit only supported common Kotlin, then use an unused tag/output directory and increasing version. Example for the first patch on the unreleased security base:
 
 ```powershell
-python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-back-v1-patch-2 --version 2 --tag native-back-v1-patch-2
+python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-sandbox-v1-patch-1 --version 1 --tag native-sandbox-v1-patch-1
 ```
 
-This command is an example, not a claim that patch 2 has been published. Current published patch is 1. For another GitHub artifact repository, add `--repository OWNER/REPOSITORY`; use `--key PATH` for its signing key.
+This command is an example, not a claim that the security base or its patch has been published. The last published Back base still has its own patch 1. For another GitHub artifact repository, add `--repository OWNER/REPOSITORY`; use `--key PATH` for its signing key.
 
 The tool:
 
@@ -132,9 +134,9 @@ The output program is complete, not a per-method binary delta. Do not copy its J
 Create release notes in a local UTF-8 file. For a fresh GitHub release/tag:
 
 ```powershell
-.\tools\publish-github.ps1 -Repository jaypal1046/patchrelay -Tag native-back-v1-patch-2 -NotesFile .tools/patch-2-notes.md -PreRelease -Files @(
-    'dist/native-back-v1-patch-2/screens.js',
-    'dist/native-back-v1-patch-2/patch.json'
+.\tools\publish-github.ps1 -Repository jaypal1046/patchrelay -Tag native-sandbox-v1-patch-1 -NotesFile .tools/patch-1-notes.md -PreRelease -Files @(
+    'dist/native-sandbox-v1-patch-1/screens.js',
+    'dist/native-sandbox-v1-patch-1/patch.json'
 )
 ```
 
@@ -144,7 +146,7 @@ Keep published versioned artifacts immutable. The manifest's signed artifact URL
 
 ## 5. Publish the channel manifest last
 
-After checking artifact availability, publish the **exact signed** `patch.json` at the channel URL embedded in the APK. For the current example, that is the `native-back-v1` release asset named `patch.json`.
+After checking artifact availability, publish the **exact signed** `patch.json` at the channel URL embedded in the APK. For the working security base, that is the `native-sandbox-v1` release asset named `patch.json`; this channel has not been published. Leave the old `native-back-v1` channel unchanged.
 
 - First channel release: the same publish helper can create it with only the signed manifest as an asset.
 - Existing channel: replace its manifest through GitHub Releases/API. The helper has no update-channel command.
@@ -160,7 +162,7 @@ The existing Java signer can sign an already checked/built program for your serv
 
 ```powershell
 $base = Get-Content demo/release-baseline.json -Raw | ConvertFrom-Json
-java tools/Publisher.java sign .keys/patch-signing.key dist/native-back-v1-patch-2/screens.js $base.appId $base.baseVersion 2 ($base.screenIds -join ',') https://updates.example.com/releases/patch-2/screens.js dist/native-back-v1-patch-2/server-patch.json $base.hostSha256
+java tools/Publisher.java sign .keys/patch-signing.key dist/native-sandbox-v1-patch-1/screens.js $base.appId $base.baseVersion 1 ($base.screenIds -join ',') https://updates.example.com/releases/patch-1/screens.js dist/native-sandbox-v1-patch-1/server-patch.json $base.hostSha256
 ```
 
 Replace the example domain/paths/version/key with your own. Upload the matching `screens.js` to that exact signed URL, then serve the bytes of `server-patch.json` as the channel's `patch.json`. The signer calculates the script hash but does not run screen tests; do not use it to bypass compatibility/build checks. The existing GitHub demo will keep polling GitHub until a new host is configured for your server.
@@ -180,7 +182,7 @@ In the demo, checking updates is manual. Force-stop/reopen was a controlled test
 | Incompatible app/base/API/IDs | Use artifacts built for the installed host and exact registered screen set |
 | HTTP 404 | Check channel asset, immutable artifact URL, publication order and caching |
 | No newer version | Accepted version is at least as high; publish a newer corrective version |
-| Screen/interpreter failure | Host recovery must reject/fallback; timeout may require restart |
+| Screen/interpreter failure | Host recovery must reject/fallback; worker timeout terminates execution before fallback |
 | Missing native widget/hook/capability | Requires native release; a screen patch cannot add it |
 
 Pointing the channel backward is not remote rollback: accepted-version protection prevents downgrades. Publish corrected/previous-good supported code under a **newer** version. Fallback does not reverse persistent data or external side effects.

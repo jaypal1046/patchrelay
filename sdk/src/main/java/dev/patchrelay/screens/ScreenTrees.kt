@@ -12,7 +12,7 @@ data class ScreenTree(val screenId: String, val children: List<ScreenNode>, val 
 object ScreenTrees {
     fun parse(json: String, expectedScreen: String): ScreenTree {
         require(json.length <= 65536) { "Screen result too large" }
-        val root = JSONObject(json)
+        val root = BoundedJson.objectValue(json)
         keys(root, setOf("screenId", "type", "children", "backAction"))
         val backAction = if (root.has("backAction")) string(root, "backAction").also {
             require(it.matches(Regex("[a-z][a-z0-9_-]{0,31}"))) { "Invalid Back action" }

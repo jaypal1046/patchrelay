@@ -1,0 +1,38 @@
+<!doctype html>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-patchrelay' 'unsafe-eval'; worker-src blob:; connect-src 'none'">
+<script nonce="patchrelay">
+'use strict';
+// Patches execute in a worker, without this page's DOM or native request channel.
+window.__relay = (() => {
+    const source = `self.onmessage = function(event) {
+        try {
+            const value = (0, eval)(event.data.source);
+            self.postMessage({ticket:event.data.ticket, value:value});
+        } catch (error) {
+            self.postMessage({ticket:event.data.ticket, value:JSON.stringify({ok:false,error:String(error)})});
+        }
+    };`;
+    const url = URL.createObjectURL(new Blob([source], {type:'text/javascript'}));
+    const worker = new Worker(url);
+    URL.revokeObjectURL(url);
+    let ticket = 0, reply = null, received = false, stopped = false;
+    const failed = () => JSON.stringify({ok:false,error:'Invalid worker response'});
+    worker.onmessage = event => {
+        if (received || !event.data || event.data.ticket !== ticket) return;
+        received = true;
+        reply = typeof event.data.value === 'string' && event.data.value.length <= 128 * 1024
+            ? event.data.value : failed();
+    };
+    worker.onerror = event => { event.preventDefault(); received = true; reply = failed(); };
+    worker.onmessageerror = () => { received = true; reply = failed(); };
+    return Object.freeze({
+        send(id, script) {
+            if (stopped) throw new Error('Interpreter stopped');
+            ticket = id; reply = null; received = false;
+            worker.postMessage({ticket:id, source:script});
+        },
+        take(id) { return id === ticket && received ? reply : null; },
+        stop() { stopped = true; worker.terminate(); }
+    });
+})();
+</script>

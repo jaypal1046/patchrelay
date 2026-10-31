@@ -9,15 +9,28 @@ import java.util.Base64
 
 internal object ScreenManifests {
     fun verify(bytes: ByteArray, key: String, appId: String, base: String, screens: Set<String>, hostHash: String): JSONObject {
+        return verify(bytes, setOf(key), appId, base, screens, hostHash)
+    }
+
+    fun verify(bytes: ByteArray, keys: Set<String>, appId: String, base: String, screens: Set<String>, hostHash: String): JSONObject {
+        require(keys.size in 1..8) { "Configure 1 to 8 trusted signing keys" }
         require(bytes.size <= 64 * 1024) { "Manifest too large" }
-        val envelope = JSONObject(decode(bytes))
+        val envelope = BoundedJson.objectValue(decode(bytes))
         val payload = Base64.getDecoder().decode(envelope.getString("payload"))
-        Signatures.verify(payload, Base64.getDecoder().decode(envelope.getString("signature")), key)
-        val value = JSONObject(decode(payload))
+        val signature = Base64.getDecoder().decode(envelope.getString("signature"))
+        if (keys.none { key ->
+            try { Signatures.verify(payload, signature, key); true }
+            catch (_: java.security.GeneralSecurityException) { false }
+            catch (_: IllegalArgumentException) { false }
+            catch (_: SecurityException) { false }
+        }) throw SecurityException("No trusted key signed this patch")
+        val value = BoundedJson.objectValue(decode(payload))
+        val version = value.get("version")
+        require((version is Long || version is Int) && (version as Number).toLong() > 0) { "Invalid patch version" }
         require(hostHash.matches(Regex("[0-9a-f]{64}")) && value.getString("hostSha256") == hostHash)
         require(value.getInt("schema") == 3 && value.getInt("screenApi") == 2 &&
             value.getString("runtime") == "kotlin-screen-js" && value.getString("appId") == appId &&
-            value.getString("baseVersion") == base && value.getLong("version") > 0) { "Incompatible screen patch" }
+            value.getString("baseVersion") == base) { "Incompatible screen patch" }
         val ids = value.getJSONArray("screenIds")
         require(ids.length() in 1..16) { "Invalid screen IDs" }
         val provided = (0 until ids.length()).map { ids.getString(it) }

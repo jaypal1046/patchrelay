@@ -2,7 +2,23 @@
 
 [README](../README.md) · [Integration](integration.md) · [Architecture](architecture.md) · [Release workflow](release-workflow.md)
 
-Updated 2026-10-30. PatchRelay is a dependency prototype with a working example host. It does not claim general native hot-patching, Shorebird feature parity or production readiness.
+Updated 2026-10-31. PatchRelay is a dependency prototype with a working example host. It does not claim general native hot-patching, Shorebird feature parity or production readiness.
+
+## Security changes in working source
+
+Unreleased base **0.5.0 / `native-sandbox-v1`** replaces page-thread execution with an opaque-origin Web Worker. It explicitly denies browser permissions/dialogs/file selection, terminates workers on timeout, restores atomic-file backups before verification, rejects coerced patch versions, accepts host-owned overlapping verification keys, and provides persistent host disable/re-enable without resetting replay protection. The published 0.4.0 host below is historical evidence and does not include these fixes.
+
+`tools/test-interpreter.mjs` runs the actual installed interpreter HTML in Chromium: compiled Kotlin execution, absent DOM/native bridges/WebRTC, denied IndexedDB, denied HTTPS/file/content fetch/WebSocket/remote scripts, malformed/oversized replies, and infinite-loop termination followed by a fresh worker. This is browser evidence, not all-provider Android proof. `SandboxInstrumentation` runs the corresponding core checks against a connected device's real WebView.
+
+On 2026-10-31, the isolated SDK test package passed those core Android probes on RMX2117 / API 31 with `com.google.android.webview` **157.0.8103.14**, targeting API 35. It ran the bundled Kotlin program, confirmed missing native/DOM bridges and denied storage/network/script requests, handled a thrown startup error, timed out an infinite loop, then successfully ran the bundled program in a replacement interpreter. An initial detached-WebView test failed with a stopped renderer; the recorded pass used an attached Activity, matching the host lifecycle. This was an SDK instrumentation test, not installation or OTA-flow verification of the new 0.5.0 demo base.
+
+Current automated SDK count: **23 tests**, including 10 updater recovery/security tests and 2 pre-parser nesting tests. Historical 0.4.0 counts below describe the earlier release.
+
+Untrusted JSON is checked for length and nesting before Android's recursive parser runs. This covers manifests, worker responses, screen trees and function-ID lists; a deeply nested program result must be rejected rather than overflow the native thread stack.
+
+Ten updater fault tests run Android storage behavior through test-only Robolectric/API 28: next-session activation, replay refusal, repeated unhealthy boots, failed fallback, saved-code corruption, interrupted atomic writes, interrupted/offline/altered downloads, obstructed storage, persistent disable/re-enable, trust changes and invalid numeric versions. Storage obstruction exercises write failure; it does not simulate a physically full disk or every preferences-commit failure.
+
+Remaining security limits: no hard memory/CPU quota, no proof against WebView vulnerabilities, no independent emergency revocation channel, no production key vault, no rollback of business effects, and no automatic detection of all crashes after `markHealthy`. Removing keys from new host releases does not revoke them in older installed APKs.
 
 ## Current verified release
 
@@ -102,6 +118,8 @@ Google Play restricts app self-updates and externally downloaded executable form
 
 PatchRelay downloads signed JS and uses installed native widgets through a constrained interpreter boundary. That technical choice, and excluding assets/dependencies from patch scope, **do not establish Play approval**. No Play eligibility decision or approval has been obtained.
 
-The signing utility reads a local Base64-encoded private-key file; Base64 is not encryption. Production key protection and rotation are not implemented. Never put keys/tokens in source, APKs, public releases or documentation. A compromised signing key can authorize malicious supported programs.
+The signing utility reads a local Base64-encoded private-key file; Base64 is not encryption. Production key protection is not implemented. Host-owned overlapping keys support rotation, but revocation in already installed older hosts needs a separate trusted mechanism or host update. Never put keys/tokens in source, APKs, public releases or documentation. A compromised signing key can authorize malicious supported programs in apps trusting that key.
+
+Developers remain responsible for every patch: preserve disclosed data practices, permissions and legitimate user flows; do not use patches for deceptive payments, undisclosed data collection or policy evasion. Sign only reviewed programs. Sandbox restrictions do not make malicious business behavior acceptable.
 
 The WebView restrictions are defense measures, not proof of complete sandbox isolation. Startup health is limited, business effects are not rolled back, and pointing a channel to an old version cannot override device replay protection. See [architecture](architecture.md#state-health-and-failure) and [corrective releases](release-workflow.md#corrective-releases-and-common-failures).

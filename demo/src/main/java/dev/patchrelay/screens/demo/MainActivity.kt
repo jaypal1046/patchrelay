@@ -122,9 +122,7 @@ class MainActivity : Activity() {
                     val fallback = app.updates.reject(app.bundled, failure)
                     app.selected = fallback
                     runOnUiThread { if (alive()) {
-                        if (failure is java.util.concurrent.TimeoutException) {
-                            status.text = "Fallback prepared. Force stop and reopen after interpreter timeout."
-                        } else show(fallback)
+                        show(fallback)
                     } }
                 } catch (restore: Exception) { runOnUiThread { if (alive()) status.text = "Recovery failed: ${restore.message}" } }
             }.start()

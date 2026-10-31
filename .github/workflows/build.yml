@@ -21,6 +21,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - run: chmod +x gradlew && ./gradlew :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease --max-workers=2
       - run: node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
+      - run: node tools/test-interpreter.mjs
       - run: node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
       - run: python3 tools/test_screen_build.py
       - run: python3 tools/screens.py check-host

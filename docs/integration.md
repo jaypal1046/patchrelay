@@ -157,7 +157,7 @@ Run `updates.stage(manifestUrl)` on a worker. It returns true for a newly staged
 
 After required startup checks succeed, call `updates.markHealthy()`. The demo waits for a valid attached screen and successful prepared-function results. Do not confirm immediately after downloading.
 
-Handle `onFailure`: close the engine; call `updates.reject(bundled, failure)` on a worker; replace the application selection with the fallback and rebuild the host. The demo treats an interpreter timeout as requiring process restart. Consult its recovery code before copying only the happy path.
+Handle `onFailure`: close the engine; call `updates.reject(bundled, failure)` on a worker; replace the application selection with the fallback and rebuild the host. Worker timeout terminates patch execution before this callback; the demo starts the fallback immediately. Consult its recovery code before copying only the happy path.
 
 No scheduler or restart manager is provided. Force-stop/reopen was used for controlled testing, not as a proposed production user experience.
 
@@ -167,8 +167,14 @@ No scheduler or restart manager is provided. Force-stop/reopen was used for cont
 | `stage(url)` | Worker; verifies and stages a newer program, without switching the current one |
 | `markHealthy()` | After required startup succeeds; use a worker for its storage write |
 | `reject(bundled, failure)` | Worker; selects previous/bundled fallback for the host to display |
+| `disable(bundled)` | Worker; persist disabled state, clear patch selection, return bundled program; host closes/replaces the old engine |
+| `enable()` | Worker; allow staging again, preserving the accepted-version floor |
 | `activeVersion()` | Selected session version, 0 for bundled |
 | `pendingVersion()` | Staged version, 0 when none |
+
+The existing constructor accepting one public-key string remains supported. For planned rotation, its third argument can instead be a `Set<String>` containing 1–8 trusted public keys. The host owns this set; patches cannot add keys. Build a trusted host release to remove a compromised key. There is no remote revocation service, and users still on an older APK retain its original trust configuration.
+
+Call `disable` only from a trusted host control, then replace the running engine with its returned bundled program. Persist the application selection too, as in failure recovery. Calling the updater alone cannot remove a screen already displayed by another engine. `stage` returns false without fetching while disabled. After explicit `enable`, previously accepted versions remain blocked; publish a higher version to resume.
 
 ## What changes need another APK?
 

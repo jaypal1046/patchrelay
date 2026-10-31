@@ -69,7 +69,7 @@ flowchart LR
     R --> E
 ```
 
-`ScreenInterpreter` owns one hidden local WebView and a serial request queue. Only the installed wrapper can call its supported exports:
+`ScreenInterpreter` owns one hidden local WebView, a dedicated Web Worker and a serial request queue. The installed page owns the request channel; downloaded code runs in the worker and has no DOM or access to that channel. Only the installed wrapper dispatches these exports:
 
 | Export | Result |
 | --- | --- |
@@ -78,7 +78,9 @@ flowchart LR
 | `patchedFunctionIds()` | JSON array of function IDs as a string |
 | `invokePatch(id, first, second)` | Decimal integer result as a string |
 
-WebView is not the visible UI. File/content/network loads and external navigation are disabled; no JavaScript-to-Java interface is installed. JS arguments are serialized through the wrapper, not interpolated as raw user code. Signed programs are still trusted code; these measures do not prove complete isolation from resource exhaustion or provider bugs.
+WebView is not the visible UI. The page has an opaque origin: origin-backed storage such as IndexedDB is denied. CSP denies network connections, remote scripts and page content; only the installed inline bootstrap, evaluated code and blob workers are allowed. File/content/network loads and external navigation are also disabled in WebView. Browser permissions, geolocation, file choosers, dialogs and downloads are explicitly denied; no JavaScript-to-Java interface is installed. JS arguments are serialized through the wrapper, not interpolated as raw user code. Signed programs remain untrusted at the output boundary. These measures do not prove isolation from memory exhaustion or provider vulnerabilities.
+
+The 10-second operation timer terminates the worker through the responsive control page before reporting failure. An infinite loop therefore does not need to finish before fallback can run. Browser and Android tests exercise termination followed by a fresh interpreter. A renderer/process or host crash is a separate failure mode; there is no hard per-worker memory quota.
 
 Native HTTPS downloading is separate from WebView execution. The SDK manifest supplies the Internet permission for that transport; the downloaded JS is not granted a general network or Android-service bridge.
 
@@ -139,8 +141,16 @@ The demo confirms health only after its first validated native tree attaches and
 
 - Unconfirmed patched startup restores previous/bundled code on next start.
 - Runtime failure calls `onFailure`; the host must close the engine, run `reject` on a worker and use the selected fallback.
-- The demo permits one recovery attempt; an interpreter timeout prepares fallback and asks for process restart.
+- The demo permits one recovery attempt, including immediate fallback after worker termination on timeout.
 - Highest accepted version remains preserved. Repointing the channel to an older patch does not remotely roll devices back; a corrective program needs a newer patch version.
 - No recovery undoes database writes, network operations, payments or other external effects.
 
-Key rotation/revocation, durable state migration, multi-process coordination, staged rollout/telemetry and broad failure recovery remain unimplemented or unverified. See the [test matrix](production-readiness.md#broader-test-matrix).
+Saved scripts and manifests are read with bounded `AtomicFile.openRead`, allowing Android to restore an interrupted write's backup before signature/hash verification. Fractional, string and overflowing patch versions are rejected rather than coerced into integers.
+
+All externally supplied JSON passes a length/nesting scan (maximum 32 containers) before recursive parsing; screen-tree depth and widget limits are then validated separately. Length limits alone do not prevent a nested-JSON stack overflow.
+
+Hosts may configure 1–8 trusted public keys. Each saved program is checked against the current trust set on boot; keys are never accepted from a patch. Overlap keys during rotation, then remove revoked keys through a trusted host release. This is not an OTA revocation service.
+
+`disable(bundled)` persists disabled state, clears active/pending/fallback pointers, retains the highest accepted version and returns the bundled program. The host must close the old engine and display that return value. While disabled, staging performs no download. `enable()` allows only newer patches; it never restores disabled versions automatically. These controls require a trusted host decision; no remote control endpoint is provided.
+
+Durable state migration, multi-process coordination, staged rollout/telemetry, independent emergency revocation and broad failure/device coverage remain unfinished. See the [test matrix](production-readiness.md#broader-test-matrix).

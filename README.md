@@ -6,6 +6,8 @@ PatchRelay is intended to be a dependency inside a developer's app. The included
 
 **Status:** working prototype, verified on one RMX2117 / Android API 31 phone. Not a general Kotlin/Compose hot-patcher, not production-ready, and not published on Maven Central.
 
+Working source now targets **0.5.0 / `native-sandbox-v1`**, an unreleased security base. It moves patch execution into a terminable, opaque-origin worker, adds host-controlled disable/re-enable and multiple trusted signing keys, and fixes atomic-file reads and deeply nested JSON handling. The isolated SDK security test passed on the connected API-31 phone, including infinite-loop termination and a working replacement interpreter. The published 0.4.0 APK below does not contain these changes. This requires a new APK once; old channels stay unchanged.
+
 ## Read the docs
 
 | Guide | Contents |
@@ -81,10 +83,13 @@ From the repository root in PowerShell, with JDK/SDK configured:
 ```powershell
 .\gradlew.bat :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease --max-workers=2
 node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
+node tools/test-interpreter.mjs
 node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
 python tools/test_screen_build.py
 python tools/screens.py check-host
 ```
+
+The interpreter test needs an installed Chromium browser (`CHROME_BIN` can select one). Recovery tests use test-only Robolectric on API 28. Run the real Android WebView sandbox test on a connected test device with `:sdk:connectedDebugAndroidTest`; it installs an isolated test package, not the demo.
 
 SDK output: `sdk/build/outputs/aar/sdk-release.aar`. Demo output: `demo/build/outputs/apk/release/demo-release.apk`. The demo uses a development signing key.
 
