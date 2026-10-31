@@ -9,12 +9,14 @@ import java.net.URL
 object HttpsDownloads {
     @JvmStatic
     @Throws(IOException::class)
-    fun download(address: String, limit: Int): ByteArray {
+    fun download(address: String, limit: Int): ByteArray = download(address, limit) { it.openConnection() as HttpURLConnection }
+
+    internal fun download(address: String, limit: Int, open: (URL) -> HttpURLConnection): ByteArray {
         require(limit > 0) { "Positive download size limit required" }
         var url = URL(address)
         repeat(6) {
             if (url.protocol != "https" || url.userInfo != null) throw IOException("HTTPS URL required")
-            val connection = url.openConnection() as HttpURLConnection
+            val connection = open(url)
             connection.instanceFollowRedirects = false
             connection.connectTimeout = 15000
             connection.readTimeout = 20000

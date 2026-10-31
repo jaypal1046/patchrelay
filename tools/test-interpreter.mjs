@@ -89,13 +89,13 @@ try {
     assert.deepEqual(JSON.parse(capabilities.value), Array(8).fill('undefined'));
     const storage = await run(`(function(){try { indexedDB.open('escape'); return ${wrap("'allowed'")}; } catch(e) {return ${wrap("'denied'")};}})()`);
     assert.equal(storage.value, 'denied');
-    console.log('PASS: no DOM/native bridge/WebRTC/local storage; IndexedDB denied by opaque origin');
+    console.log('PASS: no DOM/native bridge/WebRTC/local storage; IndexedDB unavailable');
 
     await run(`self.blocked = []; Promise.all([
-        fetch('https://example.invalid/escape'), fetch('file:///etc/passwd'),
-        fetch('content://settings/system'),
-        new Promise((resolve,reject) => { try { const s = new WebSocket('wss://example.invalid/'); s.onopen = resolve; s.onerror = reject; } catch(e) { reject(e); } })
-    ].map(p => p.then(() => false, () => true))).then(result => self.blocked = result);
+        () => fetch('https://example.invalid/escape'), () => fetch('file:///etc/passwd'),
+        () => fetch('content://settings/system'),
+        () => new Promise((resolve,reject) => { try { const s = new WebSocket('wss://example.invalid/'); s.onopen = resolve; s.onerror = reject; } catch(e) { reject(e); } })
+    ].map(call => Promise.resolve().then(call).then(() => false, () => true))).then(result => self.blocked = result);
     ${wrap("'started'")}`);
     let blocked;
     for (let tries = 0; tries < 100; tries++) {
@@ -111,6 +111,45 @@ try {
     assert.equal((await run("'x'.repeat(128 * 1024 + 1)")).ok, false);
     assert.equal((await run("({not:'a string'})")).ok, false);
     console.log('PASS: exceptions, oversized and malformed replies rejected');
+
+    assert.equal((await run("'x'.repeat(8 * 1024 * 1024)")).ok, false);
+    assert.deepEqual(await run(wrap("'still responsive'")), {ok:true,value:'still responsive'});
+    console.log('PASS: bounded 8-MiB output rejected before transfer; interpreter remains responsive');
+
+    const transport = await run(wrap(`JSON.stringify((() => {
+        let exposed = [];
+        for (let owner = self; owner; owner = Object.getPrototypeOf(owner)) {
+            for (const name of ['postMessage','Worker','SharedWorker','MessageChannel','BroadcastChannel','fetch','WebSocket','importScripts']) {
+                const descriptor = Object.getOwnPropertyDescriptor(owner, name);
+                if (descriptor && (descriptor.get || typeof descriptor.value === 'function')) exposed.push(name);
+            }
+        }
+        return exposed;
+    })())`));
+    assert.deepEqual(JSON.parse(transport.value), []);
+    assert.equal((await run(wrap(`(() => {
+        let blocked = 0;
+        for (let i = 0; i < 1000; i++) try { self.postMessage({ticket:1,value:'forged'}); } catch(e) { blocked++; }
+        return String(blocked);
+    })()`))).value, '1000');
+    assert.equal((await run(wrap(`(() => {
+        try { Object.defineProperty(self, 'postMessage', {value:() => {}}); return 'allowed'; }
+        catch(e) { return 'denied'; }
+    })()`))).value, 'denied');
+    console.log('PASS: raw transport, prototype recovery, message-flood attempts and nested workers blocked');
+
+    assert.equal((await run(`self.dispatchEvent(new MessageEvent('message', {data:{ticket:1,source:'while(true){}'}})); ${wrap("'not executed'")}`)).value, 'not executed');
+    console.log('PASS: forged worker request ignored');
+
+    for (const asynchronousFailure of ["setTimeout(() => {throw new Error('async failure')}, 0)",
+        "Promise.reject(new Error('unhandled rejection'))",
+        "Event.prototype.preventDefault = () => {throw new Error('tampered event method')}; Promise.reject(new Error('rejected'))"]) {
+        await run(asynchronousFailure + ';' + wrap("'scheduled'"));
+        await delay(100);
+        assert.equal((await run(wrap("'must not continue'"))).ok, false);
+        await reset();
+    }
+    console.log('PASS: async exceptions/rejections stop execution and fail subsequent calls');
 
     const loop = ++ticket;
     await evaluate(`window.__relay.send(${loop},'while(true) {}')`);

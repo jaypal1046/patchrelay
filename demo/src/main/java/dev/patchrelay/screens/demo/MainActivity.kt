@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -20,9 +21,10 @@ class MainActivity : Activity() {
     private lateinit var calculation: TextView
     private lateinit var calculate: Button
     private var runner: IntPatchRunner? = null
+    private var screenReady = false
     private var engine: ScreenEngine? = null
-    private var recoveryAttempted = false
-    private var renderGeneration = 0
+    private val attemptedVersions = mutableSetOf<Long>()
+    @Volatile private var renderGeneration = 0
     private var removeBackCallback: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +32,7 @@ class MainActivity : Activity() {
         app = application as DemoApp
         root = FrameLayout(this)
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        status = TextView(this).apply { text = "Preparing checkout…"; textSize = 15f; setPadding(24, 24, 24, 16) }
+        status = TextView(this).apply { text = "Checkout"; textSize = 15f; setPadding(24, 24, 24, 16) }
         screen = FrameLayout(this)
         calculation = TextView(this).apply { text = "Preparing native function…"; textSize = 17f; setPadding(24, 8, 24, 8) }
         calculate = Button(this).apply {
@@ -62,11 +64,24 @@ class MainActivity : Activity() {
             try {
                 val program = app.selected ?: app.prepared.get()
                 runOnUiThread { if (alive()) show(program) }
-            } catch (failure: Exception) { runOnUiThread { if (alive()) status.text = "Cannot prepare screen: ${failure.message}" } }
+            } catch (failure: Exception) {
+                Log.e("PatchRelayDemo", "Program preparation failed", failure)
+                try {
+                    val fallback = ScreenProgram(0, assets.open("baseline-screen.js").bufferedReader().use { it.readText() })
+                    app.bundled = fallback.script
+                    app.selected = fallback
+                    runOnUiThread { if (alive()) show(fallback) }
+                } catch (fallback: Exception) { runOnUiThread { if (alive()) unavailable(fallback) } }
+            }
         }.start()
     }
 
     private fun show(program: ScreenProgram) {
+        if (!attemptedVersions.add(program.version)) {
+            if (program.version > 0) show(ScreenProgram(0, app.bundled))
+            else unavailable(IllegalStateException("Bundled screen already failed"))
+            return
+        }
         try { launchEngine(program) }
         catch (failure: Exception) { failed(program, failure) }
     }
@@ -75,29 +90,47 @@ class MainActivity : Activity() {
         engine?.close()
         syncBack(false)
         runner = null
+        screenReady = false
         calculate.isEnabled = false
         val generation = ++renderGeneration
         var confirmed = false
-        val renderer = NativeScreenRenderer(this) { action, value -> engine?.event(action, value) }
+        var ready = false
+        lateinit var latest: ScreenTree
+        val renderer = NativeScreenRenderer(this) { action, value ->
+            if (ready && generation == renderGeneration) engine?.event(action, value)
+        }
+        fun publish(tree: ScreenTree) {
+            val view = renderer.build(tree)
+            syncBack(tree.backAction != null)
+            if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
+        }
         engine = ScreenEngine(this, "checkout", onTree = { tree ->
             if (alive() && generation == renderGeneration) {
-                val view = renderer.build(tree)
-                syncBack(tree.backAction != null)
-                if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
+                latest = tree
+                renderer.build(tree)
+                if (ready) publish(tree)
                 if (!confirmed) {
                     confirmed = true
                     engine!!.prepareIntFunctions(setOf("checkout.total.v1", "checkout.shipping.v1")) { prepared ->
                         runner = prepared
-                        runNativeCalculation {
+                        runNativeCalculation { proof ->
                             Thread {
                                 try {
-                                    app.updates.markHealthy()
+                                    if (generation != renderGeneration) return@Thread
+                                    if (program.version > 0 && !app.updates.markHealthy(program.version)) return@Thread
                                     runOnUiThread { if (alive() && generation == renderGeneration) {
-                                        status.text = "Native checkout · screen patch ${program.version}\n" +
-                                            if (program.version == 0L) "Bundled Kotlin screen" else "Kotlin screen downloaded from GitHub"
+                                        ready = true
+                                        screenReady = true
+                                        publish(latest)
+                                        status.text = "Checkout"
+                                        calculation.text = proof
+                                        calculate.isEnabled = true
                                         download.isEnabled = true
+                                        app.checkCatalogInBackground()
                                     } }
-                                } catch (failure: Exception) { runOnUiThread { if (alive()) failed(program, failure) } }
+                                } catch (failure: Exception) { runOnUiThread {
+                                    if (alive() && generation == renderGeneration) failed(program, failure)
+                                } }
                             }.start()
                         }
                     }
@@ -105,18 +138,27 @@ class MainActivity : Activity() {
             }
         }, onFailure = { failure -> if (alive() && generation == renderGeneration) failed(program, failure) })
         root.addView(engine!!.webView, 0, FrameLayout.LayoutParams(1, 1))
+        engine!!.registerHostFunction("github.repository.v1") { repository ->
+            require(repository == "JetBrains/kotlin") { "Repository not allowed" }
+            val bytes = dev.patchrelay.core.HttpsDownloads.download("https://api.github.com/repos/$repository", 65536)
+            val response = org.json.JSONObject(String(bytes, Charsets.UTF_8))
+            "${response.getString("full_name")} · ${response.getInt("stargazers_count")} stars"
+        }
         engine!!.start(program.script)
     }
 
     private fun failed(program: ScreenProgram, failure: Exception) {
+        Log.e("PatchRelayDemo", "Program ${program.version} rejected; selecting fallback", failure)
         engine?.close(); engine = null
         syncBack(false)
         runner = null; calculate.isEnabled = false
+        screenReady = false
+        screen.removeAllViews()
+        calculation.text = ""
+        status.text = "Checkout"
         ++renderGeneration
-        if (program.version > 0 && !recoveryAttempted) {
-            recoveryAttempted = true
+        if (program.version > 0) {
             download.isEnabled = false
-            status.text = "Patch failed; restoring bundled/previous screen…"
             Thread {
                 try {
                     val fallback = app.updates.reject(app.bundled, failure)
@@ -124,23 +166,31 @@ class MainActivity : Activity() {
                     runOnUiThread { if (alive()) {
                         show(fallback)
                     } }
-                } catch (restore: Exception) { runOnUiThread { if (alive()) status.text = "Recovery failed: ${restore.message}" } }
+                } catch (restore: Exception) {
+                    Log.e("PatchRelayDemo", "Cannot persist rollback; using bundled program in memory", restore)
+                    val fallback = ScreenProgram(0, app.bundled)
+                    app.selected = fallback
+                    runOnUiThread { if (alive()) show(fallback) }
+                }
             }.start()
-        } else {
-            status.text = "Screen unavailable: ${failure.message}"
-            download.isEnabled = true
-        }
+        } else unavailable(failure)
+    }
+
+    private fun unavailable(failure: Exception) {
+        Log.e("PatchRelayDemo", "Bundled checkout unavailable", failure)
+        status.text = "Checkout is temporarily unavailable."
+        download.isEnabled = true
     }
 
     private fun stage() {
         download.isEnabled = false
-        status.text = "Downloading signed screen program…"
         Thread {
-            val message = try {
-                app.updates.stage(BuildConfig.MANIFEST_URL)
-                if (app.updates.pendingVersion() > 0) "Screen update verified. Force stop and reopen." else "No newer screen update. Active patch ${app.updates.activeVersion()}."
-            } catch (failure: Exception) { "Update failed: ${failure.message}" }
-            runOnUiThread { if (alive()) { status.text = message; download.isEnabled = true } }
+            try {
+                if (BuildConfig.CATALOG_URL.isNotEmpty()) app.updates.stageCatalog(BuildConfig.CATALOG_URL, BuildConfig.UPDATE_CHANNEL)
+                else app.updates.stage(BuildConfig.MANIFEST_URL)
+                Log.i("PatchRelayDemo", "Pending program: ${app.updates.pendingVersion()}")
+            } catch (failure: Exception) { Log.w("PatchRelayDemo", "Update check failed; current screen retained", failure) }
+            runOnUiThread { if (alive()) download.isEnabled = true }
         }.start()
     }
 
@@ -148,22 +198,21 @@ class MainActivity : Activity() {
     private fun originalTotal(quantity: Int, price: Int): Int = quantity + price
     private fun originalShipping(base: Int, extra: Int): Int = base + extra
 
-    private fun runNativeCalculation(onReady: () -> Unit = {}) {
+    private fun runNativeCalculation(onReady: (String) -> Unit = { proof -> calculation.text = proof; calculate.isEnabled = true }) {
         val current = runner ?: return
         calculate.isEnabled = false
         current.call("checkout.total.v1", 3, 100, ::originalTotal) { total ->
             current.call("checkout.shipping.v1", 10, 5, ::originalShipping) { shipping ->
-                calculation.text = "3 × 100 = $total · " +
+                val proof = "3 × 100 = $total · " +
                     (if (current.isPatched("checkout.total.v1")) "JS patch" else "original Kotlin") +
                     "\nUnpatched Kotlin shipping: $shipping"
-                calculate.isEnabled = true
-                onReady()
+                onReady(proof)
             }
         }
     }
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (engine?.back() != true) super.onBackPressed()
+        if (!screenReady || engine?.back() != true) super.onBackPressed()
     }
 
     private fun syncBack(enabled: Boolean) {

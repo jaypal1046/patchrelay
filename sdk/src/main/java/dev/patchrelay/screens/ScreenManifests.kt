@@ -13,18 +13,7 @@ internal object ScreenManifests {
     }
 
     fun verify(bytes: ByteArray, keys: Set<String>, appId: String, base: String, screens: Set<String>, hostHash: String): JSONObject {
-        require(keys.size in 1..8) { "Configure 1 to 8 trusted signing keys" }
-        require(bytes.size <= 64 * 1024) { "Manifest too large" }
-        val envelope = BoundedJson.objectValue(decode(bytes))
-        val payload = Base64.getDecoder().decode(envelope.getString("payload"))
-        val signature = Base64.getDecoder().decode(envelope.getString("signature"))
-        if (keys.none { key ->
-            try { Signatures.verify(payload, signature, key); true }
-            catch (_: java.security.GeneralSecurityException) { false }
-            catch (_: IllegalArgumentException) { false }
-            catch (_: SecurityException) { false }
-        }) throw SecurityException("No trusted key signed this patch")
-        val value = BoundedJson.objectValue(decode(payload))
+        val value = verifiedPayload(bytes, keys)
         val version = value.get("version")
         require((version is Long || version is Int) && (version as Number).toLong() > 0) { "Invalid patch version" }
         require(hostHash.matches(Regex("[0-9a-f]{64}")) && value.getString("hostSha256") == hostHash)
@@ -37,6 +26,21 @@ internal object ScreenManifests {
         require(provided.size == provided.toSet().size && provided.toSet() == screens) { "Unsupported screen contract" }
         require(value.getString("sha256").matches(Regex("[0-9a-f]{64}"))) { "Invalid artifact hash" }
         return value
+    }
+
+    fun verifiedPayload(bytes: ByteArray, keys: Set<String>): JSONObject {
+        require(keys.size in 1..8) { "Configure 1 to 8 trusted signing keys" }
+        require(bytes.size <= 64 * 1024) { "Manifest too large" }
+        val envelope = BoundedJson.objectValue(decode(bytes))
+        val payload = Base64.getDecoder().decode(envelope.getString("payload"))
+        val signature = Base64.getDecoder().decode(envelope.getString("signature"))
+        if (keys.none { key ->
+            try { Signatures.verify(payload, signature, key); true }
+            catch (_: java.security.GeneralSecurityException) { false }
+            catch (_: IllegalArgumentException) { false }
+            catch (_: SecurityException) { false }
+        }) throw SecurityException("No trusted key signed this patch")
+        return BoundedJson.objectValue(decode(payload))
     }
 
     fun checkHash(bytes: ByteArray, expected: String) {

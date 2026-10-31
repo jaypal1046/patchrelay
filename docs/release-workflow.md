@@ -2,7 +2,11 @@
 
 [README](../README.md) · [Integration](integration.md) · [Architecture](architecture.md) · [Verification](production-readiness.md)
 
-These are commands for this repository's configured example, not a universal compiler plugin. Run from the repository root. JDK 17, SDK 35, Python 3 and Node 22+ (CI uses 22) must be configured.
+The [installable PatchRelay CLI](../cli/README.md) provides `patchrelay init`,
+`patchrelay baseline` and `patchrelay patch`, with no Python runtime. It requires
+Node 22+, JDK 17, SDK 35 and a prepared project. The Python commands retained
+below are legacy tools for this repository's configured example. Neither route
+is an automatic integration/compiler plugin for arbitrary native screens.
 
 ## What gets published where?
 
@@ -11,14 +15,83 @@ These are commands for this repository's configured example, not a universal com
 | Developer's original APK/AAB with SDK/hooks | Developer's normal Android distribution channel | Demo APKs hosted on GitHub; no Play approval established |
 | Signed JS program + manifest | GitHub Releases or personal HTTPS server | Working |
 | Signed channel manifest | Stable HTTPS URL polled by installed app | Working, manually published |
-| PatchRelay Android library | Local Gradle module or AAR today | Maven Central publication is not configured |
-| Source/build tools | GitHub | No packaged public CLI/compiler plugin |
+| PatchRelay Android library | Module, AAR or local Maven preview | Public Maven Central publication pending; see [Maven guide](maven-publishing.md) |
+| CLI | npm `@orbital_mcp/patchrelay`, `alpha` tag | First publication accepted; registry processing pending public availability |
+| Source/build tools | Private GitHub | No automatic native integration/compiler plugin |
 
 The SDK is the product; the APK demonstrates/tests it. Publishing an example APK is not publishing the dependency.
 
+With the [Gradle baseline plugin](gradle-integration.md) applied, normal
+`assembleRelease`/`bundleRelease` commands now record the actual APK/AAB baseline
+automatically. Select its immutable record explicitly when building a patch.
+The legacy Python commands below are not required for this normal-build flow.
+
+For multi-build discovery, `patchrelay catalog` creates a signed app/channel
+catalog locally while preserving explicitly supplied older-base routes. See
+[catalog, hosting and native-upgrade flow](update-routing.md). Automatic remote
+upload/catalog replacement is not implemented; selection of baselines and the
+previous catalog remains explicit.
+
+## Explicit baseline and patch commands
+
+No command selects a baseline, commit or branch automatically. The developer
+chooses the exact release being patched.
+
+Before making screen changes, build and record a base:
+
+```powershell
+python tools/screens.py baseline --out dist/my-base-v1
+```
+
+`baseline` is the clearer name for the existing `base` command. It builds the
+configured demo APK, compiles/tests the supported screen program and saves
+`baseline.json`, `screen-base.apk`, `baseline-screen.js` and `baseline-sources.zip`.
+The JSON includes native/screen file hashes, APK/program hashes and the source
+archive hash. The ZIP preserves the declared native and screen inputs; it is not
+a complete project backup, Git history or a signing-key backup. Store the whole
+directory in durable private release storage, with an independent backup. `dist/`
+is Git-ignored local output, not durable remote storage or automatic cloud backup.
+Never upload this private source ZIP in a public patch or Maven release.
+
+After editing supported screen Kotlin, explicitly supply that saved baseline:
+
+```powershell
+python tools/screens.py patch --baseline dist/my-base-v1/baseline.json --version 1 --repository YOUR-OWNER/YOUR-REPO --tag my-base-v1-patch-1 --key .keys/patch-signing.key --out dist/my-base-v1-patch-1
+```
+
+The command verifies compatibility and archive integrity, compiles the complete
+current program and signs the patch. It does not upload or update a catalog.
+Keep earlier fixes in current source. Native changes require another base.
+Output directories must be empty; existing release records are not overwritten.
+Older format-3 records without a source-archive hash remain supported.
+
+If the record was lost, explicitly select the original commit/tag/branch and
+provide the actual original released APK:
+
+```powershell
+python tools/screens.py recover-baseline --from-ref YOUR-RELEASE-COMMIT --apk C:/releases/original.apk --out dist/recovered-base-v1
+```
+
+Recovery resolves only the supplied ref, creates a detached Git worktree under
+`.tools/baseline-recovery/`, and runs that revision's existing `base` builder.
+It never checks out/resets your active branch or copies private keys into that
+worktree. Recovery requires that revision's supported build tool and original
+dependencies/toolchain/signing configuration. Local.properties and ignored keys
+are not restored automatically; configure Android SDK/JDK paths in the environment.
+The recovered APK must match the supplied original APK byte for byte; a different
+signing certificate or non-reproducible build is rejected, not guessed compatible.
+The recovery worktree/candidate remain private local diagnostic output; no
+baseline is copied to the chosen output directory on an APK mismatch.
+
+Without the release record or an exactly reproducible original APK, this tool
+cannot establish a trusted baseline. Ship a new native base instead. Older normal
+builds without the Gradle plugin did not record baselines; plugin-enabled release
+builds now do. These tools still require a prepared screen module, not arbitrary
+native screens.
+
 ## Current release identities
 
-The block below describes the last published host. Working source/snapshot now target **0.5.0 / code 5 / `native-sandbox-v1`**. Its channel is not published yet. Do not serve the new worker/security program to the old base or overwrite old snapshots/releases.
+The block below describes the last published host. Working source/snapshot now target **0.8.0 / code 8 / `native-store-v1`**. Its channel is not published yet. Do not serve the new worker/API program to the old base or overwrite old snapshots/releases.
 
 ```text
 Base: native-back-v1
@@ -108,13 +181,13 @@ The baseline command's behavior checks are example-specific. A different app/mod
 
 ## 3. Build a compatible patch
 
-Keep the native base/snapshot unchanged. Edit only supported common Kotlin, then use an unused tag/output directory and increasing version. Example for the first patch on the unreleased security base:
+Keep the native base/snapshot unchanged. Edit only supported common Kotlin, then use an unused tag/output directory and increasing version. Example for the first patch on the unreleased storage test base:
 
 ```powershell
-python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-sandbox-v1-patch-1 --version 1 --tag native-sandbox-v1-patch-1
+python tools/screens.py patch --baseline demo/release-baseline.json --out dist/native-store-v1-patch-1 --version 1 --tag native-store-v1-patch-1
 ```
 
-This command is an example, not a claim that the security base or its patch has been published. The last published Back base still has its own patch 1. For another GitHub artifact repository, add `--repository OWNER/REPOSITORY`; use `--key PATH` for its signing key.
+This command is an example, not a claim that the storage test base or its patch has been published. The last published Back base still has its own patch 1. For another GitHub artifact repository, add `--repository OWNER/REPOSITORY`; use `--key PATH` for its signing key.
 
 The tool:
 
@@ -134,9 +207,9 @@ The output program is complete, not a per-method binary delta. Do not copy its J
 Create release notes in a local UTF-8 file. For a fresh GitHub release/tag:
 
 ```powershell
-.\tools\publish-github.ps1 -Repository jaypal1046/patchrelay -Tag native-sandbox-v1-patch-1 -NotesFile .tools/patch-1-notes.md -PreRelease -Files @(
-    'dist/native-sandbox-v1-patch-1/screens.js',
-    'dist/native-sandbox-v1-patch-1/patch.json'
+.\tools\publish-github.ps1 -Repository jaypal1046/patchrelay -Tag native-store-v1-patch-1 -NotesFile .tools/patch-1-notes.md -PreRelease -Files @(
+    'dist/native-store-v1-patch-1/screens.js',
+    'dist/native-store-v1-patch-1/patch.json'
 )
 ```
 
@@ -146,7 +219,7 @@ Keep published versioned artifacts immutable. The manifest's signed artifact URL
 
 ## 5. Publish the channel manifest last
 
-After checking artifact availability, publish the **exact signed** `patch.json` at the channel URL embedded in the APK. For the working security base, that is the `native-sandbox-v1` release asset named `patch.json`; this channel has not been published. Leave the old `native-back-v1` channel unchanged.
+After checking artifact availability, publish the **exact signed** `patch.json` at the channel URL embedded in the APK. For the working storage test base, that is the `native-store-v1` release asset named `patch.json`; this channel has not been published. Leave the old `native-back-v1` channel unchanged.
 
 - First channel release: the same publish helper can create it with only the signed manifest as an asset.
 - Existing channel: replace its manifest through GitHub Releases/API. The helper has no update-channel command.
@@ -162,7 +235,7 @@ The existing Java signer can sign an already checked/built program for your serv
 
 ```powershell
 $base = Get-Content demo/release-baseline.json -Raw | ConvertFrom-Json
-java tools/Publisher.java sign .keys/patch-signing.key dist/native-sandbox-v1-patch-1/screens.js $base.appId $base.baseVersion 1 ($base.screenIds -join ',') https://updates.example.com/releases/patch-1/screens.js dist/native-sandbox-v1-patch-1/server-patch.json $base.hostSha256
+java tools/Publisher.java sign .keys/patch-signing.key dist/native-store-v1-patch-1/screens.js $base.appId $base.baseVersion 1 ($base.screenIds -join ',') https://updates.example.com/releases/patch-1/screens.js dist/native-store-v1-patch-1/server-patch.json $base.hostSha256
 ```
 
 Replace the example domain/paths/version/key with your own. Upload the matching `screens.js` to that exact signed URL, then serve the bytes of `server-patch.json` as the channel's `patch.json`. The signer calculates the script hash but does not run screen tests; do not use it to bypass compatibility/build checks. The existing GitHub demo will keep polling GitHub until a new host is configured for your server.
@@ -171,7 +244,10 @@ Replace the example domain/paths/version/key with your own. Upload the matching 
 
 Check the bundled baseline before downloading. Record installed APK hash/version/install times. Then stage the signed program, restart the process, verify expected UI/function behavior, and compare the installed APK/hash/timestamps again. A second restart checks healthy selection persistence.
 
-In the demo, checking updates is manual. Force-stop/reopen was a controlled test procedure. Production scheduling/restart UX is not implemented.
+With `patchrelay.catalogUrl` configured, the new demo checks once per process on
+a worker after healthy first rendering. Manual controls remain test tools.
+Periodic scheduling/restart UX is not implemented; Force-stop/reopen remains a
+controlled test procedure, not an instruction the SDK forces on end users.
 
 ## Corrective releases and common failures
 
@@ -191,6 +267,15 @@ Pointing the channel backward is not remote rollback: accepted-version protectio
 
 Buildable local artifact today: `sdk/build/outputs/aar/sdk-release.aar`. There is no published `dev.patchrelay:android:VERSION` coordinate and no configured Maven publication task.
 
-Maven Central is the planned public dependency destination. Namespace ownership, artifact metadata, publishing/signing configuration and a separately tested consumer app still need work; see the [Central Publisher Portal guide](https://central.sonatype.org/publish/publish-portal-guide/). Do not advertise example-app version 0.4.0 as an available Maven SDK version.
+Maven Central is the planned public dependency destination. A local Maven preview now includes the AAR and dependency metadata; see [Maven distribution](maven-publishing.md). Verified namespace ownership, distribution license, signing, Central upload and a separately tested consumer app remain pending. No SDK version is publicly available yet.
 
 The original app and SDK must meet their distribution channel's rules. Interpreted patches are not a blanket approval exemption; see [distribution and security](production-readiness.md#distribution-and-security).
+
+## Private GitHub hosting
+
+The demo channel can be overridden with `patchrelay.manifestUrl` in ignored
+`local.properties` or with `-Ppatchrelay.manifestUrl=...`; see
+[host configuration](integration.md#choose-your-patch-host-in-localproperties).
+This supplies a URL, not authentication or an automatic patch-upload destination.
+
+The repository is now private. The current downloader is unauthenticated; private repository release URLs are not anonymously readable. Existing release/source links require repository access. Use a separately designed authenticated delivery gateway or an accessible HTTPS artifact host before relying on private release delivery. Keep GitHub credentials on trusted infrastructure; do not ship a broad repository token in the APK, JS or manifest. The public GitHub API smoke test does not validate private release downloads.

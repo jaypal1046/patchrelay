@@ -1,0 +1,15 @@
+plugins { id 'groovy'; id 'java-gradle-plugin' }
+repositories { google(); mavenCentral() }
+dependencies {
+    implementation localGroovy()
+    compileOnly 'com.android.tools.build:gradle-api:8.6.0'
+}
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+gradlePlugin {
+    plugins {
+        baseline {
+            id = 'dev.patchrelay.baseline'
+            implementationClass = 'dev.patchrelay.gradle.PatchRelayPlugin'
+        }
+    }
+}

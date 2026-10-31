@@ -1,18 +1,132 @@
-plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android' }
+plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android'; id 'maven-publish'; id 'signing' }
+
+group = 'io.github.jaypal1046'
+version = '0.1.0-alpha01'
+def publicationLicenseName = providers.gradleProperty('publicationLicenseName').orElse('PatchRelay SDK License — Binary Use')
+def publicationLicenseUrl = providers.gradleProperty('publicationLicenseUrl').orElse(
+    "https://repo.maven.apache.org/maven2/io/github/jaypal1046/patchrelay-android/${project.version}/patchrelay-android-${project.version}-license.txt")
 android {
     namespace 'dev.patchrelay'
     compileSdk 35
     defaultConfig {
         minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
         testInstrumentationRunner 'dev.patchrelay.screens.SandboxInstrumentation'
     }
     sourceSets { androidTest.assets.srcDirs += '../demo/src/main/assets' }
+    sourceSets.main.resources.srcDir(layout.buildDirectory.dir('generated/license'))
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
     testOptions { targetSdk = 35; unitTests.returnDefaultValues = true; unitTests.includeAndroidResources = true }
+    publishing { singleVariant('release') }
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
 dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
     testImplementation 'org.robolectric:robolectric:4.11'
+}
+
+publishing {
+    repositories {
+        maven { name = 'preview'; url = layout.buildDirectory.dir('maven-repository') }
+    }
+    publications {
+        release(MavenPublication) {
+            artifactId = 'patchrelay-android'
+            pom {
+                name = 'PatchRelay Android'
+                description = 'Native Android screen rendering and bounded JavaScript patch execution.'
+                url = 'https://github.com/jaypal1046/patchrelay'
+                licenses { license {
+                    name = publicationLicenseName.get()
+                    if (publicationLicenseUrl.isPresent()) url = publicationLicenseUrl.get()
+                    distribution = 'repo'
+                } }
+                developers { developer { id = 'jaypal1046'; name = 'Jay'; url = 'https://github.com/jaypal1046' } }
+                scm { url = 'https://github.com/jaypal1046/patchrelay'; connection = 'scm:git:https://github.com/jaypal1046/patchrelay.git' }
+            }
+        }
+    }
+}
+
+def closedSources = tasks.register('closedSourcesJar', Jar) {
+    archiveClassifier = 'sources'
+    from 'publication/sources'
+    from rootProject.file('LICENSE')
+}
+def publicDocumentation = tasks.register('publicDocumentationJar', Jar) {
+    archiveClassifier = 'javadoc'
+    from 'publication/documentation'
+    from rootProject.file('LICENSE')
+    from(rootProject.file('docs')) {
+        include 'integration.md', 'gradle-integration.md', 'update-routing.md'
+        into 'docs'
+    }
+}
+def packageSdkLicense = tasks.register('packageSdkLicense', Sync) {
+    from(rootProject.file('LICENSE')) { into 'META-INF/patchrelay' }
+    into layout.buildDirectory.dir('generated/license')
+}
+tasks.named('preBuild') { dependsOn packageSdkLicense }
+afterEvaluate {
+    publishing.publications.release {
+        from components.release
+        artifact closedSources
+        artifact publicDocumentation
+        artifact(rootProject.file('LICENSE')) { classifier = 'license'; extension = 'txt' }
+    }
+    signing {
+        required { gradle.taskGraph.hasTask(':sdk:centralBundle') }
+        def key = providers.environmentVariable('MAVEN_SIGNING_KEY')
+        if (key.isPresent()) useInMemoryPgpKeys(key.get(), providers.environmentVariable('MAVEN_SIGNING_PASSWORD').orNull)
+        sign publishing.publications.release
+    }
+}
+
+tasks.register('validateCentralPublication') {
+    doLast {
+        if (!publicationLicenseName.isPresent() || !publicationLicenseUrl.isPresent() ||
+            publicationLicenseName.get().trim().isEmpty() || !(publicationLicenseUrl.get() ==~ /https:\/\/\S+/)) {
+            throw new GradleException('Supply approved publicationLicenseName and HTTPS publicationLicenseUrl; no license is assumed.')
+        }
+        if (!providers.environmentVariable('MAVEN_SIGNING_KEY').isPresent()) {
+            throw new GradleException('MAVEN_SIGNING_KEY is required. Use a publication PGP key, never the patch-signing key.')
+        }
+    }
+}
+tasks.withType(Sign).configureEach {
+    if (gradle.startParameter.taskNames.any { it == 'centralBundle' || it.endsWith(':centralBundle') }) {
+        dependsOn 'validateCentralPublication'
+    }
+}
+tasks.register('centralBundle', Zip) {
+    dependsOn 'validateCentralPublication', 'publishReleasePublicationToPreviewRepository'
+    archiveFileName = "patchrelay-android-${project.version}-central.zip"
+    destinationDirectory = layout.buildDirectory.dir('central')
+    def repositoryPath = "io/github/jaypal1046/patchrelay-android/${project.version}"
+    from(layout.buildDirectory.dir("maven-repository/$repositoryPath")) {
+        into repositoryPath
+        include { entry ->
+            def prefix = "patchrelay-android-${project.version}"
+            def artifacts = ["${prefix}.aar", "${prefix}.pom", "${prefix}.module", "${prefix}-sources.jar", "${prefix}-javadoc.jar", "${prefix}-license.txt"]
+            entry.relativePath.segments.length == 1 && artifacts.any { name ->
+                ['', '.asc', '.md5', '.sha1', '.sha256', '.sha512', '.asc.md5', '.asc.sha1', '.asc.sha256', '.asc.sha512'].any { suffix -> entry.name == name + suffix }
+            }
+        }
+    }
+    doFirst {
+        def folder = layout.buildDirectory.dir("maven-repository/$repositoryPath").get().asFile
+        ['aar', 'pom', 'module', 'sources.jar', 'javadoc.jar', 'license.txt'].each { suffix ->
+            def name = "patchrelay-android-${project.version}" + (suffix.endsWith('.jar') || suffix == 'license.txt' ? "-$suffix" : ".$suffix")
+            [name, "${name}.asc", "${name}.md5", "${name}.sha1"].each { required ->
+                if (!new File(folder, required).isFile()) throw new GradleException("Missing publication file: $required")
+            }
+        }
+    }
 }

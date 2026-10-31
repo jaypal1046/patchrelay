@@ -91,7 +91,7 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
     }
 
     fun call(function: String, args: List<Any?>, onResult: (String) -> Unit) {
-        require(function in setOf("renderScreen", "handleEvent", "patchedFunctionIds", "invokePatch"))
+        require(function in setOf("renderScreen", "handleEvent", "patchedFunctionIds", "invokePatch", "takeHostRequests", "handleHostResult"))
         val arguments = args.joinToString(",") {
             when (it) { null -> "null"; is Int -> it.toString(); is String -> JSONObject.quote(it); else -> error("Unsupported argument") }
         }

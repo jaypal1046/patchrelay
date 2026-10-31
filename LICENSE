@@ -1,0 +1,71 @@
+PatchRelay SDK License — Binary Use
+Version 1.0
+
+Copyright (c) 2026 the PatchRelay SDK copyright holders.
+All rights reserved except as expressly granted below.
+
+1. Scope
+
+This license applies to the PatchRelay Android SDK binaries and accompanying
+command-line tools and SDK documentation distributed with this notice (the "SDK"). It does not grant
+access to implementation source code or license separately identified third-party
+software. Third-party components remain governed by their respective licenses.
+
+2. Permission
+
+The copyright holders grant you a worldwide, non-exclusive, royalty-free license
+to use the SDK to develop, test and operate your own applications, including free
+and commercial applications, and to distribute the SDK as an integrated part of
+those applications. You may shrink, optimize, obfuscate and package the SDK as
+needed for that integration. You may keep copies in build caches and private
+dependency repositories for your development and deployment.
+
+Distribution of unmodified SDK releases through package registries or mirrors
+authorized by the copyright holders is permitted. This license and applicable
+third-party notices must accompany redistributed SDK copies; an application's
+legal-notices screen or bundled notices file is sufficient.
+
+Your application code and patches that you create remain yours. This license
+does not require you to disclose their source code.
+
+3. Restrictions
+
+You may not sell, sublicense or distribute the SDK as a standalone product,
+publish modified SDK releases, remove ownership or license notices, or represent
+the SDK as your own product without separate written permission. You may not
+reverse engineer, decompile or disassemble the SDK except to the extent that
+applicable law permits such activity despite this restriction. The permitted
+build transformations in section 2 are not prohibited by this section.
+
+No trademark rights or rights to implementation source code are granted.
+All rights not expressly granted are reserved.
+
+4. Application and update responsibility
+
+You are responsible for your applications, patches, signing keys, user disclosures,
+data handling and compliance with applicable laws and distribution-platform rules.
+Use of this SDK does not represent approval by Google Play or any other platform.
+
+5. Warranty and liability
+
+THE SDK IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDERS ARE NOT
+LIABLE FOR CLAIMS, DAMAGES OR OTHER LIABILITY ARISING FROM THE SDK OR ITS USE,
+WHETHER IN CONTRACT, TORT OR OTHERWISE. THESE LIMITATIONS DO NOT EXCLUDE RIGHTS
+OR LIABILITY THAT APPLICABLE LAW DOES NOT ALLOW TO BE EXCLUDED.
+
+6. Termination
+
+These permissions terminate if you materially breach this license and do not
+remedy the breach within 30 days after receiving written notice from a copyright
+holder. On termination, stop using and distributing the SDK. Termination does not
+require end users to uninstall applications lawfully distributed before termination.
+
+7. Other terms
+
+This is a proprietary binary-use license, not an open-source license. No support,
+maintenance, future release or compatibility commitment is included. Changes to
+license terms for later SDK versions do not change the terms supplied with a
+previously received version. If a provision is unenforceable, the remaining
+provisions continue to apply to the extent permitted by law.

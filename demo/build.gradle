@@ -1,6 +1,27 @@
-plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
+plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android'; id 'dev.patchrelay.baseline' }
 def runtime = new groovy.json.JsonSlurper().parse(rootProject.file('runtime.json'))
 assert runtime.format == 1 && runtime.screenApi == 2 : 'Unsupported runtime contract'
+
+def localSettings = new Properties()
+def localSettingsFile = rootProject.file('local.properties')
+if (localSettingsFile.isFile()) localSettingsFile.withInputStream { localSettings.load(it) }
+def manifestUrl = providers.gradleProperty('patchrelay.manifestUrl').getOrElse(
+    localSettings.getProperty('patchrelay.manifestUrl', runtime.manifestUrl)).trim()
+def catalogUrl = providers.gradleProperty('patchrelay.catalogUrl').getOrElse(
+    localSettings.getProperty('patchrelay.catalogUrl', '')).trim()
+def updateChannel = providers.gradleProperty('patchrelay.channel').getOrElse(
+    localSettings.getProperty('patchrelay.channel', 'production')).trim()
+if (!(updateChannel ==~ /[a-z][a-z0-9_-]{0,31}/)) throw new GradleException('Invalid patchrelay.channel')
+try {
+    [manifestUrl, catalogUrl].findAll { !it.isEmpty() }.each { value ->
+        def address = new URI(value)
+        if (address.scheme != 'https' || !address.host || address.rawUserInfo != null || address.rawFragment != null) {
+            throw new IllegalArgumentException()
+        }
+    }
+} catch (Exception ignored) {
+    throw new GradleException('PatchRelay update URLs must use absolute HTTPS without credentials or a fragment.')
+}
 def hostFiles = new TreeMap<String, String>()
 runtime.nativeInputs.each { relative ->
     def target = rootProject.file(relative)
@@ -22,15 +43,32 @@ android {
         targetSdk 35
         versionCode runtime.versionCode
         versionName runtime.versionName
+        testInstrumentationRunner 'dev.patchrelay.screens.demo.SilentRecoveryInstrumentation'
         buildConfigField 'String', 'PATCH_PUBLIC_KEY', '"' + file('patch-public-key.txt').text.trim() + '"'
         buildConfigField 'String', 'BASE_VERSION', groovy.json.JsonOutput.toJson(runtime.baseVersion)
-        buildConfigField 'String', 'MANIFEST_URL', groovy.json.JsonOutput.toJson(runtime.manifestUrl)
+        buildConfigField 'String', 'MANIFEST_URL', groovy.json.JsonOutput.toJson(manifestUrl)
+        buildConfigField 'String', 'CATALOG_URL', groovy.json.JsonOutput.toJson(catalogUrl)
+        buildConfigField 'String', 'UPDATE_CHANNEL', groovy.json.JsonOutput.toJson(updateChannel)
         buildConfigField 'String', 'HOST_SHA256', groovy.json.JsonOutput.toJson(hostHash)
         buildConfigField 'String', 'SCREEN_IDS', groovy.json.JsonOutput.toJson(runtime.screenIds.join(','))
     }
     buildFeatures { buildConfig true }
-    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.debug }
+        r8Check {
+            initWith release
+            matchingFallbacks = ['release']
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
+    testOptions { unitTests.includeAndroidResources = true }
+    testBuildType 'release'
 }
-dependencies { implementation project(':sdk') }
+dependencies {
+    implementation project(':sdk')
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.11'
+}

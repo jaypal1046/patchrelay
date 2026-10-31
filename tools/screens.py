@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import uuid
+import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 PROGRAM = ROOT / "screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js"
@@ -30,7 +33,7 @@ def fingerprint(root, paths):
     result = {}
     for path in files:
         data = path.read_bytes()
-        if path.suffix in CONFIG["textExtensions"]:
+        if any(path.name.endswith(suffix) for suffix in CONFIG["textExtensions"]):
             data = data.replace(b"\r\n", b"\n")
         result[path.relative_to(root).as_posix()] = hashlib.sha256(data).hexdigest()
     return result
@@ -46,11 +49,73 @@ def run(*args):
     subprocess.run(list(map(str, args)), cwd=ROOT, check=True)
 
 
+def save_baseline_sources(root, out, baseline):
+    """Preserve declared inputs without including local credentials or signing keys."""
+    with zipfile.ZipFile(out / "baseline-sources.zip", "x", zipfile.ZIP_DEFLATED) as archive:
+        for relative in sorted(set(baseline["nativeFiles"]) | set(baseline["screenFiles"])):
+            source = (root / relative).resolve()
+            if not source.is_relative_to(root.resolve()):
+                raise ValueError("Baseline input escapes project directory")
+            archive.write(source, relative)
+    baseline["sourcesSha256"] = hashlib.sha256((out / "baseline-sources.zip").read_bytes()).hexdigest()
+    (out / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
+
+
+def load_baseline(path):
+    baseline = json.loads(path.read_text(encoding="utf-8"))
+    if baseline.get("format") != 3:
+        raise ValueError("Unsupported baseline format")
+    if "sourcesSha256" in baseline:
+        archive = path.parent / "baseline-sources.zip"
+        if not archive.is_file() or hashlib.sha256(archive.read_bytes()).hexdigest() != baseline["sourcesSha256"]:
+            raise ValueError("Baseline source archive missing or altered; preserve the complete baseline directory")
+    return baseline
+
+
+def recover_baseline(ref, apk, out):
+    if not ref or ref.startswith("-"):
+        raise ValueError("Supply an explicit commit, tag or branch with --from-ref")
+    expected = hashlib.sha256(apk.read_bytes()).hexdigest()
+    commit = subprocess.check_output(["git", "rev-parse", "--verify", "--end-of-options", ref + "^{commit}"], cwd=ROOT, text=True).strip()
+    workspace = ROOT / ".tools/baseline-recovery" / uuid.uuid4().hex
+    checkout = workspace / "checkout"
+    candidate = workspace / "candidate"
+    workspace.mkdir(parents=True)
+    run("git", "worktree", "add", "--detach", checkout, commit)
+    # Keep the recovery checkout for diagnosis; never switch or reset current work.
+    print("Recovery checkout: " + str(checkout), flush=True)
+    helper = checkout / "tools/screens.py"
+    if not helper.is_file():
+        raise ValueError("Selected revision has no supported base builder; restore its original build tooling first")
+    subprocess.run([sys.executable, str(helper), "base", "--out", str(candidate)], cwd=checkout, check=True)
+    baseline = json.loads((candidate / "baseline.json").read_text(encoding="utf-8"))
+    (candidate / "baseline.json").rename(candidate / "unverified-baseline.json")
+    rebuilt = hashlib.sha256((candidate / "screen-base.apk").read_bytes()).hexdigest()
+    if rebuilt != expected or baseline.get("apkSha256") != expected:
+        raise ValueError("Recovered APK differs from the supplied original APK; baseline rejected. Keep the candidate for diagnosis, not patching.")
+    if baseline.get("format") != 3:
+        raise ValueError("Recovered baseline format is unsupported")
+    if (candidate / "baseline-sources.zip").exists():
+        if hashlib.sha256((candidate / "baseline-sources.zip").read_bytes()).hexdigest() != baseline.get("sourcesSha256"):
+            raise ValueError("Recovered source archive hash mismatch")
+    else:
+        save_baseline_sources(checkout, candidate, baseline)
+    baseline["recoveredFromCommit"] = commit
+    (candidate / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
+    shutil.copytree(candidate, out, dirs_exist_ok=True, ignore=shutil.ignore_patterns('unverified-baseline.json'))
+    print("Verified recovered baseline: " + str(out), flush=True)
+
+
 def check_release_host():
     baseline = json.loads((ROOT / "demo/release-baseline.json").read_text())
     check_native(baseline["nativeFiles"], fingerprint(ROOT, NATIVE))
     source = (ROOT / "demo/build/generated/source/buildConfig/release/dev/patchrelay/screens/demo/BuildConfig.java").read_text()
     actual = re.search(r'HOST_SHA256 = "([a-f0-9]{64})"', source)
+    if actual is None:
+        generated = re.search(r'HOST_SHA256 = ([\w.]+\.PatchRelayBuild)\.HOST_SHA256;', source)
+        if generated:
+            path = ROOT / ('demo/build/generated/patchrelay/release/' + generated[1].replace('.', '/') + '.java')
+            actual = re.search(r'HOST_SHA256 = "([a-f0-9]{64})"', path.read_text())
     if not actual or actual[1] != baseline["hostSha256"] or actual[1] != host_hash(baseline["nativeFiles"]):
         raise ValueError("Native host fingerprint differs between Gradle, Python and release snapshot")
     print("Native host fingerprint matches release snapshot and Gradle BuildConfig.")
@@ -58,14 +123,18 @@ def check_release_host():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("base", "patch", "check-host"))
+    parser.add_argument("command", choices=("base", "baseline", "recover-baseline", "patch", "check-host"))
     parser.add_argument("--out", type=Path)
     parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--from-ref", help="Explicit old commit/tag/branch for baseline recovery")
+    parser.add_argument("--apk", type=Path, help="Original installed/released APK required for recovery")
     parser.add_argument("--version", type=int, default=1)
     parser.add_argument("--repository", default="jaypal1046/patchrelay")
     parser.add_argument("--tag")
     parser.add_argument("--key", type=Path, default=Path(".keys/patch-signing.key"))
     args = parser.parse_args()
+    if args.command == "baseline":
+        args.command = "base"
     if args.command == "check-host":
         check_release_host()
         return
@@ -73,8 +142,15 @@ def main():
         parser.error("--out is required for base/patch builds")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    if (out / "baseline.json").exists() or (out / "patch.json").exists():
-        parser.error("Signed/base output exists; use a fresh output directory")
+    if any(out.iterdir()):
+        parser.error("Output directory is not empty; use a fresh output directory")
+    if args.command == "recover-baseline":
+        if not args.from_ref or args.apk is None:
+            parser.error("Recovery requires --from-ref and --apk; no baseline is selected automatically")
+        recover_baseline(args.from_ref, args.apk.resolve(), out)
+        return
+    if args.from_ref or args.apk:
+        parser.error("--from-ref and --apk are only supported for recover-baseline")
     if args.version <= 0:
         parser.error("Version must be positive")
     gradle = ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew")
@@ -86,9 +162,7 @@ def main():
             parser.error("--repository must be owner/repository")
         if args.baseline is None:
             parser.error("--baseline is required")
-        baseline = json.loads(args.baseline.read_text())
-        if baseline.get("format") != 3:
-            parser.error("Unsupported baseline format")
+        baseline = load_baseline(args.baseline)
         check_native(baseline["nativeFiles"], fingerprint(ROOT, NATIVE))
         if baseline["hostSha256"] != host_hash(baseline["nativeFiles"]) or baseline["screenApi"] != CONFIG["screenApi"]:
             parser.error("Invalid baseline compatibility contract")
@@ -103,7 +177,7 @@ def main():
         asset = ROOT / "demo/src/main/assets/baseline-screen.js"
         asset.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(PROGRAM, asset)
-        run(gradle, ":sdk:testDebugUnitTest", ":sdk:assembleRelease", ":demo:assembleRelease", "--console=plain", "--max-workers=2")
+        run(gradle, ":sdk:testDebugUnitTest", ":demo:testDebugUnitTest", ":sdk:assembleRelease", ":demo:assembleRelease", "--console=plain", "--max-workers=2")
         apk = out / "screen-base.apk"
         shutil.copyfile(ROOT / "demo/build/outputs/apk/release/demo-release.apk", apk)
         shutil.copyfile(PROGRAM, out / "baseline-screen.js")
@@ -114,7 +188,7 @@ def main():
                     "screenFiles": fingerprint(ROOT, ("screens/src/commonMain",)),
                     "apkSha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
                     "programSha256": hashlib.sha256(PROGRAM.read_bytes()).hexdigest()}
-        (out / "baseline.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        save_baseline_sources(ROOT, out, manifest)
         print("Native base and compatibility snapshot ready: " + str(out), flush=True)
     else:
         check_native(baseline["nativeFiles"], fingerprint(ROOT, NATIVE))

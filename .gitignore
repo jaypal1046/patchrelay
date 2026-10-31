@@ -8,3 +8,7 @@ dist/
 *.keystore
 node_modules/
 __pycache__/
+.patchrelay/
+cli/LICENSE
+cli/gradle-plugin/
+*.tgz

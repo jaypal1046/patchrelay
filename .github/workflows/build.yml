@@ -19,12 +19,15 @@ jobs:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v5
-      - run: chmod +x gradlew && ./gradlew :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease --max-workers=2
-      - run: node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js baseline
+      - run: npm test --prefix cli
+      - run: npm pack ./cli --pack-destination .
+      - run: chmod +x gradlew && ./gradlew :screens:jvmTest :screens:compileProductionExecutableKotlinJs :sdk:testDebugUnitTest :demo:testDebugUnitTest :sdk:assembleRelease :demo:assembleRelease :demo:bundleRelease --max-workers=2
+      - run: node tools/test-screen-program.mjs demo/src/main/assets/baseline-screen.js fixed
       - run: node tools/test-interpreter.mjs
       - run: node tools/test-screen-program.mjs screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js fixed
       - run: python3 tools/test_screen_build.py
-      - run: python3 tools/screens.py check-host
+      - run: node tools/check-gradle-baseline.mjs demo release apk
+      - run: node tools/check-gradle-baseline.mjs demo release aab
       - uses: actions/upload-artifact@v4
         with:
           name: native-screen-engine

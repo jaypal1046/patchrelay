@@ -1,0 +1,15 @@
+{
+  "name": "@orbital_mcp/patchrelay",
+  "version": "0.1.0-alpha04",
+  "description": "Build and sign patches for prepared PatchRelay Android projects",
+  "type": "module",
+  "bin": { "patchrelay": "bin/patchrelay.mjs" },
+  "engines": { "node": ">=22" },
+  "files": ["bin/", "src/", "README.md", "LICENSE", "gradle-plugin/build.gradle", "gradle-plugin/settings.gradle", "gradle-plugin/src/main/"],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "prepack": "node scripts/package.mjs"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "publishConfig": { "access": "public", "tag": "alpha" }
+}

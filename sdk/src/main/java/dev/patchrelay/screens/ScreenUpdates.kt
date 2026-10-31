@@ -62,11 +62,26 @@ class ScreenUpdates internal constructor(context: Context, private val baseVersi
     }
 
     @Synchronized fun stage(url: String): Boolean {
+        return stageManifest(url, null)
+    }
+
+    /** One signed catalog per application/channel; only the exact installed base is selected. */
+    @Synchronized fun stageCatalog(url: String, channel: String = "production"): Boolean {
+        workerThread()
+        if (!state.getBoolean("enabled", true)) return false
+        val patch = ScreenCatalogs.select(download(url, 64 * 1024), publicKeys, app.packageName, baseVersion, hostHash, channel)
+            ?: return false
+        if (patch.version <= state.getLong("highest", 0)) return false
+        return stageManifest(patch.url, patch.version)
+    }
+
+    private fun stageManifest(url: String, expectedVersion: Long?): Boolean {
         workerThread()
         if (!state.getBoolean("enabled", true)) return false
         val envelope = download(url, 64 * 1024)
         val manifest = verify(envelope)
         val version = manifest.getLong("version")
+        require(expectedVersion == null || version == expectedVersion) { "Catalog and manifest versions differ" }
         if (version <= state.getLong("highest", 0)) return false
         val script = download(manifest.getString("artifactUrl"), MAX_SCRIPT)
         require(script.isNotEmpty()) { "Empty screen patch" }
@@ -87,9 +102,16 @@ class ScreenUpdates internal constructor(context: Context, private val baseVersi
     }
 
     @Synchronized fun markHealthy() {
+        markHealthy(sessionVersion)
+    }
+
+    /** Ignore stale startup callbacks after selection changed during recovery. */
+    @Synchronized fun markHealthy(version: Long): Boolean {
         workerThread()
         check(started)
+        if (sessionVersion != version || state.getLong("active", 0) != version) return false
         if (sessionVersion > 0) save(state.edit().putBoolean("booting", false))
+        return true
     }
 
     @Synchronized fun reject(bundled: String, failure: Exception): ScreenProgram {
@@ -149,7 +171,27 @@ class ScreenUpdates internal constructor(context: Context, private val baseVersi
         }
         output.toByteArray()
     }
-    private fun save(editor: SharedPreferences.Editor) { if (!editor.commit()) throw IOException("Cannot save screen state") }
+    private fun save(editor: SharedPreferences.Editor) {
+        val previous = state.all.toMap()
+        val failure = try {
+            if (editor.commit()) return
+            IOException("Cannot save screen state")
+        } catch (error: Exception) { IOException("Cannot save screen state", error) }
+        // Android can change memory before commit reports a disk failure. Restore it too.
+        try {
+            val rollback = state.edit().clear()
+            for ((key, value) in previous) when (value) {
+                is String -> rollback.putString(key, value)
+                is Long -> rollback.putLong(key, value)
+                is Int -> rollback.putInt(key, value)
+                is Boolean -> rollback.putBoolean(key, value)
+                is Float -> rollback.putFloat(key, value)
+                is Set<*> -> { @Suppress("UNCHECKED_CAST") rollback.putStringSet(key, value as Set<String>) }
+            }
+            if (!rollback.commit()) failure.addSuppressed(IOException("Cannot persist state rollback"))
+        } catch (rollback: Exception) { failure.addSuppressed(rollback) }
+        throw failure
+    }
     private fun workerThread() { check(Looper.myLooper() != Looper.getMainLooper()) { "Use a worker thread" } }
     private fun write(file: File, bytes: ByteArray) {
         val atomic = AtomicFile(file)

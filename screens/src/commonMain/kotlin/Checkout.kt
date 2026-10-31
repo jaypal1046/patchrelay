@@ -23,7 +23,11 @@ fun renderScreen(screenId: String): String {
                 button("remove", "Remove", "remove", quantity > 1 && !confirmed),
                 button("add", "Add item", "add", quantity < 100 && !confirmed)
             )),
-            button("next", "Continue to details", "to_details", !confirmed)
+            button("next", "Continue to details", "to_details", !confirmed),
+            layout("repository_api", "card", listOf(
+                text("api_status", apiStatus, "caption"),
+                button("api_load", "Check repository API", "load_repository", !apiBusy)
+            ))
         ) + if (confirmed) listOf(button("new_order", "Start new order", "new_order")) else emptyList()
         "details" -> listOf(
             input("email", "Receipt email", email, "email"),
@@ -60,6 +64,7 @@ fun renderScreen(screenId: String): String {
 fun handleEvent(screenId: String, action: String, value: String? = null): String {
     require(screenId == "checkout") { "Unknown screen" }
     when (action) {
+        "load_repository" -> if (page == "cart") requestRepository()
         "add" -> if (page == "cart" && !confirmed && quantity < 100) quantity++
         "remove" -> if (page == "cart" && !confirmed && quantity > 1) quantity--
         "email" -> {

@@ -4,31 +4,76 @@
 'use strict';
 // Patches execute in a worker, without this page's DOM or native request channel.
 window.__relay = (() => {
-    const source = `self.onmessage = function(event) {
-        try {
-            const value = (0, eval)(event.data.source);
-            self.postMessage({ticket:event.data.ticket, value:value});
-        } catch (error) {
-            self.postMessage({ticket:event.data.ticket, value:JSON.stringify({ok:false,error:String(error)})});
+    const source = `(function() {
+        'use strict';
+        const send = self.postMessage.bind(self);
+        const subscribe = self.addEventListener.bind(self);
+        const execute = eval;
+        const apply = Reflect.apply;
+        const preventDefault = Event.prototype.preventDefault;
+        const readData = Object.getOwnPropertyDescriptor(MessageEvent.prototype, 'data').get;
+        const invalid = '{"ok":false,"error":"Invalid worker response"}';
+        let currentTicket = 0, failed = false;
+        function seal(name, value) {
+            for (let owner = self; owner; owner = Object.getPrototypeOf(owner)) {
+                if (Object.getOwnPropertyDescriptor(owner, name)) {
+                    Object.defineProperty(owner, name, {value:value, writable:false, configurable:false});
+                }
+            }
+            Object.defineProperty(self, name, {value:value, writable:false, configurable:false});
         }
-    };`;
+        // Only the private closure can reply; these browser APIs are outside the patch contract.
+        for (const name of ['postMessage', 'Worker', 'SharedWorker', 'importScripts', 'MessageChannel',
+            'BroadcastChannel', 'fetch', 'XMLHttpRequest', 'WebSocket', 'WebTransport', 'EventSource',
+            'RTCPeerConnection', 'indexedDB', 'caches', 'navigator', 'OffscreenCanvas', 'createImageBitmap']) {
+            seal(name, undefined);
+        }
+        const quiet = () => {};
+        seal('console', Object.freeze({log:quiet, info:quiet, warn:quiet, error:quiet, debug:quiet,
+            trace:quiet, assert:quiet, clear:quiet, group:quiet, groupEnd:quiet, table:quiet}));
+        const fatal = event => {
+            apply(preventDefault, event, []);
+            if (failed) return;
+            failed = true;
+            send({ticket:currentTicket, value:invalid});
+        };
+        subscribe('error', fatal);
+        subscribe('unhandledrejection', fatal);
+        subscribe('message', function(event) {
+            if (failed || !event.isTrusted) return;
+            const data = apply(readData, event, []);
+            const ticket = data.ticket;
+            currentTicket = ticket;
+            let value;
+            try {
+                value = (0, execute)(data.source);
+                // Bound output before structured cloning can allocate it in the control page.
+                if (typeof value !== 'string' || value.length > 128 * 1024) value = invalid;
+            } catch (error) {
+                value = '{"ok":false,"error":"Worker execution failed"}';
+            }
+            send({ticket:ticket, value:value});
+        });
+    })();`;
     const url = URL.createObjectURL(new Blob([source], {type:'text/javascript'}));
     const worker = new Worker(url);
     URL.revokeObjectURL(url);
     let ticket = 0, reply = null, received = false, stopped = false;
     const failed = () => JSON.stringify({ok:false,error:'Invalid worker response'});
+    const reject = () => { reply = failed(); received = true; stopped = true; worker.terminate(); };
     worker.onmessage = event => {
-        if (received || !event.data || event.data.ticket !== ticket) return;
+        if (stopped) return;
+        if (received || !event.data || event.data.ticket !== ticket || typeof event.data.value !== 'string'
+            || event.data.value.length > 128 * 1024) { reject(); return; }
         received = true;
-        reply = typeof event.data.value === 'string' && event.data.value.length <= 128 * 1024
-            ? event.data.value : failed();
+        reply = event.data.value;
     };
-    worker.onerror = event => { event.preventDefault(); received = true; reply = failed(); };
-    worker.onmessageerror = () => { received = true; reply = failed(); };
+    worker.onerror = event => { event.preventDefault(); reject(); };
+    worker.onmessageerror = reject;
     return Object.freeze({
         send(id, script) {
-            if (stopped) throw new Error('Interpreter stopped');
             ticket = id; reply = null; received = false;
+            if (stopped) { reject(); return; }
             worker.postMessage({ticket:id, source:script});
         },
         take(id) { return id === ticket && received ? reply : null; },
