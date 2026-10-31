@@ -95,8 +95,8 @@ fun renderScreen(screenId: String): String {
         )
 
         "catalog" -> listOf(
-            text("cat_title", "Exclusive Hardware Catalog (4 Items)", "title"),
-            text("cat_desc", "Special hot-patched holiday discounts applied automatically.", "caption"),
+            text("cat_title", "Exclusive Hardware Catalog (4 Items) [v2]", "title"),
+            text("cat_desc", "Special hot-patched holiday discounts applied automatically. In-stock guaranteed.", "caption"),
             layout("cat_filter_row", "row", listOf(
                 button("cat_all", "All Items", "cat_filter_all", catalogCategory != "all"),
                 button("cat_ctrl", "Controllers", "cat_filter_controllers", catalogCategory != "controllers"),
