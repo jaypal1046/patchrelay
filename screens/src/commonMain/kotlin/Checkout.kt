@@ -277,7 +277,7 @@ fun renderScreen(screenId: String): String {
         )
 
         "support" -> listOf(
-            text("sup_title", "24/7 VIP Help & Developer Support", "title"),
+            text("sup_title", "24/7 VIP Help & Developer Support [v2]", "title"),
             layout("faq_card1", "card", listOf(
                 text("faq_q1", "Q: How do patches update without installing APKs?", "caption"),
                 text("faq_a1", "A: PatchRelay compiles Kotlin screen logic into signed JavaScript executed inside a sandboxed native WebView interpreter.")
@@ -289,6 +289,10 @@ fun renderScreen(screenId: String): String {
             layout("faq_card3", "card", listOf(
                 text("faq_q3", "Q: What is the typical patch size?", "caption"),
                 text("faq_a3", "A: Less than 120 KB, compared to a full 20-50 MB APK update!")
+            )),
+            layout("faq_card4", "card", listOf(
+                text("faq_q4", "Q: How many git commits and iterations can be patched?", "caption"),
+                text("faq_a4", "A: Unlimited! As long as native contracts remain invariant, any number of sequential commits can be patched.")
             )),
             layout("sup_form_card", "card", listOf(
                 text("sup_form_head", "Priority Ticket Submission", "caption"),
