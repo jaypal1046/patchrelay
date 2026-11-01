@@ -1,12 +1,19 @@
-plugins { id 'groovy'; id 'java-gradle-plugin' }
+plugins { id 'groovy'; id 'java-gradle-plugin'; id 'org.jetbrains.kotlin.jvm' version '1.9.23' }
 repositories { google(); mavenCentral() }
 dependencies {
     implementation localGroovy()
+    implementation 'org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.23'
+    testImplementation 'junit:junit:4.13.2'
     compileOnly 'com.android.tools.build:gradle-api:8.6.0'
 }
 java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+kotlin { jvmToolchain(17) }
 gradlePlugin {
     plugins {
+        functions {
+            id = 'dev.patchrelay.functions'
+            implementationClass = 'dev.patchrelay.gradle.FunctionsPlugin'
+        }
         baseline {
             id = 'dev.patchrelay.baseline'
             implementationClass = 'dev.patchrelay.gradle.PatchRelayPlugin'

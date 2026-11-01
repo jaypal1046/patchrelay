@@ -8,6 +8,8 @@
 -keep public class dev.patchrelay.screens.ScreenTree { public protected *; }
 -keep public class dev.patchrelay.screens.ScreenTrees { public protected *; }
 -keep public class dev.patchrelay.screens.NativeScreenRenderer { public protected *; }
+-keep public class dev.patchrelay.screens.ScreenStateStore { public protected *; }
+-keep public class dev.patchrelay.screens.FunctionPatchRunner { public protected *; }
 -keep public class dev.patchrelay.screens.IntPatchRunner { public protected *; }
 
 # Kotlin consumers need metadata for constructors, named arguments and defaults.

@@ -1,5 +1,6 @@
 package dev.patchrelay.screens.demo
 
+import java.io.File
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -36,7 +37,14 @@ class SilentRecoveryTest {
     }
     @Suppress("UNCHECKED_CAST")
     private fun <T> callback(engine: ScreenEngine, name: String): (T) -> Unit =
-        ScreenEngine::class.java.getDeclaredField(name).apply { isAccessible = true }.get(engine) as (T) -> Unit
+        ScreenEngine::class.java.getDeclaredField(run {
+            // Release SDK fields are intentionally obfuscated; use its private build mapping in tests only.
+            val mapping = System.getProperty("patchrelay.testMapping")?.let(::File)
+            if (mapping?.isFile == true) mapping.readText().substringAfter("dev.patchrelay.screens.ScreenEngine ->")
+                .substringBefore("\ndev.").lineSequence()
+                .first { it.trim().startsWith("kotlin.jvm.functions.Function1 $name -> ") }.substringAfter(" -> ").trim()
+            else name
+        }).apply { isAccessible = true }.get(engine) as (T) -> Unit
 
     @Test fun failedPatchRestoresBundledSelectionWithoutExposingDiagnostics() {
         val app = RuntimeEnvironment.getApplication() as DemoApp
@@ -50,7 +58,7 @@ class SilentRecoveryTest {
             callback<Exception>(engine(activity)!!, "onFailure")(IllegalStateException("private failure"))
             await { app.selected?.version == 0L && engine(activity) != null }
             val visible = texts(activity.findViewById(android.R.id.content)).joinToString("\n")
-            assertTrue(visible.contains("Checkout"))
+            assertTrue(visible.contains("Simple pages"))
             for (forbidden in listOf("private failure", "Patch failed", "Recovery failed", "Screen unavailable")) {
                 assertFalse("Exposed diagnostic: $forbidden", visible.contains(forbidden))
             }

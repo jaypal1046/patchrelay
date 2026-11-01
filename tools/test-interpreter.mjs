@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join, dirname} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
 // Real Chromium worker/CSP tests. These do not replace Android WebView device coverage.
@@ -57,11 +57,22 @@ try {
         assert(!response.exceptionDetails, JSON.stringify(response.exceptionDetails));
         return response.result.value;
     }
+    await cdp('Page.enable', {}, sessionId);
+    // Observe URL ownership in the control page only; the patch worker cannot access these hooks.
+    await cdp('Page.addScriptToEvaluateOnNewDocument', {source: `
+        window.__relayTestDocument = Math.random();
+        window.__relayTestUrls = new Set();
+        const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL), NativeWorker = Worker;
+        URL.createObjectURL = value => { const url = create(value); window.__relayTestUrls.add(url); return url; };
+        URL.revokeObjectURL = url => { window.__relayTestUrls.delete(url); revoke(url); };
+        window.Worker = function(...args) { return window.__relayTestWorker = new NativeWorker(...args); };
+    `}, sessionId);
     const html = readFileSync(new URL('../sdk/src/main/assets/patchrelay-interpreter.html', import.meta.url));
     async function reset() {
+        const previous = await evaluate('window.__relayTestDocument');
         await cdp('Page.navigate', {url:`data:text/html;base64,${html.toString('base64')}`}, sessionId);
         for (let tries = 0; tries < 100; tries++) {
-            if (await evaluate('typeof window.__relay === "object"')) return;
+            if (await evaluate(`window.__relayTestDocument !== ${JSON.stringify(previous)} && typeof window.__relay === "object"`)) return;
             await delay(20);
         }
         throw new Error('Interpreter page did not initialize');
@@ -79,11 +90,33 @@ try {
     }
     const wrap = expression => `JSON.stringify({ok:true,value:${expression}})`;
     await reset();
-    const program = readFileSync(new URL('../demo/src/main/assets/baseline-screen.js', import.meta.url), 'utf8');
+    assert.equal(await evaluate('window.__relayTestUrls.size'), 1, 'Worker source URL must remain live during startup');
+    assert.deepEqual(await run(wrap("'bootstrap'")), {ok:true,value:'bootstrap'});
+    assert.equal(await evaluate('window.__relayTestUrls.size'), 1);
+    assert.equal(await evaluate('window.__relay.stop(); window.__relay.stop(); window.__relayTestUrls.size'), 0);
+    await reset();
+    assert.equal(await evaluate("window.__relayTestWorker.onmessageerror(new MessageEvent('messageerror')); window.__relayTestUrls.size"), 0);
+    assert.equal((await run(wrap("'must not continue'"))).ok, false);
+    await reset();
+    console.log('PASS: worker Blob URL survives startup and is revoked on stop/failure');
+    const program = readFileSync(new URL('../screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js', import.meta.url), 'utf8');
     assert.deepEqual(await run(program + '\n;' + wrap("'ready'")), {ok:true,value:'ready'});
     const tree = await run(wrap("self['PatchRelay:screens'].renderScreen('checkout')"));
     assert.equal(JSON.parse(tree.value).screenId, 'checkout');
     console.log('PASS: compiled Kotlin program executes in worker');
+    const compose = await run(wrap("self.__patchrelay.handleEvent('checkout','c_nav_catalog',null)"));
+    assert.match(compose.value, /Items in cart: 0/);
+    assert.match((await run(wrap("self.__patchrelay.handleEvent('checkout','c_add_product',null)"))).value, /Items in cart: 1/);
+    assert.match((await run(wrap("self.__patchrelay.handleEvent('checkout','c_add_product',null)"))).value, /Items in cart: 2/);
+    assert.match((await run(wrap("self.__patchrelay.handleEvent('checkout','c_nav_cart',null)"))).value, /Items: 2/);
+    console.log('PASS: real Compose state, callbacks and navigation inside restricted worker');
+    const scalar = await run("self.__patchrelay.invokeFunction('checkout.greeting.v1','[\"Ada\",true]').then(value => JSON.stringify({ok:true,value:value}))");
+    assert.equal(JSON.parse(scalar.value), 'Welcome VIP Ada');
+    const suspended = await run("self.__patchrelay.invokeFunction('checkout.status.v1','[true]').then(value => JSON.stringify({ok:true,value:value}))");
+    assert.equal(JSON.parse(suspended.value), 'Confirmed');
+    assert.equal((await run("new Promise(resolve => setTimeout(() => resolve(JSON.stringify({ok:true,value:'later'})),25))")).value, 'later');
+    assert.equal((await run("Promise.reject(new Error('rejected'))")).ok, false);
+    console.log('PASS: scalar/suspend Kotlin calls and delayed/rejected Promise transport');
 
     const capabilities = await run(wrap("JSON.stringify(['window','document','Android','java','Java','__relay','RTCPeerConnection','localStorage'].map(name => typeof self[name]))"));
     assert.deepEqual(JSON.parse(capabilities.value), Array(8).fill('undefined'));
@@ -155,7 +188,7 @@ try {
     await evaluate(`window.__relay.send(${loop},'while(true) {}')`);
     await delay(100);
     assert.equal(await evaluate(`window.__relay.take(${loop})`), null);
-    assert.equal(await evaluate('window.__relay.stop(); 7'), 7);
+    assert.equal(await evaluate('window.__relay.stop(); window.__relayTestUrls.size'), 0);
     await reset();
     assert.deepEqual(await run(wrap("'recovered'")), {ok:true,value:'recovered'});
     console.log('PASS: infinite-loop worker terminates; replacement interpreter runs');
@@ -167,6 +200,8 @@ try {
         if (child.exitCode === null) child.kill();
     }
     // Only remove the unique temporary profile created by this test.
+    assert.equal(dirname(profile), tmpdir());
+    assert.ok(profile.startsWith(join(tmpdir(), 'patchrelay-browser-')));
     for (let tries = 0; tries < 30; tries++) {
         try { rmSync(profile, {recursive:true, force:true}); break; }
         catch (error) {

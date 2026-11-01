@@ -91,15 +91,15 @@ internal class ScreenInterpreter(context: Context, private val onFailure: (Excep
     }
 
     fun call(function: String, args: List<Any?>, onResult: (String) -> Unit) {
-        require(function in setOf("renderScreen", "handleEvent", "patchedFunctionIds", "invokePatch", "takeHostRequests", "handleHostResult"))
+        require(function in setOf("renderScreen", "handleEvent", "patchedFunctionIds", "invokePatch", "takeHostRequests", "handleHostResult", "patchedFunctionContracts", "invokeFunction", "exportState", "restoreState"))
         val arguments = args.joinToString(",") {
             when (it) { null -> "null"; is Int -> it.toString(); is String -> JSONObject.quote(it); else -> error("Unsupported argument") }
         }
-        enqueue(wrap("self['PatchRelay:screens'].$function($arguments)"), onResult)
+        enqueue(wrap("(self.__patchrelay || self['PatchRelay:screens']).$function($arguments)"), onResult)
     }
 
     private fun wrap(expression: String) =
-        "(function(){try{return JSON.stringify({ok:true,value:$expression});}catch(e){return JSON.stringify({ok:false,error:String(e)});}})()"
+        "(function(){try{return Promise.resolve($expression).then(function(value){return JSON.stringify({ok:true,value:value});},function(){return JSON.stringify({ok:false,error:\"Execution failed\"});});}catch(e){return JSON.stringify({ok:false,error:String(e)});}})()"
 
     private fun enqueue(source: String, onResult: (String) -> Unit) {
         check(Looper.myLooper() == Looper.getMainLooper())

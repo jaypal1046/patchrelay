@@ -6,26 +6,13 @@ Uses Node 22+ and the project's Gradle wrapper with JDK 17 and Android SDK 35.
 Experimental alpha package: `@orbital_mcp/patchrelay`. The Android SDK is a
 separate Maven dependency; installing it does not install this CLI.
 
-## Install a built package
+## Run current source
 
-```sh
-npm install --global /path/to/orbital_mcp-patchrelay-0.1.0-alpha04.tgz
-patchrelay --help
+```powershell
+node .\cli\bin\patchrelay.mjs --help
 ```
 
-Public alpha installation:
-
-```sh
-npm install --global @orbital_mcp/patchrelay@alpha
-```
-
-Package page: https://www.npmjs.com/package/@orbital_mcp/patchrelay.
-The `alpha` tag identifies an experimental release rather than a stable one.
-
-Publisher setup requires `npm login`, verification that the account controls the
-`@orbital_mcp` scope, and `npm publish --access public --tag alpha` from the CLI
-package. Never paste npm credentials into this repository or an app. Ownership
-and authentication must be established before advertising a working public link.
+Use this checkout's CLI for generated function contracts. Existing alpha installations predate these changes. A local package can be built with `npm pack ./cli`; no publication is needed. Signing keys are not package inputs. See [generated Kotlin integration](../docs/kotlin-workflow.md).
 
 ## Use
 
@@ -35,6 +22,8 @@ Run inside your prepared Android project:
 patchrelay init
 patchrelay baseline
 # Edit patchable screen Kotlin.
+patchrelay compare --baseline PATH_TO_BASELINE_JSON
+patchrelay compare --baseline PATH_TO_BASELINE_JSON --diff
 patchrelay patch
 patchrelay catalog
 ```
@@ -44,7 +33,7 @@ signing-key location, stable signed-catalog HTTPS URL and channel. It writes
 `patchrelay.config.json` without key contents and appends catalog URL/channel
 settings to `local.properties`, preserving existing SDK path settings.
 It also copies the Gradle build plugin and prints the one-time settings/app plugin
-hooks. Apply those hooks so normal `assembleRelease` and `bundleRelease` builds
+hooks. Also apply `dev.patchrelay.functions` to the JVM/JS shared module and add that module as an Android dependency. Apply those hooks so normal `assembleRelease` and `bundleRelease` builds
 automatically preserve matching baseline records; no extra baseline command is
 then required. This repository's demo already has the hooks. The plugin remains
 limited to prepared screen modules, not arbitrary Kotlin screen rewriting.
@@ -62,10 +51,29 @@ saves APK, program, compatibility JSON and private source ZIP under
 as part of preparing that native build. Back up the entire baseline directory
 privately. Local output is not cloud backup. Do not publish the source ZIP.
 
+`compare --baseline PATH` compares **all files recursively** under configured
+native/screen inputs against that explicitly selected release. It lists every
+`ADDED`, `MODIFIED` and `REMOVED` file, grouped by native/build inputs versus
+supported screen inputs, with counts. There is no one-file or 100-file limit;
+the test suite checks a 150-file change set. Missing declared inputs are reported.
+Comparison follows baseline content hashes, including configured text line-ending
+normalization, rather than the Git working tree or the last patch.
+
+Add `--diff` to see actual added/deleted source lines for every changed file,
+using the baseline's verified private source ZIP. It requires Git plus the JDK
+`jar` tool, extracts sources into an isolated temporary directory and cleans it
+afterward. Binary files get Git's binary-change notice. A normal comparison
+performs no build, signing, version reservation or project writes. No application
+source is changed by either mode. Files outside declared inputs are not included;
+this is a released-app comparison, not a whole-repository or semantic-code audit.
+Native changes require a new APK. Matching native hashes do not prove correctness:
+function/signature compatibility and configured tests run during `patch`.
+
 `patch` lists available baseline paths and asks you to choose one explicitly,
 then asks for a positive patch version. It never selects a record automatically.
 It rejects native/contract changes and altered source archives, compiles/tests
 the full current supported screen program and signs `screens.js` plus `patch.json`.
+It prints the same added/modified/removed file summary before compilation.
 Output directories are exclusive; prior releases are never overwritten.
 
 GitHub artifact URLs use the configured repository and the convention

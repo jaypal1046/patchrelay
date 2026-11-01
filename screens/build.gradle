@@ -1,4 +1,4 @@
-plugins { id 'org.jetbrains.kotlin.multiplatform' }
+plugins { id 'org.jetbrains.kotlin.multiplatform'; id 'dev.patchrelay.functions' }
 kotlin {
     jvm { compilations.all { kotlinOptions.jvmTarget = '17' } }
     js(IR) {

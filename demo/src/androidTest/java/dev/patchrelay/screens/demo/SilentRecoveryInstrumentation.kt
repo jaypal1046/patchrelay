@@ -6,212 +6,136 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import dev.patchrelay.screens.ScreenUpdates
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.security.KeyPairGenerator
-import java.security.MessageDigest
-import java.security.Signature
 import java.util.Base64
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.TimeUnit
 
-/** Tests the real release Activity; fixture patches use ephemeral keys and isolated artifact paths. */
+/** CLI-driven checks against the real release Activity and pinned-key SDK staging. */
 class SilentRecoveryInstrumentation : Instrumentation() {
     private var args: Bundle? = null
-    override fun onCreate(arguments: Bundle?) { this.args = arguments; super.onCreate(arguments); start() }
-
+    override fun onCreate(arguments: Bundle?) { args = arguments; super.onCreate(arguments); start() }
     override fun onStart() {
-        val action = args?.getString("action")
-        if (action == "stage_real_patch") {
-            try {
-                stageRealPatch()
-                finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "STAGED_OK\n") })
-            } catch (failure: Throwable) {
-                finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", android.util.Log.getStackTraceString(failure)) })
+        try {
+            waitForIdleSync()
+            val app = targetContext.applicationContext as DemoApp
+            app.prepared.get(30, TimeUnit.SECONDS)
+            val action = args?.getString("action") ?: "generated_workflow"
+            when (action) {
+                "stage_real_patch" -> check(stageRealPatch(app)) { "Patch version was already accepted" }
+                "reject_replay" -> {
+                    check(!stageRealPatch(app)) { "Already accepted patch version was staged again" }
+                    verifyPages(app, true)
+                }
+                "reject_bad_patch" -> {
+                    var rejected = false
+                    try { stageRealPatch(app) } catch (_: SecurityException) { rejected = true }
+                    check(rejected && app.updates.pendingVersion() == 0L) { "Tampered patch was not rejected cleanly" }
+                }
+                "generated_workflow", "generated_restore" -> verifyPages(app, action == "generated_restore")
+                else -> error("Unknown verification action")
             }
-            return
-        }
-        try { runChecks() }
-        catch (failure: Throwable) {
+            finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "OK ($action)\n") })
+        } catch (failure: Throwable) {
             finish(Activity.RESULT_CANCELED, Bundle().apply { putString("stream", android.util.Log.getStackTraceString(failure)) })
         }
     }
 
-    private fun stageRealPatch() {
-        val app = targetContext.applicationContext as DemoApp
-        val filesDir = app.getExternalFilesDir(null) ?: File("/sdcard/Android/data/dev.patchrelay.screens.demo/files")
-        val patchScript = File(filesDir, "screens.js").readBytes()
-        val patchJson = File(filesDir, "patch.json").readText()
-        val envelope = JSONObject(patchJson)
-        val payload = JSONObject(String(Base64.getDecoder().decode(envelope.getString("payload"))))
-        val host = payload.getString("hostSha256")
-        val base = payload.getString("baseVersion")
-        val version = payload.getLong("version")
-        val identity = "$base:$host"
-        val directory = File(app.noBackupFilesDir, "screen-patches/" + UUID.nameUUIDFromBytes(identity.toByteArray()))
-        directory.mkdirs()
-        File(directory, "$version.js").writeBytes(patchScript)
-        File(directory, "$version.json").writeText(patchJson)
-        val prefs = app.getSharedPreferences("patchrelay-screens", 0)
-        prefs.edit().putString("base", identity).putLong("pending", version).putLong("highest", version).commit()
-        android.util.Log.i("PatchRelayDemo", "Staged real patch $version successfully for base $identity!")
-    }
-
-    private fun runChecks() {
-        waitForIdleSync()
-        val app = targetContext.applicationContext as DemoApp
-        app.prepared.get(15, java.util.concurrent.TimeUnit.SECONDS)
-        val originalUpdates = app.updates
-        val originalSelection = app.selected
-        val prefs = app.getSharedPreferences("patchrelay-screens", 0)
-        val saved = prefs.all.toMap()
-        val base = "silent-ui-test-" + UUID.randomUUID()
-        val host = "b".repeat(64)
-        val directory = File(app.noBackupFilesDir, "screen-patches/" + UUID.nameUUIDFromBytes("$base:$host".toByteArray()))
-        val keys = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
-        val publicKey = Base64.getEncoder().encodeToString(keys.public.encoded)
-        val candidate = "self['PatchRelay:screens']={" +
-            "renderScreen:function(){return JSON.stringify({screenId:'checkout',type:'column',children:[{id:'candidate',type:'text',text:'REJECTED CANDIDATE'}]})}," +
-            "takeHostRequests:function(){return '[]'},patchedFunctionIds:function(){return '[\"unregistered.native.v1\"]'}};"
-        val runtimeFailure = "self['PatchRelay:screens']={" +
-            "renderScreen:function(){return JSON.stringify({screenId:'checkout',type:'column',children:[{id:'title',type:'text',text:'Checkout'},{id:'next',type:'button',text:'Continue',action:'fail_now'}]})}," +
-            "takeHostRequests:function(){return '[]'},patchedFunctionIds:function(){return '[]'}," +
-            "handleEvent:function(){throw new Error('PRIVATE PATCH FAILURE')}};"
-        val validCandidate = candidate.replace("[\"unregistered.native.v1\"]", "[]")
-        check(!validCandidate.contains("unregistered.native.v1"))
-        val transportProbe = "var exposed=false;for(var owner=self;owner;owner=Object.getPrototypeOf(owner)){" +
-            "for(var name of ['postMessage','Worker','SharedWorker','MessageChannel','fetch','WebSocket','importScripts']){" +
-            "var d=Object.getOwnPropertyDescriptor(owner,name);if(d&&(d.get||typeof d.value==='function'))exposed=true}};" +
-            "if(!exposed)throw new Error('Unsafe transport denied');" +
-            validCandidate
-        val oversized = "self['PatchRelay:screens']={renderScreen:function(){return 'x'.repeat(8*1024*1024)},takeHostRequests:function(){return '[]'}};"
-        val forged = "self.dispatchEvent(new MessageEvent('message',{data:{ticket:1,source:'while(true){}'}}));" + runtimeFailure
-        val asynchronous = runtimeFailure.replace("renderScreen:function(){", "renderScreen:function(){setTimeout(function(){throw new Error('ASYNC FAILURE')},1000);")
-        val approvedApi = "var requested=false;var reply='Loading repository';self['PatchRelay:screens']={" +
-            "renderScreen:function(){return JSON.stringify({screenId:'checkout',type:'column',children:[{id:'title',type:'text',text:'Checkout'},{id:'api',type:'text',text:reply},{id:'next',type:'button',text:'Continue',action:'fail_now'}]})}," +
-            "takeHostRequests:function(){if(requested)return '[]';requested=true;return JSON.stringify([{id:1,function:'github.repository.v1',argument:'JetBrains/kotlin'}])}," +
-            "handleHostResult:function(screen,id,result,error){if(error)throw new Error(error);reply=result;return this.renderScreen()}," +
-            "patchedFunctionIds:function(){return '[]'},handleEvent:function(){throw new Error('PRIVATE PATCH FAILURE')}};"
-        val cases = listOf("startupFailure" to "throw new Error('PRIVATE PATCH FAILURE')", "hiddenCandidate" to candidate,
-            "runtimeFailure" to runtimeFailure, "transportBlocked" to transportProbe, "oversizedResult" to oversized,
-            "forgedRequest" to forged, "asyncFailure" to asynchronous, "approvedApi" to approvedApi)
-        var activity: Activity? = null
-        var failed = false
-        var currentStatus = Bundle()
-        try {
-            for ((index, entry) in cases.withIndex()) {
-                currentStatus = Bundle().apply {
-                    putString("class", this@SilentRecoveryInstrumentation.javaClass.name)
-                    putString("test", entry.first); putInt("numtests", cases.size); putInt("current", index + 1)
-                }
-                sendStatus(1, currentStatus)
-                val updater = ScreenUpdates(app, base, publicKey, setOf("checkout"), host)
-                val version = index + 1
-                val bytes = entry.second.toByteArray(Charsets.UTF_8)
-                val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
-                val payload = JSONObject().put("schema", 3).put("screenApi", 2).put("runtime", "kotlin-screen-js")
-                    .put("appId", app.packageName).put("baseVersion", base).put("hostSha256", host).put("version", version)
-                    .put("screenIds", JSONArray().put("checkout")).put("sha256", hash)
-                    .put("artifactUrl", "https://fixture.invalid/screens.js").toString().toByteArray(Charsets.UTF_8)
-                val signature = Signature.getInstance("SHA256withRSA").apply { initSign(keys.private); update(payload) }.sign()
-                File(directory, "$version.js").writeBytes(bytes)
-                File(directory, "$version.json").writeText(JSONObject().put("payload", Base64.getEncoder().encodeToString(payload))
-                    .put("signature", Base64.getEncoder().encodeToString(signature)).toString())
-                check(prefs.edit().putLong("pending", version.toLong()).putLong("highest", version.toLong()).commit())
-                app.updates = updater
-                app.selected = updater.start(app.bundled)
-                check(app.selected!!.version == version.toLong())
-                activity = startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                val hostActivity = activity!!
-                val forbidden = AtomicReference<String>()
-                val listener = ViewTreeObserver.OnPreDrawListener {
-                    val text = texts(hostActivity.findViewById(android.R.id.content)).joinToString("\n")
-                    if (listOf("REJECTED CANDIDATE", "PRIVATE PATCH FAILURE", "Patch failed", "Recovery failed", "Screen unavailable")
-                            .any { it in text }) forbidden.compareAndSet(null, text)
-                    true
-                }
-                runOnMainSync { hostActivity.window.decorView.viewTreeObserver.addOnPreDrawListener(listener) }
-                try {
-                    if (entry.first == "approvedApi") {
-                        await(hostActivity) { text -> text.any { it.contains("JetBrains/kotlin") } }
-                    }
-                    if (entry.first in setOf("runtimeFailure", "forgedRequest", "asyncFailure", "approvedApi")) {
-                        await(hostActivity) { text -> text.any { it == "Continue" } || (app.selected?.version == 0L && "Pay 100" in text) }
-                        if (app.selected?.version == version.toLong()) {
-                            if (entry.first == "asyncFailure") Thread.sleep(1200)
-                            click(hostActivity, "Continue")
-                        } else check(entry.first == "asyncFailure") { "Program failed before its requested action" }
-                    }
-                    await(hostActivity) { text -> app.selected?.version == 0L && text.any { it == "Pay 100" } }
-                    click(hostActivity, "Add item")
-                    await(hostActivity) { it.any { text -> text == "Pay 200" } }
-                    click(hostActivity, "Pay 200")
-                    await(hostActivity) { it.any { text -> text == "Payment confirmed: 200" } }
-                    check(forbidden.get() == null) { "Exposed patch diagnostic/candidate: ${forbidden.get()}" }
-                    currentStatus.putString("stream", "PASS ${entry.first}: silent bundled fallback; Add item and Pay still work\n")
-                    sendStatus(0, currentStatus)
-                } finally {
-                    runOnMainSync {
-                        hostActivity.window.decorView.viewTreeObserver.removeOnPreDrawListener(listener)
-                        hostActivity.finish()
-                    }
-                    waitForIdleSync()
-                    activity = null
-                }
-            }
-        } catch (failure: Throwable) {
-            failed = true
-            currentStatus.putString("stack", android.util.Log.getStackTraceString(failure))
-            sendStatus(-2, currentStatus)
-        } finally {
-            activity?.let { current -> runOnMainSync { current.finish() } }
-            val editor = prefs.edit().clear()
-            for ((key, value) in saved) when (value) {
-                is String -> editor.putString(key, value)
-                is Long -> editor.putLong(key, value)
-                is Int -> editor.putInt(key, value)
-                is Boolean -> editor.putBoolean(key, value)
-                is Float -> editor.putFloat(key, value)
-                is Set<*> -> { @Suppress("UNCHECKED_CAST") editor.putStringSet(key, value as Set<String>) }
-            }
-            check(editor.commit()) { "Cannot restore SDK state after test" }
-            app.updates = originalUpdates
-            app.selected = originalSelection
-            for (version in 1..cases.size) {
-                File(directory, "$version.js").delete()
-                File(directory, "$version.json").delete()
-            }
-            directory.delete()
+    private fun verifyPages(app: DemoApp, restoreOnly: Boolean) {
+        val version = args?.getString("version")?.toLong() ?: 0L
+        val patched = args?.getString("edition") == "patch"
+        check(app.selected?.version == version) { "Expected active version $version; actual ${app.selected?.version}" }
+        val edition = if (patched) "v2" else "v1"
+        val price = if (patched) 9 else 12
+        val points = if (patched) 20 else 10
+        val activity = startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        fun go(page: String) {
+            val label = when (page) { "home" -> if (patched) "Start" else "Home"; "catalog" -> if (patched) "Shop" else "Catalog"; "cart" -> if (patched) "Basket" else "Cart"; "profile" -> if (patched) "Account" else "Profile"; else -> "Offers" }
+            runOnMainSync { views(activity).filterIsInstance<Button>().single { it.text.toString() == label }.let { if (it.isEnabled) it.performClick() } }
+            await(activity) { "${page.replaceFirstChar { it.uppercaseChar() }} $edition" in it }
         }
-        finish(Activity.RESULT_OK, Bundle().apply { putString("stream", if (failed) "FAIL: silent recovery\n" else "OK (${cases.size} silent-recovery tests)\n") })
+        try {
+            await(activity) { "Simple pages $edition" in it && it.any { line -> line.contains("Shared Kotlin shipping: 15") && line.contains("Shared Kotlin status: Pending") && line.contains("Shared reward points: ${2 * points}") } }
+            if (restoreOnly || version > 0) {
+                await(activity) { "Cart $edition" in it && "Items: 2" in it && "Total: $${2 * price}" in it && "Reward points: ${2 * points}" in it }
+                if (restoreOnly) {
+                    check(JSONObject(app.savedState!!).getJSONObject("values").getString("simple.name") == "Jay")
+                    return
+                }
+                go("profile"); await(activity) { "Hello Jay" in it }
+            }
+            go("cart")
+            var quantity = 0
+            runOnMainSync { quantity = texts(activity).first { it.startsWith("Items: ") }.substringAfter(": ").toInt() }
+            while (quantity > 0) { click(activity, "Remove one"); quantity--; await(activity) { "Items: $quantity" in it } }
+            go("home")
+            await(activity) { (if (patched) "Welcome back to the updated app" else "Welcome to your simple app") in it }
+            click(activity, if (patched) "Explore catalog" else "Browse catalog")
+            await(activity) { "Catalog $edition" in it && "Unit price: $$price" in it }
+            click(activity, if (patched) "Add travel notebook" else "Add notebook")
+            await(activity) { "Items in cart: 1" in it }
+            go("cart")
+            await(activity) { "Total: $$price" in it && "Reward points: $points" in it }
+            click(activity, "Add one")
+            await(activity) { "Total: $${2 * price}" in it && "Reward points: ${2 * points}" in it }
+            go("profile")
+            runOnMainSync { views(activity).filterIsInstance<EditText>().single().setText("Jay") }
+            await(activity) { "Hello Jay" in it }
+            await(activity) { app.savedState?.let { snapshot -> JSONObject(snapshot).getJSONObject("values").let { it.getString("simple.page") == "profile" && it.getString("simple.name") == "Jay" } } == true }
+            if (patched) { go("offers"); await(activity) { "Free delivery on every order" in it } }
+            go("cart")
+            await(activity) {
+                app.savedState?.let { snapshot -> JSONObject(snapshot).getJSONObject("values").let {
+                    it.getInt("simple.quantity") == 2 && it.getString("simple.name") == "Jay" && it.getString("simple.page") == "cart"
+                } } == true
+            }
+            val disk = JSONObject(app.stateStore.load()!!).getJSONObject("values")
+            check(disk.getInt("simple.quantity") == 2 && disk.getString("simple.name") == "Jay")
+        } finally { runOnMainSync { activity.finish() } }
     }
 
-    private fun texts(view: View): List<String> = when (view) {
-        is TextView -> listOf(view.text.toString())
-        is ViewGroup -> (0 until view.childCount).flatMap { texts(view.getChildAt(it)) }
-        else -> emptyList()
+    /** Test-only USB byte transport; the SDK verifies its real pinned key, route, hash and replay state. */
+    private fun stageRealPatch(app: DemoApp): Boolean {
+        val folder = app.getExternalFilesDir(null) ?: error("App external files unavailable")
+        val script = File(folder, "screens.js").readBytes()
+        val manifest = File(folder, "patch.json").readBytes()
+        val catalog = File(folder, "catalog.json").readBytes()
+        val catalogEnvelope = JSONObject(String(catalog, Charsets.UTF_8))
+        val catalogPayload = JSONObject(String(Base64.getDecoder().decode(catalogEnvelope.getString("payload")), Charsets.UTF_8))
+        val routes = catalogPayload.getJSONArray("entries")
+        val manifestUrl = (0 until routes.length()).map { routes.getJSONObject(it) }.single {
+            it.getString("baseVersion") == BuildConfig.BASE_VERSION && it.getString("hostSha256") == BuildConfig.HOST_SHA256
+        }.getString("manifestUrl")
+        val envelope = JSONObject(String(manifest, Charsets.UTF_8))
+        val payload = JSONObject(String(Base64.getDecoder().decode(envelope.getString("payload")), Charsets.UTF_8))
+        val artifact = payload.getString("artifactUrl")
+        val uri = java.net.URI(artifact)
+        require(uri.scheme == "https" && uri.host != null && uri.rawUserInfo == null && uri.rawFragment == null)
+        val catalogUrl = "https://local-verification.invalid/catalog.json"
+        val download: (String, Int) -> ByteArray = { url, limit ->
+            val bytes = when (url) { catalogUrl -> catalog; manifestUrl -> manifest; artifact -> script; else -> error("Unexpected fixture URL") }
+            require(bytes.size <= limit); bytes
+        }
+        val constructor = ScreenUpdates::class.java.declaredConstructors.single { it.parameterTypes.size == 6 }
+        val importer = constructor.newInstance(app, BuildConfig.BASE_VERSION, setOf(BuildConfig.PATCH_PUBLIC_KEY), BuildConfig.SCREEN_IDS.split(',').toSet(), BuildConfig.HOST_SHA256, download) as ScreenUpdates
+        return importer.stageCatalog(catalogUrl, BuildConfig.UPDATE_CHANNEL)
     }
+
+    private fun views(activity: Activity): List<View> {
+        fun descend(view: View): List<View> = listOf(view) + if (view is ViewGroup) (0 until view.childCount).flatMap { descend(view.getChildAt(it)) } else emptyList()
+        return descend(activity.findViewById(android.R.id.content))
+    }
+    private fun texts(activity: Activity) = views(activity).filterIsInstance<TextView>().map { it.text.toString() }
     private fun await(activity: Activity, condition: (List<String>) -> Boolean) {
         var last = emptyList<String>()
-        repeat(600) {
-            var ready = false
-            runOnMainSync { last = texts(activity.findViewById(android.R.id.content)); ready = condition(last) }
-            if (ready) return
-            Thread.sleep(25)
-        }
-        error("Timed out waiting for working checkout: $last")
+        repeat(600) { var ready = false; runOnMainSync { last = texts(activity); ready = condition(last) }; if (ready) return; Thread.sleep(50) }
+        error("Timed out waiting for simple pages: $last")
     }
     private fun click(activity: Activity, label: String) {
-        fun find(view: View): Button? {
-            if (view is Button && view.text.toString() == label && view.isEnabled) return view
-            if (view is ViewGroup) for (index in 0 until view.childCount) find(view.getChildAt(index))?.let { return it }
-            return null
-        }
-        runOnMainSync { check(find(activity.findViewById(android.R.id.content))?.performClick() == true) { "Missing button: $label" } }
+        runOnMainSync { check(views(activity).filterIsInstance<Button>().single { it.text.toString() == label }.performClick()) }
     }
 }

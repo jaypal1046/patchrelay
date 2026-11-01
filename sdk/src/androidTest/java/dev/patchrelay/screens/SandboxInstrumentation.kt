@@ -23,9 +23,11 @@ class SandboxActivity : Activity() {
 class SandboxInstrumentation : Instrumentation() {
     private lateinit var activity: SandboxActivity
     private var backgroundFaultsOnly = false
+    private var workerSmokeOnly = false
     override fun onCreate(arguments: Bundle?) {
         super.onCreate(arguments)
         backgroundFaultsOnly = arguments?.getString("backgroundFaultsOnly") == "true"
+        workerSmokeOnly = arguments?.getString("workerSmokeOnly") == "true"
         start()
     }
     override fun onStart() {
@@ -47,7 +49,25 @@ class SandboxInstrumentation : Instrumentation() {
             }
             activity = startActivitySync(Intent(targetContext, SandboxActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as SandboxActivity
             val baseline = context.assets.open("baseline-screen.js").bufferedReader().use { it.readText() }
+            if (workerSmokeOnly) {
+                probe("self.__patchrelay={renderScreen:function(){return 'worker-ready'}};", "renderScreen") { check(it == "worker-ready") }
+                probe(baseline, "renderScreen", listOf("checkout")) { check(it.contains("checkout")) }
+                finish(Activity.RESULT_OK, Bundle().apply { putString("stream", "OK (worker smoke)\n") })
+                return
+            }
             probe(baseline, "renderScreen", listOf("checkout")) { check(it.contains("checkout")) }
+            probe(baseline + "\n;self.__patchrelay.handleEvent('checkout','c_nav_catalog',null);self.__patchrelay.handleEvent('checkout','c_add_product',null);" +
+                "var testState=self.__patchrelay.exportState();self.__patchrelay.handleEvent('checkout','c_add_product',null);self.__patchrelay.restoreState(testState);",
+                "exportState", emptyList()) { check(org.json.JSONObject(it).getJSONObject("values").getInt("simple.quantity") == 1) }
+            probe(baseline, "invokeFunction", listOf("checkout.greeting.v1", "[\"Ada\",true]")) { check(it == "\"Welcome VIP Ada\"") }
+            probe(baseline, "invokeFunction", listOf("checkout.status.v1", "[true]")) { check(it == "\"Confirmed\"") }
+            probe(baseline, "invokeFunction", listOf("checkout.note.v1", "[null]")) { check(it == "null") }
+            probe("self.__patchrelay={invokeFunction:function(){return new Promise(function(resolve){setTimeout(function(){resolve('7')},25)})}};",
+                "invokeFunction", listOf("later.v1", "[]")) { check(it == "7") }
+            probe("self.__patchrelay={invokeFunction:function(){return Promise.reject(new Error('rejected'))}};",
+                "invokeFunction", listOf("later.v1", "[]"), expectFailure = true)
+            probe("self.__patchrelay={invokeFunction:function(){return new Promise(function(){})}};",
+                "invokeFunction", listOf("later.v1", "[]"), expectFailure = true, timeout = true)
             apiProbe()
             recoveryProbe(baseline)
             rendererCrashProbe(baseline)

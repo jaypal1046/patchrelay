@@ -2,19 +2,14 @@
 
 [README](../README.md) · [Architecture](architecture.md) · [Release workflow](release-workflow.md) · [Verification](production-readiness.md)
 
-This guide describes the **implemented prototype APIs**. There is no published Maven coordinate, automatic compiler plugin, `@Patchable` annotation, `PatchRelay.initialize()` or `showScreen()` convenience API today.
-
-A [Gradle baseline-recording plugin](gradle-integration.md) is now implemented
-for prepared release builds. It compiles/bundles screen code and records APK/AAB
-contracts automatically; it is not the arbitrary-Kotlin compiler/hook-generation
-plugin mentioned above. This repository's demo applies it already.
+This guide covers installed SDK lifecycle APIs. The [generated Kotlin workflow](kotlin-workflow.md) adds compiler-PSI based hook/export generation for a bounded common Kotlin module. It does not convert arbitrary Android/Compose code.
 
 ## What developers must change
 
 | Existing code | Integration required |
 | --- | --- |
 | Screen intended to receive UI patches | Author/migrate its patchable layout and behavior through the supported common Kotlin screen API |
-| Native function intended to receive logic patches | Prepare an explicit stable-ID runner call before shipping the APK |
+| Native function intended to receive logic patches | Mark supported shared Kotlin functions and use generated hooks before shipping the APK |
 | Application startup | Own one updater, load the bundled/selected program once per process |
 | Activity hosting patched content | Create/render/dispose an engine and forward Back |
 | Existing backend operation | Register a bounded `String → String` host operation before engine startup; validate arguments and keep credentials native |
@@ -44,7 +39,7 @@ This is a local integration experiment, not a completed external-app compatibili
 
 **No separate WebView dependency or manual `WebView(...)` construction is required.** `android.webkit.WebView` is part of Android; `ScreenEngine` creates the hidden interpreter view. Current low-level integration still attaches `engine.webView` to the host, as shown below. Visible content uses `NativeScreenRenderer`, not HTML. The device supplies its WebView provider; Maven does not install that provider. Gradle resolves declared library dependencies and packages the AAR's code/assets/manifest. A [local Maven preview](maven-publishing.md) is configured; public Central publication is pending. [Android WebView](https://developer.android.com/reference/android/webkit/WebView), [library publishing](https://developer.android.com/build/publish-library/upload-library).
 
-The repository's Gradle/Python builder is still configured around `demo/`, `screens/` and the `PatchRelay:screens` JS export. For an external project, adapt those module paths, app identity, fingerprint generation, output/export names and example-specific behavior checks together. Changing only the GitHub `--repository` option does not integrate a different app.
+The current generator registers a stable SDK API independently of project/module names. External projects still configure their module paths, application identity, fingerprints and output locations. Legacy Python fixtures target this repository's old export contract; use the current CLI/generator for new releases.
 
 The SDK manifest declares `android.permission.INTERNET` for native HTTPS downloads. Manifest merging brings it into the host. No package-install permission or APK installer is part of the current updater; it stages JS programs inside app-private storage.
 
@@ -54,7 +49,7 @@ The example reads [runtime.json](../runtime.json). It supplies application ID, b
 
 The [demo Gradle build](../demo/build.gradle) generates:
 
-- `BASE_VERSION`: native compatibility identity, currently `native-back-v1`.
+- `BASE_VERSION`: native compatibility identity, from `runtime.json`.
 - `HOST_SHA256`: declared native source/build contract hash.
 - `SCREEN_IDS`: registered root IDs.
 - `MANIFEST_URL`: HTTPS signed-channel URL.
@@ -162,21 +157,22 @@ For exact attachment, generation checks, first-frame confirmation, fallback and 
 
 ## 4. Author supported screen code
 
-The [common module](../screens/src/commonMain/kotlin/Checkout.kt) exports the functions the engine calls. Its helpers are in [Ui.kt](../screens/src/commonMain/kotlin/Ui.kt). For example, inside that module:
+The [common module](../screens/src/commonMain/kotlin/App.kt) supplies the application entry points. The current sample uses the generated Compose backend; page code remains ordinary common Kotlin:
 
 ```kotlin
-return column(
-    screenId,
-    listOf(
-        text("title", "Details", "title"),
-        input("email", "Receipt email", email, "email"),
-        button("back", "Back to cart", "back_cart")
-    ),
-    backAction = "back_cart"
-)
+import androidx.compose.runtime.Composable
+import dev.patchrelay.compose.*
+
+@Composable
+fun Details(onBack: () -> Unit) {
+    Column("details") {
+        Text("title", "Details", "title")
+        Button("back", "Back to cart", onClick = onBack)
+    }
+}
 ```
 
-Stable IDs identify views, not source line numbers. `handleEvent` updates supported Kotlin state and returns a complete new tree. Guard transitions by current page so queued stale actions cannot submit or skip a step.
+Stable IDs identify views, not source line numbers. Generated `handleEvent` delegates to `handleAppEvent`, which updates supported Kotlin state and returns a complete new tree. Guard transitions by current page so queued stale actions cannot submit or skip a step.
 
 Current capabilities: columns/rows/cards, four text styles, text inputs, checkboxes and enabled buttons. No images, arbitrary Android objects, external navigation or real network/payment calls are exposed by this screen API.
 
@@ -191,27 +187,28 @@ The engine does not intercept Activity events by itself.
 
 The example implements both platform paths. Android's keyboard dismissal was verified before page Back on API 31. See [official Back guidance](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture). Android 13+ callback behavior is compiled but not device-tested.
 
-## 6. Prepare a native function hook
+## 6. Generate native function hooks
 
-After the engine's initial tree is ready, obtain the runner:
+Apply `dev.patchrelay.functions` to the shared module and depend on that module from the Android app. Write one supported body:
 
 ```kotlin
-engine.prepareIntFunctions(
-    setOf("checkout.total.v1", "checkout.shipping.v1")
-) { runner ->
-    runner.call("checkout.total.v1", 3, 100, ::originalTotal) { total ->
+@PatchFunction("checkout.total.v1")
+fun checkoutTotal(quantity: Int, price: Int): Int = quantity * price
+```
+
+After initial rendering, use generated IDs/hooks:
+
+```kotlin
+engine.prepareFunctions(PatchRelayFunctions.contracts) { runner ->
+    PatchRelayFunctions.checkoutTotal(3, 100, runner::call) { total ->
         resultLabel.text = total.toString()
     }
 }
 ```
 
-The original compiled function remains installed. With no declared patch binding, the runner calls it. A matching binding uses JS instead. The callback may run immediately for native fallback or later for JS; do not assume a synchronous return value.
+The build generates ID lists, JS dispatch and the hook's compiled native fallback from that same body. No duplicate implementations or manual exports. Direct original calls remain native. Callbacks can complete immediately for native fallback or later for JS; invoke the SDK runner on the UI thread.
 
-Invoke engine/runner operations on the UI thread. Native fallback runs on the caller's thread; the runner does not supply a general background executor.
-
-The patch module exports `patchedFunctionIds()` and `invokePatch()`; see [Runner.kt](../screens/src/commonMain/kotlin/Runner.kt). IDs are explicit contracts. Changing a signature is not made compatible by reusing its old ID.
-
-Only two integer arguments and an integer result are implemented. General strings/objects, native handles, suspend functions, automatic method extraction and generated hooks are not implemented. Do not move arbitrary Android code into this module and expect compilation to work.
+Public top-level functions support up to eight scalar/nullable arguments, scalar or Unit results and suspend continuations. Generic/member/receiver/object transports remain unsupported. Default IDs are qualified names plus `.v1`; explicit literal IDs support intentional stable naming. Duplicates and incompatible signatures fail builds. Added/removed hooks require a new APK. See [full compiler boundary and commands](kotlin-workflow.md).
 
 ## 7. Approved backend calls
 
@@ -277,4 +274,4 @@ A new base is required for new/changed SDK or renderer code, native hooks/capabi
 
 Once the needed hooks and renderer capabilities exist in the base, compatible supported screen/flow/function changes can be delivered through signed programs.
 
-Patch selection survives a process restart. Cart/form/page state does not have durable persistence or migration. Real transaction state must not rely on these in-memory demo globals.
+Patch selection survives process restart. Selected cart/form/page values now use opt-in generated snapshots with atomic base-scoped persistence and explicit schema migration. Unmarked globals remain transient. Real transaction/account state stays in the native application/backend; see [state contract](kotlin-workflow.md#state-snapshots-and-migration).

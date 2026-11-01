@@ -6,17 +6,138 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { main, verifyBuild } from '../src/main.mjs';
-import { sha256, hostHash, fingerprint, inside, checkNative, loadBaseline, signedManifest, validateUrl, command, routeId, updateCatalog, signPayload, verifiedEnvelope, reserveVersion, baselineFiles } from '../src/project.mjs';
+import { sha256, hostHash, fingerprint, inside, checkNative, compareFiles, loadBaseline, signedManifest, validateUrl, command, jdkTool, routeId, updateCatalog, signPayload, verifiedEnvelope, reserveVersion, baselineFiles, checkFunctions } from '../src/project.mjs';
 
 const keypair = generateKeyPairSync('rsa', { modulusLength: 3072 });
 const key = Buffer.from(keypair.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'));
 const baseline = { format: 3, appId: 'test.app', baseVersion: 'v1', screenApi: 2, screenIds: ['checkout'],
   nativeFiles: { 'native.txt': 'hash' }, screenFiles: {}, hostSha256: hostHash({ 'native.txt': 'hash' }) };
 
+test('comparison classifies added modified removed and unchanged files deterministically', () => {
+  assert.deepEqual(compareFiles({z: 'old', deleted: 'x', same: 'y'}, {same: 'y', added: 'a', z: 'new'}),
+    {added: ['added'], modified: ['z'], removed: ['deleted']});
+  assert.deepEqual(compareFiles({}, {}), {added: [], modified: [], removed: []});
+});
+
 function temporary(run) {
   const root = mkdtempSync(join(tmpdir(), 'patchrelay-cli-'));
   return Promise.resolve().then(() => run(root)).finally(() => rmSync(root, { recursive: true, force: true }));
 }
+
+test('compare is read-only and reports native and Kotlin additions modifications removals', () => temporary(async root => {
+  for (const dir of ['native', 'screens']) {
+    mkdirSync(join(root, dir));
+    writeFileSync(join(root, dir, 'Changed.kt'), 'before');
+    writeFileSync(join(root, dir, 'Removed.kt'), 'before');
+    writeFileSync(join(root, dir, 'Same.kt'), 'same');
+  }
+  writeFileSync(join(root, 'native-single.txt'), 'before');
+  const runtime = {format: 1, appId: 'test.app', baseVersion: 'v1', screenApi: 2, screenIds: ['checkout'], nativeInputs: ['native', 'native-single.txt'], textExtensions: ['.kt', '.txt']};
+  writeFileSync(join(root, 'runtime.json'), JSON.stringify(runtime));
+  writeFileSync(join(root, 'patchrelay.config.json'), JSON.stringify({format: 1, runtimeFile: 'runtime.json', screenInputs: ['screens'], outputDir: '.patchrelay/releases'}));
+  const native = fingerprint(root, runtime.nativeInputs, runtime.textExtensions);
+  const record = {...baseline, nativeFiles: native, hostSha256: hostHash(native), screenFiles: fingerprint(root, ['screens'], runtime.textExtensions), functionContract: {format: 2, functions: []}};
+  const archive = join(root, 'baseline-sources.zip');
+  command(root, jdkTool('jar'), ['--create', '--file', archive, 'native', 'screens', 'native-single.txt']);
+  record.sourcesSha256 = sha256(readFileSync(archive));
+  const file = join(root, 'baseline.json');
+  writeFileSync(file, JSON.stringify(record));
+  const original = readFileSync(file, 'utf8');
+  for (const dir of ['native', 'screens']) {
+    writeFileSync(join(root, dir, 'Changed.kt'), 'after');
+    writeFileSync(join(root, dir, 'Added.kt'), 'new');
+    rmSync(join(root, dir, 'Removed.kt'));
+  }
+  rmSync(join(root, 'native-single.txt'));
+  const output = [];
+  const log = console.log;
+  try {
+    console.log = value => output.push(value);
+    await main(['compare', '--baseline', file], root, () => assert.fail('Explicit comparison must not prompt'));
+  } finally { console.log = log; }
+  const text = output.join('\n');
+  for (const dir of ['native', 'screens']) {
+    assert.match(text, new RegExp(`ADDED +${dir}/Added.kt`));
+    assert.match(text, new RegExp(`MODIFIED +${dir}/Changed.kt`));
+    assert.match(text, new RegExp(`REMOVED +${dir}/Removed.kt`));
+    assert.doesNotMatch(text, new RegExp(`${dir}/Same.kt`));
+  }
+  assert.match(text, /REMOVED +native-single.txt/);
+  assert.match(text, /New APK baseline required/);
+  assert.equal(readFileSync(file, 'utf8'), original);
+  assert.equal(existsSync(join(root, '.patchrelay')), false, 'No version reservation, output or build');
+  assert.equal(readFileSync(join(root, 'screens/Changed.kt'), 'utf8'), 'after');
+  output.length = 0;
+  try {
+    console.log = value => output.push(value);
+    await main(['compare', '--diff', '--baseline', file], root);
+  } finally { console.log = log; }
+  const details = output.join('\n');
+  assert.match(details, /^--- baseline\/screens\/Changed.kt$/m);
+  assert.match(details, /^\+\+\+ current\/screens\/Changed.kt$/m);
+  assert.match(details, /^-before$/m);
+  assert.match(details, /^\+after$/m);
+  assert.match(details, /^\+new$/m);
+  assert.match(details, /^--- \/dev\/null$/m);
+  assert.match(details, /^\+\+\+ \/dev\/null$/m);
+  assert.equal(readFileSync(file, 'utf8'), original);
+  assert.equal(existsSync(join(root, '.patchrelay')), false);
+  await assert.rejects(main(['compare', '--baseline', file, '--version', '1'], root), /Invalid option/);
+  await assert.rejects(main(['compare', '--diff', '--diff', '--baseline', file], root), /Invalid option/);
+  const unsafe = Buffer.from(readFileSync(archive).toString('latin1').replaceAll('native/Changed.kt', '../bad/Changed.kt'), 'latin1');
+  writeFileSync(archive, unsafe);
+  writeFileSync(file, JSON.stringify({...record, sourcesSha256: sha256(unsafe)}));
+  try {
+    console.log = value => output.push(value);
+    await assert.rejects(main(['compare', '--diff', '--baseline', file], root), /Unsafe baseline archive entry/);
+  } finally { console.log = log; }
+}));
+
+test('comparison reports all 150 source changes without truncation', () => temporary(async root => {
+  mkdirSync(join(root, 'screens'));
+  const before = {};
+  for (let i = 0; i < 100; i++) {
+    const path = `screens/File${i}.kt`;
+    writeFileSync(join(root, path), 'before');
+    before[path] = sha256('before');
+  }
+  writeFileSync(join(root, 'native.txt'), 'same');
+  const native = {'native.txt': sha256('same')};
+  const archive = join(root, 'baseline-sources.zip');
+  command(root, jdkTool('jar'), ['--create', '--file', archive, 'screens', 'native.txt']);
+  writeFileSync(join(root, 'baseline.json'), JSON.stringify({...baseline, nativeFiles: native, hostSha256: hostHash(native), screenFiles: before, functionContract: {format: 2, functions: []}, sourcesSha256: sha256(readFileSync(archive))}));
+  writeFileSync(join(root, 'runtime.json'), JSON.stringify({format: 1, appId: 'test.app', baseVersion: 'v1', screenApi: 2, screenIds: ['checkout'], nativeInputs: ['native.txt'], textExtensions: ['.kt']}));
+  writeFileSync(join(root, 'patchrelay.config.json'), JSON.stringify({format: 1, runtimeFile: 'runtime.json', screenInputs: ['screens'], outputDir: '.patchrelay/releases'}));
+  for (let i = 0; i < 50; i++) {
+    writeFileSync(join(root, `screens/File${i}.kt`), 'after');
+    rmSync(join(root, `screens/File${i + 50}.kt`));
+    writeFileSync(join(root, `screens/New${i}.kt`), 'added');
+  }
+  const output = [];
+  const log = console.log;
+  try { console.log = value => output.push(value); await main(['compare', '--baseline', 'baseline.json'], root); }
+  finally { console.log = log; }
+  const text = output.join('\n');
+  assert.match(text, /50 added, 50 modified, 50 removed/);
+  assert.equal(output.filter(line => /^  (ADDED|MODIFIED|REMOVED) /.test(line)).length, 150);
+  for (let i = 0; i < 100; i++) assert.ok(text.includes(`screens/File${i}.kt`));
+  for (let i = 0; i < 50; i++) assert.ok(text.includes(`screens/New${i}.kt`));
+  output.length = 0;
+  try { console.log = value => output.push(value); await main(['compare', '--baseline', 'baseline.json', '--diff'], root); }
+  finally { console.log = log; }
+  assert.equal(output.filter(line => /^\n(ADDED|MODIFIED|REMOVED) /.test(line)).length, 150);
+  const lines = output.join('\n');
+  for (let i = 0; i < 100; i++) assert.ok(lines.includes(`--- baseline/screens/File${i}.kt`));
+  for (let i = 0; i < 50; i++) assert.ok(lines.includes(`+++ current/screens/New${i}.kt`));
+  const runtime = JSON.parse(readFileSync(join(root, 'runtime.json')));
+  runtime.nativeInputs.push('missing-input');
+  writeFileSync(join(root, 'runtime.json'), JSON.stringify(runtime));
+  output.length = 0;
+  try { console.log = value => output.push(value); await main(['compare', '--baseline', 'baseline.json'], root); }
+  finally { console.log = log; }
+  assert.match(output.join('\n'), /Fix missing configured inputs before patching/);
+  assert.equal(existsSync(join(root, '.patchrelay')), false);
+}));
 
 test('fingerprints preserve Python compatibility including Unicode and line endings', () => temporary(root => {
   assert.equal(hostHash({ 'é': '😀', a: '1' }), sha256('{"a":"1","\\u00e9":"\\ud83d\\ude00"}'));
@@ -83,6 +204,9 @@ test('guided init stores only settings and never overwrites them', () => tempora
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').startsWith('sdk.dir=existing-sdk\n'));
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').includes('patchrelay.catalogUrl=https://updates.example.com/catalog.json'));
   assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/groovy/dev/patchrelay/gradle/PatchRelayPlugin.groovy')));
+  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/kotlin/dev/patchrelay/compiler/PatchRelayCompilerRegistrar.kt')));
+  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/resources/META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar')));
+  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/resources/patchrelay/ComposeScreens.kt')));
   assert.equal(readFileSync(join(root, 'gradle-plugin/build.gradle'), 'utf8'), 'unrelated build plugin');
   assert.ok(JSON.parse(readFileSync(join(root, 'runtime.json'))).nativeInputs.includes('patchrelay-gradle-plugin/src/main'));
   await assert.rejects(main(['init'], root, async () => assert.fail('must not prompt')), /already configured/);
@@ -97,6 +221,8 @@ test('CLI verifies Gradle-generated host constants and rejects mismatched output
   mkdirSync(dirname(generated), { recursive: true });
   writeFileSync(generated, `HOST_SHA256 = "${'b'.repeat(64)}";`);
   const ctx = { root, settings: { buildConfigFile: path }, runtime: { appId: 'test.app', baseVersion: 'v1' } };
+  verifyBuild(ctx, 'b'.repeat(64));
+  writeFileSync(generated, `HOST_SHA256 = new String("${'b'.repeat(64)}");`);
   verifyBuild(ctx, 'b'.repeat(64));
   assert.throws(() => verifyBuild(ctx, 'c'.repeat(64)), /HOST_SHA256/);
 }));
@@ -143,7 +269,7 @@ test('installed-independent baseline, patch and explicit Git recovery with real 
   const runtime = { format: 1, appId: 'test.app', baseVersion: 'v1', screenApi: 2, screenIds: ['checkout'],
     nativeInputs: ['native.txt', 'app/assets/baseline-screen.js'], textExtensions: ['.txt', '.js'] };
   const settings = { format: 1, runtimeFile: 'runtime.json', repository: 'owner/repository', signingKey: '.keys/private.key', publicKeyFile: 'public-key.txt', screenInputs: ['screen'],
-    compileTasks: ['compileProgram'], baseTasks: ['buildApp'], programFile: 'build/program.js', baselineAsset: 'app/assets/baseline-screen.js',
+    functionContractFile: 'build/functions.json', compileTasks: ['compileProgram'], baseTasks: ['buildApp'], programFile: 'build/program.js', baselineAsset: 'app/assets/baseline-screen.js',
     apkFile: 'build/fixture.apk', buildConfigFile: 'build/BuildConfig.java', outputDir: '.patchrelay/releases' };
   writeFileSync(join(root, 'runtime.json'), JSON.stringify(runtime));
   writeFileSync(join(root, 'patchrelay.config.json'), JSON.stringify(settings));
@@ -151,6 +277,7 @@ test('installed-independent baseline, patch and explicit Git recovery with real 
   writeFileSync(join(root, 'build.gradle'), `
 tasks.register('compileProgram') { doLast {
   file('build').mkdirs(); file('build/program.js').bytes = file('screen/program.js').bytes
+  file('build/functions.json').text = '{"format":1,"functions":[{"id":"total.v1","signature":"(Int,Int)->Int"}]}'
 } }
 tasks.register('buildApp') { doLast {
   def hashes = new TreeMap<String,String>()
@@ -191,3 +318,31 @@ tasks.register('buildApp') { doLast {
   assert.equal(readFileSync(join(root, 'screen/program.js'), 'utf8'), 'globalThis.fixture = 2;');
 }));
 
+
+test('generated function contract rejects removed, added, duplicate and incompatible signatures', () => {
+  const contract = { format: 1, functions: [{ id: 'total.v1', signature: '(Int,Int)->Int' }] };
+  checkFunctions(contract, structuredClone(contract));
+  for (const next of [undefined, { format: 1, functions: [] },
+    { format: 1, functions: [...contract.functions, { id: 'new.v1', signature: '(Int,Int)->Int' }] },
+    { format: 1, functions: [...contract.functions, ...contract.functions] },
+    { format: 1, functions: [{ id: 'total.v1', signature: '(String,Int)->Int' }] }]) {
+    assert.throws(() => checkFunctions(contract, next), /contract|APK/);
+  }
+});
+
+test('scalar and suspend contracts are exact and versioned', () => {
+  const screenOnly = { format: 2, functions: [] };
+  checkFunctions(screenOnly, structuredClone(screenOnly));
+  const contract = { format: 2, functions: [{ id: 'greet.v1', signature: 'suspend (String,Boolean,Int?,Double)->String?' }] };
+  checkFunctions(contract, structuredClone(contract));
+  assert.throws(() => checkFunctions(screenOnly, contract), /Incompatible/);
+  assert.throws(() => checkFunctions(contract, screenOnly), /Incompatible/);
+  for (const signature of ['(Long)->Int', '(String)->List<Int>', '(Unit)->Int', '(Int,Int,Int,Int,Int,Int,Int,Int,Int)->Int']) {
+    assert.throws(() => checkFunctions(contract, { format: 2, functions: [{ id: 'greet.v1', signature }] }));
+  }
+  for (const signature of ['()->Unit', 'suspend ()->Unit', '(Int?)->Boolean']) {
+    const current = { format: 2, functions: [{ id: 'test.v1', signature }] };
+    checkFunctions(current, current);
+    assert.throws(() => checkFunctions(contract, current), /Incompatible/);
+  }
+});

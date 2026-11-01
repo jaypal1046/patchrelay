@@ -13,7 +13,7 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
         testInstrumentationRunner 'dev.patchrelay.screens.SandboxInstrumentation'
     }
-    sourceSets { androidTest.assets.srcDirs += '../demo/src/main/assets' }
+    sourceSets { androidTest.assets.srcDirs = [layout.buildDirectory.dir('generated/patchrelayTestAssets')] }
     sourceSets.main.resources.srcDir(layout.buildDirectory.dir('generated/license'))
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
     kotlinOptions { jvmTarget = '1.8' }
@@ -27,6 +27,7 @@ android {
     }
 }
 dependencies {
+    testImplementation project(':screens')
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
     testImplementation 'org.robolectric:robolectric:4.11'
@@ -130,3 +131,12 @@ tasks.register('centralBundle', Zip) {
         }
     }
 }
+
+// Instrumentation always tests this checkout's compiled program, never a stale demo asset.
+def testProgram = tasks.register('preparePatchRelayTestProgram', Copy) {
+    dependsOn ':screens:compileProductionExecutableKotlinJs'
+    from rootProject.file('screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js')
+    into layout.buildDirectory.dir('generated/patchrelayTestAssets')
+    rename { 'baseline-screen.js' }
+}
+tasks.matching { it.name == 'mergeDebugAndroidTestAssets' }.configureEach { dependsOn testProgram }

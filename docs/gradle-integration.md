@@ -3,7 +3,7 @@
 The `dev.patchrelay.baseline` Gradle plugin integrates the existing prepared
 Kotlin/JS screen module with normal APK and Play Store AAB builds. It records a
 base automatically; developers still explicitly choose which record to patch.
-It does not rewrite arbitrary Android screens or discover native method hooks.
+The companion `dev.patchrelay.functions` plugin generates supported shared function hooks and JS exports. It does not rewrite arbitrary Android screens. See [compiler boundary](kotlin-workflow.md).
 
 ## One-time setup
 
@@ -21,6 +21,8 @@ includeBuild("patchrelay-gradle-plugin")
 // app/build.gradle.kts, inside plugins
 id("dev.patchrelay.baseline")
 ```
+
+Also apply `id("dev.patchrelay.functions")` to the JVM/JS shared module, add `implementation(project(":screens"))` to the Android host, and use `PatchRelayFunctions` generated hooks. Set CLI `functionContractFile` and the baseline extension's matching property (default `screens/build/generated/patchrelay/functions.json`).
 
 This repository already applies those hooks to `demo` with `gradle-plugin/`.
 Commit the copied plugin, runtime contract and module configuration with the

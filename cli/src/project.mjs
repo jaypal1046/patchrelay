@@ -56,6 +56,16 @@ export function checkNative(before, after) {
   if (changed.length) throw new Error(`Native inputs changed; build a new base: ${changed.slice(0, 10).join(', ')}`);
 }
 
+export function compareFiles(before, after) {
+  const report = { added: [], modified: [], removed: [] };
+  for (const path of [...new Set([...Object.keys(before), ...Object.keys(after)])].sort()) {
+    if (!Object.hasOwn(before, path)) report.added.push(path);
+    else if (!Object.hasOwn(after, path)) report.removed.push(path);
+    else if (before[path] !== after[path]) report.modified.push(path);
+  }
+  return report;
+}
+
 export function emptyOutput(path) {
   mkdirSync(dirname(path), { recursive: true });
   mkdirSync(path); // Exclusive: never overwrite an existing release directory.
@@ -171,4 +181,16 @@ export function reserveVersion(root, baseline, version, writePatch) {
     renameSync(temporary, file);
     writePatch();
   } finally { closeSync(lock); unlinkSync(file + '.lock'); }
+}
+
+// The native APK already contains these exact hooks. New/removed IDs need a new APK.
+export function checkFunctions(baseline, current) {
+  const scalar = '(?:Int|Double|Boolean|String)\\??';
+  const signature = new RegExp(`^(?:suspend )?\\((?:${scalar}(?:,${scalar}){0,7})?\\)->(?:${scalar}|Unit)$`);
+  const valid = value => [1, 2].includes(value?.format) && Array.isArray(value.functions) && (value.format === 2 || value.functions.length > 0) && value.functions.length <= 64 &&
+    value.functions.every(f => /^[a-z][a-z0-9_.-]{0,95}$/.test(f.id) && typeof f.signature === 'string' && (value.format === 1 ? f.signature === '(Int,Int)->Int' : signature.test(f.signature))) &&
+    new Set(value.functions.map(f => f.id)).size === value.functions.length;
+  if (!valid(baseline) || !valid(current)) throw new Error('Missing or invalid generated function contract. Build a new APK baseline with dev.patchrelay.functions.');
+  const canonical = value => JSON.stringify(value.functions.map(f => [f.id, f.signature]).sort((a,b) => a[0].localeCompare(b[0])));
+  if (baseline.format !== current.format || canonical(baseline) !== canonical(current)) throw new Error('Incompatible function IDs/signatures: added, removed or changed hooks require a new APK baseline.');
 }

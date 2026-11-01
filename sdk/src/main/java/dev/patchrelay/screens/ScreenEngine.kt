@@ -5,6 +5,7 @@ import android.content.Context
 class ScreenEngine(context: Context, private val screenId: String,
     private val onTree: (ScreenTree) -> Unit, private val onFailure: (Exception) -> Unit) {
     private var closed = false
+    private val functionRunners = mutableListOf<FunctionPatchRunner>()
     private val interpreter = ScreenInterpreter(context) { failure -> close(); onFailure(failure) }
     val webView get() = interpreter.webView
     private var busy = true
@@ -21,8 +22,9 @@ class ScreenEngine(context: Context, private val screenId: String,
         hostFunctions[id] = function
     }
 
-    fun start(script: String) {
+    fun start(script: String, savedState: String? = null) {
         check(!started && !closed)
+        if (savedState != null) BoundedJson.objectValue(savedState, 8192)
         started = true
         if (hostFunctions.isNotEmpty()) hostCalls = ScreenHostCalls(hostFunctions.toMap()) { id, result, error ->
             if (!closed) try {
@@ -30,7 +32,13 @@ class ScreenEngine(context: Context, private val screenId: String,
                 if (!busy) dispatch(events.next()!!)
             } catch (failure: Exception) { close(); onFailure(failure) }
         }
-        interpreter.start(script) { evaluate("renderScreen", listOf(screenId)) }
+        interpreter.start(script) {
+            if (savedState == null) evaluate("renderScreen", listOf(screenId))
+            else interpreter.call("restoreState", listOf(savedState)) { status ->
+                check(status == "restored") { "Saved state requires an explicit schema migration" }
+                evaluate("renderScreen", listOf(screenId))
+            }
+        }
     }
 
     fun event(action: String, value: String? = null): Boolean {
@@ -43,11 +51,30 @@ class ScreenEngine(context: Context, private val screenId: String,
         return true
     }
 
+    /** Snapshot only opted-in common Kotlin state, after healthy rendering. */
+    fun saveState(onState: (String) -> Unit) { interpreter.call("exportState", emptyList(), onState) }
+
     fun prepareIntFunctions(ids: Set<String>, onReady: (IntPatchRunner) -> Unit) {
         interpreter.call("patchedFunctionIds", emptyList()) { json ->
             onReady(IntPatchRunner(ids, json) { id, first, second, result ->
                 interpreter.call("invokePatch", listOf(id, first, second), result)
             })
+        }
+    }
+
+    /** Generated scalar/suspend hooks. Native continuations return on the engine's UI thread. */
+    fun prepareFunctions(contracts: Map<String, String>, onReady: (FunctionPatchRunner) -> Unit) {
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        interpreter.call("patchedFunctionContracts", emptyList()) { json ->
+            val runner = FunctionPatchRunner(contracts, json, { id, arguments, result ->
+                check(!closed) { "Engine closed" }
+                interpreter.call("invokeFunction", listOf(id, arguments), result)
+            }, { failure -> close(); onFailure(failure) }, { action ->
+                if (android.os.Looper.myLooper() == handler.looper) action()
+                else handler.post { action() }
+            })
+            functionRunners.add(runner)
+            onReady(runner)
         }
     }
 
@@ -81,5 +108,12 @@ class ScreenEngine(context: Context, private val screenId: String,
         else { busy = false; backAction = tree.backAction; onTree(tree) }
     }
 
-    fun close() { closed = true; hostCalls?.close(); interpreter.close() }
+    fun close() {
+        if (closed) return
+        closed = true
+        hostCalls?.close()
+        interpreter.close()
+        functionRunners.forEach { it.close(IllegalStateException("PatchRelay engine closed")) }
+        functionRunners.clear()
+    }
 }

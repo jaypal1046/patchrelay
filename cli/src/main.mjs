@@ -1,15 +1,19 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, cpSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, cpSync, renameSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
-import { sha256, readJson, hostHash, inside, fingerprint, checkNative, emptyOutput, command, jdkTool, gradle, loadBaseline, signedManifest, routeId, reserveVersion, verifiedEnvelope, updateCatalog, signPayload, validateUrl, baselineFiles } from './project.mjs';
+import { sha256, readJson, hostHash, inside, fingerprint, checkNative, compareFiles, emptyOutput, command, jdkTool, gradle, loadBaseline, signedManifest, routeId, reserveVersion, verifiedEnvelope, updateCatalog, signPayload, validateUrl, baselineFiles, checkFunctions } from './project.mjs';
 
 const configName = 'patchrelay.config.json';
 const help = `PatchRelay — build and sign patches for prepared Android projects
 
   patchrelay init                 Configure this project once
   patchrelay baseline             Build and save a named base release
+  patchrelay compare              Compare current files with a selected baseline
+  patchrelay compare --diff       Also show actual source-line differences (requires Git)
   patchrelay patch                Select a baseline, build and sign a patch
   patchrelay catalog              Update a signed app/channel catalog locally
   patchrelay baseline --from REF  Recover an explicitly selected old release
@@ -24,17 +28,19 @@ Requires Node 22+, JDK 17, Android SDK and a prepared PatchRelay screen module.`
 function argumentsFor(args) {
   const [action = 'help', ...rest] = args;
   const options = {};
-  const allowed = { init: [], baseline: ['name', 'out', 'from', 'apk'], patch: ['baseline', 'version', 'url', 'tag', 'out'],
+  const allowed = { init: [], baseline: ['name', 'out', 'from', 'apk'], compare: ['baseline', 'diff'], patch: ['baseline', 'version', 'url', 'tag', 'out'],
     catalog: ['patch', 'catalog', 'channel', 'url', 'out'] };
   if (['help', '--help', '-h', '--version'].includes(action)) return { action, options };
   if (!allowed[action]) throw new Error(`Unknown command: ${action}. Run patchrelay --help.`);
   if (rest.includes('--help')) return { action: 'help', options };
-  for (let i = 0; i < rest.length; i += 2) {
+  for (let i = 0; i < rest.length; i++) {
     const key = rest[i].replace(/^--/, '');
-    if (!rest[i].startsWith('--') || !allowed[action].includes(key) || !rest[i + 1] || rest[i + 1].startsWith('--') || Object.hasOwn(options, key)) {
+    if (!rest[i].startsWith('--') || !allowed[action].includes(key) || Object.hasOwn(options, key)) {
       throw new Error(`Invalid option: ${rest[i]}. Run patchrelay --help.`);
     }
-    options[key] = rest[i + 1];
+    if (action === 'compare' && key === 'diff') { options.diff = true; continue; }
+    if (!rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error(`Missing value: ${rest[i]}. Run patchrelay --help.`);
+    options[key] = rest[++i];
   }
   if (options.apk && !options.from) throw new Error('--apk requires an explicit --from revision.');
   return { action, options };
@@ -64,8 +70,57 @@ function project(root, fallback) {
 }
 
 function nativeFiles(ctx) { return fingerprint(ctx.root, ctx.runtime.nativeInputs, ctx.runtime.textExtensions); }
+function generatedFunctions(ctx) {
+  if (!ctx.settings.functionContractFile) throw new Error('Configure functionContractFile from dev.patchrelay.functions and build a new native baseline.');
+  const contract = readJson(inside(ctx.root, ctx.settings.functionContractFile));
+  checkFunctions(contract, contract);
+  return contract;
+}
 function screenFiles(ctx) { return fingerprint(ctx.root, ctx.settings.screenInputs, ctx.runtime.textExtensions); }
 function saveJson(file, data) { writeFileSync(file, JSON.stringify(data, null, 2) + '\n', { flag: 'wx' }); }
+
+function printComparison(label, changes) {
+  console.log(`${label}: ${changes.added.length} added, ${changes.modified.length} modified, ${changes.removed.length} removed`);
+  let count = 0;
+  for (const [kind, paths] of Object.entries(changes)) {
+    for (const path of paths) { console.log(`  ${kind.toUpperCase().padEnd(8)} ${path}`); count++; }
+  }
+  if (!count) console.log('  No changes');
+  return count;
+}
+
+function printSourceDiff(ctx, file, baseline, changes) {
+  if (!Object.values(changes).some(paths => paths.length)) return;
+  if (!baseline.sourcesSha256) throw new Error('--diff requires a baseline with a verified source archive.');
+  const archive = join(dirname(file), 'baseline-sources.zip');
+  const folder = mkdtempSync(join(tmpdir(), 'patchrelay-compare-'));
+  try {
+    const sources = join(folder, 'sources');
+    mkdirSync(sources);
+    const entries = command(ctx.root, jdkTool('jar'), ['-J-Dfile.encoding=UTF-8', '--list', '--file', archive], true).split(/\r?\n/).filter(Boolean);
+    for (const entry of entries) {
+      if (entry.includes(':') || entry.startsWith('/') || entry.startsWith('\\') || entry.split(/[\\/]/).includes('..')) throw new Error('Unsafe baseline archive entry.');
+      inside(sources, entry);
+    }
+    command(sources, jdkTool('jar'), ['--extract', '--file', archive]);
+    const empty = join(folder, '.patchrelay-empty-file');
+    writeFileSync(empty, '');
+    for (const [kind, paths] of Object.entries(changes)) for (const path of paths) {
+      const oldFile = kind === 'added' ? empty : inside(sources, path);
+      const newFile = kind === 'removed' ? empty : inside(ctx.root, path);
+      if (!existsSync(oldFile) || !existsSync(newFile)) throw new Error(`Missing comparison source: ${path}`);
+      const result = spawnSync('git', ['diff', '--no-index', '--no-ext-diff', '--no-textconv', '--no-color', '--', oldFile, newFile], {cwd: folder, encoding: 'utf8', shell: false, maxBuffer: 16 * 1024 * 1024});
+      if (result.error || ![0, 1].includes(result.status)) throw new Error(`Cannot compare ${path}; --diff requires Git. ${result.error?.message || result.stderr || ''}`);
+      console.log(`\n${kind.toUpperCase()} ${path}`);
+      console.log(result.stdout.replace(/^diff --git .*$/m, `diff --git baseline/${path} current/${path}`)
+        .replace(/^--- .*$/m, kind === 'added' ? '--- /dev/null' : `--- baseline/${path}`)
+        .replace(/^\+\+\+ .*$/m, kind === 'removed' ? '+++ /dev/null' : `+++ current/${path}`).trimEnd());
+    }
+  } finally {
+    if (dirname(folder) !== tmpdir() || !folder.startsWith(join(tmpdir(), 'patchrelay-compare-'))) throw new Error('Unsafe comparison cleanup target');
+    rmSync(folder, {recursive: true, force: true});
+  }
+}
 
 export function verifyBuild(ctx, expected) {
   const source = readFileSync(inside(ctx.root, ctx.settings.buildConfigFile), 'utf8');
@@ -77,10 +132,14 @@ export function verifyBuild(ctx, expected) {
         const [module, tail] = ctx.settings.buildConfigFile.replaceAll('\\', '/').split('/build/generated/source/buildConfig/');
         const variant = tail?.split('/')[0];
         if (!variant) throw new Error('Configure the standard generated BuildConfig path for Gradle baseline integration.');
-        text = readFileSync(inside(ctx.root, `${module}/build/generated/patchrelay/${variant}/${generated[1].replaceAll('.', '/')}.java`), 'utf8');
+        const qualified = generated[1].replaceAll('.', '/');
+        const candidates = [`${module}/build/generated/java/preparePatchRelay${variant[0].toUpperCase() + variant.slice(1)}/${qualified}.java`, `${module}/build/generated/patchrelay/${variant}/${qualified}.java`];
+        const file = candidates.map(path => inside(ctx.root, path)).find(existsSync);
+        if (!file) throw new Error('Missing generated PatchRelay fingerprint source. Build the selected native variant first.');
+        text = readFileSync(file, 'utf8');
       }
     }
-    const match = text.match(new RegExp(`\\b${field} = ("(?:[^"\\\\]|\\\\.)*")`));
+    const match = text.match(new RegExp(`\\b${field} = (?:new String\\()?("(?:[^"\\\\]|\\\\.)*")`));
     if (!match || JSON.parse(match[1]) !== value) throw new Error(`Built APK ${field} does not match the release contract. Check host Gradle integration.`);
   }
 }
@@ -117,6 +176,7 @@ function buildBaseline(ctx, out) {
   const archive = join(out, 'baseline-sources.zip');
   command(root, jdkTool('jar'), ['--create', '--file', archive, '-C', staging, '.']);
   const baseline = { format: 3, appId: runtime.appId, baseVersion: runtime.baseVersion, screenApi: runtime.screenApi,
+    functionContract: generatedFunctions(ctx),
     hostSha256: hostHash(before), screenIds: runtime.screenIds, nativeFiles: before, screenFiles: sources,
     apkSha256: sha256(apk), programSha256: sha256(program), sourcesSha256: sha256(readFileSync(archive)) };
   saveJson(join(out, 'baseline.json'), baseline);
@@ -137,6 +197,7 @@ async function init(root, ask) {
   if (!/^[a-z][a-z0-9_-]{0,31}$/.test(channel)) throw new Error('Use a lowercase channel name.');
   const settings = { format: 1, runtimeFile: 'runtime.json', repository: repository === 'https' ? null : repository, signingKey,
     publicKeyFile: `${app}/patch-public-key.txt`,
+    functionContractFile: `${screens}/build/generated/patchrelay/functions.json`,
     screenInputs: [`${screens}/src/commonMain`], compileTasks: [`:${screens}:jvmTest`, `:${screens}:compileProductionExecutableKotlinJs`],
     baseTasks: [`:${app}:assembleRelease`], programFile: `${screens}/build/compileSync/js/main/productionExecutable/kotlin/${screens === 'screens' ? 'PatchRelayScreens' : screens}.js`,
     baselineAsset: `${app}/src/main/assets/baseline-screen.js`, apkFile: `${app}/build/outputs/apk/release/${app}-release.apk`,
@@ -171,7 +232,7 @@ async function init(root, ask) {
   const local = existsSync(localFile) ? readFileSync(localFile, 'utf8') : '';
   writeFileSync(localFile, local + (local.endsWith('\n') || !local ? '' : '\n') + `patchrelay.catalogUrl=${catalogUrl}\npatchrelay.channel=${channel}\n`);
   console.log('Saved patchrelay.config.json. Review module paths before building. Keep private keys and .patchrelay/ out of Git.');
-  console.log(`Gradle hook: add includeBuild("${pluginFolder}") inside settings pluginManagement, and id("dev.patchrelay.baseline") in the app plugins block. Commit the plugin sources/config with your native release.`);
+  console.log(`Shared module: apply id("dev.patchrelay.functions"), and add the shared JVM module as an Android dependency. Use generated PatchRelayFunctions hooks.\nGradle hook: add includeBuild("${pluginFolder}") inside settings pluginManagement, and id("dev.patchrelay.baseline") in the app plugins block. Commit the plugin sources/config with your native release.`);
 }
 
 async function recover(ctx, ref, original, out) {
@@ -248,12 +309,27 @@ export async function main(args = process.argv.slice(2), cwd = process.cwd(), in
       const baseline = loadBaseline(file);
       if (baseline.appId !== ctx.runtime.appId || baseline.baseVersion !== ctx.runtime.baseVersion || baseline.screenApi !== ctx.runtime.screenApi ||
           JSON.stringify(baseline.screenIds) !== JSON.stringify(ctx.runtime.screenIds)) throw new Error('Selected baseline belongs to a different app/base/screen contract.');
-      const currentNative = nativeFiles(ctx);
+      checkFunctions(baseline.functionContract, baseline.functionContract);
+      const missingNative = ctx.runtime.nativeInputs.filter(path => !existsSync(inside(root, path)));
+      const missingScreens = ctx.settings.screenInputs.filter(path => !existsSync(inside(root, path)));
+      const currentNative = action === 'compare' ? fingerprint(root, ctx.runtime.nativeInputs.filter(path => !missingNative.includes(path)), ctx.runtime.textExtensions) : nativeFiles(ctx);
+      const currentScreens = action === 'compare' ? fingerprint(root, ctx.settings.screenInputs.filter(path => !missingScreens.includes(path)), ctx.runtime.textExtensions) : screenFiles(ctx);
+      console.log(`Baseline: ${file}\nApp: ${baseline.appId}; base: ${baseline.baseVersion}\nNative fingerprint: ${baseline.hostSha256}`);
+      const nativeDiff = compareFiles(baseline.nativeFiles, currentNative);
+      const screenDiff = compareFiles(baseline.screenFiles, currentScreens);
+      const nativeChanges = printComparison('Native/build files (new APK required when changed)', nativeDiff);
+      const screenChanges = printComparison('Supported Kotlin/screen files', screenDiff);
+      if (action === 'compare') {
+        for (const path of [...missingNative, ...missingScreens]) console.log(`  MISSING configured input: ${path}`);
+        console.log(nativeChanges ? 'New APK baseline required before patching.' : missingNative.length || missingScreens.length ? 'Fix missing configured inputs before patching.' : 'Native inputs match. Function/signature compatibility is checked during patch compilation.');
+        console.log('Comparison uses configured baseline inputs, not every repository file. No build, signing or version reservation performed.');
+        if (options.diff) {
+          printSourceDiff(ctx, file, baseline, compareFiles({...baseline.nativeFiles, ...baseline.screenFiles}, {...currentNative, ...currentScreens}));
+        }
+        return;
+      }
       checkNative(baseline.nativeFiles, currentNative);
-      const currentScreens = screenFiles(ctx);
-      const changed = [...new Set([...Object.keys(currentScreens), ...Object.keys(baseline.screenFiles)])].filter(path => currentScreens[path] !== baseline.screenFiles[path]);
-      if (!changed.length) throw new Error('No supported screen changes found.');
-      console.log('Changed screen inputs:\n' + changed.map(path => `  ${path}`).join('\n'));
+      if (!screenChanges) throw new Error('No supported screen changes found.');
       const version = Number(options.version || await ask('Patch version (positive integer)'));
       if (!Number.isSafeInteger(version) || version <= 0) throw new Error('Patch version must be a positive safe integer.');
       const route = routeId(baseline);
@@ -264,6 +340,7 @@ export async function main(args = process.argv.slice(2), cwd = process.cwd(), in
       gradle(root, ctx.settings.compileTasks);
       checkNative(currentNative, nativeFiles(ctx));
       checkNative(currentScreens, screenFiles(ctx));
+      checkFunctions(baseline.functionContract, generatedFunctions(ctx));
       const bytes = readFileSync(inside(root, ctx.settings.programFile));
       if (sha256(bytes) === baseline.programSha256) throw new Error('Compiled program is unchanged.');
       if (!ctx.settings.publicKeyFile) throw new Error('Configure publicKeyFile to match the key pinned in your app.');

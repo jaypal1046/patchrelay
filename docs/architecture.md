@@ -32,7 +32,7 @@ flowchart TD
 
 `runtime.json` configures the example app ID, base version, registered screens, channel and native fingerprint inputs. Gradle and Python hash the same sorted path/content map, normalizing text CRLF to LF. The host fingerprint includes installed SDK/host sources, packaged baseline, public key and declared build settings.
 
-The format-3 baseline records native-file hashes, screen-source hashes, host fingerprint and APK/program SHA-256 values. Added, changed or removed native inputs reject a patch build. Changed common Kotlin files are reported, but the **whole module** is compiled. No compiler plugin discovers or rewrites arbitrary functions.
+The format-3 baseline records native-file hashes, screen-source hashes, host fingerprint and APK/program SHA-256 values. Added, changed or removed native inputs reject a patch build. Changed common Kotlin files are reported, but the **whole module** is compiled. The function baseline additionally records generated IDs/signatures. Compiler PSI discovers marked declarations; Kotlin/JS compiles their original bodies. A JVM IR pass instruments marked suspend entrypoints while retaining native fallback bodies. Non-suspend functions require generated callback hooks; arbitrary native calls and Compose are not intercepted.
 
 This fingerprint represents declared source/build inputs, not a complete reproducible toolchain or binary APK identity. APK hashes are recorded separately.
 
@@ -132,7 +132,7 @@ flowchart TD
     J --> O
 ```
 
-Hooks and matching exports are handwritten. The runner validates unique declared IDs against registered native hooks. The implemented contract is callback-based `(Int, Int) -> Int`, not arbitrary Kotlin objects, native instances or suspend functions. An unpatched call can complete its callback immediately; a JS call completes asynchronously.
+The functions Gradle plugin generates typed hooks and matching JS exports from annotated shared declarations. Native/JS fallback bodies come from the same Kotlin source. See [generated workflow](kotlin-workflow.md). The runner validates unique declared IDs against registered native hooks. The generated contract uses bounded scalar JSON with typed callbacks and optional suspend continuations. Native instances and arbitrary object graphs do not cross the boundary. Installed signatures must match exactly. An unpatched call can complete its callback immediately; a JS call completes asynchronously.
 
 The runner does not overwrite native methods or compare source code on the device. JS failure does not silently rerun the original body after possible side effects. It reaches the host's failure/recovery path.
 
@@ -190,4 +190,4 @@ Hosts may configure 1–8 trusted public keys. Each saved program is checked aga
 
 `disable(bundled)` persists disabled state, clears active/pending/fallback pointers, retains the highest accepted version and returns the bundled program. The host must close the old engine and display that return value. While disabled, staging performs no download. `enable()` allows only newer patches; it never restores disabled versions automatically. These controls require a trusted host decision; no remote control endpoint is provided.
 
-Durable state migration, multi-process coordination, staged rollout/telemetry, independent emergency revocation and broad failure/device coverage remain unfinished. See the [test matrix](production-readiness.md#broader-test-matrix).
+Arbitrary Android heap/database migration, multi-process coordination, staged rollout/telemetry, independent emergency revocation and broad failure/device coverage remain unfinished. See the [test matrix](production-readiness.md#broader-test-matrix).

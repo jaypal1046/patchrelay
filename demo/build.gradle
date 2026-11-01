@@ -69,6 +69,14 @@ android {
 }
 dependencies {
     implementation project(':sdk')
+    implementation project(':screens')
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.11'
+}
+
+// Private R8 mapping is test-only; never copied into app assets or publication artifacts.
+tasks.withType(Test).configureEach {
+    if (name == 'testReleaseUnitTest') {
+        systemProperty 'patchrelay.testMapping', rootProject.file('sdk/build/outputs/mapping/release/mapping.txt').absolutePath
+    }
 }

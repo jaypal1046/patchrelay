@@ -1,5 +1,9 @@
 package dev.patchrelay.screens.demo
 
+import PatchRelayFunctions
+import checkoutStatus
+import kotlin.coroutines.*
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -20,7 +24,7 @@ class MainActivity : Activity() {
     private lateinit var download: Button
     private lateinit var calculation: TextView
     private lateinit var calculate: Button
-    private var runner: IntPatchRunner? = null
+    private var runner: FunctionPatchRunner? = null
     private var screenReady = false
     private var engine: ScreenEngine? = null
     private val attemptedVersions = mutableSetOf<Long>()
@@ -32,7 +36,7 @@ class MainActivity : Activity() {
         app = application as DemoApp
         root = FrameLayout(this)
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        status = TextView(this).apply { text = "Checkout"; textSize = 15f; setPadding(24, 24, 24, 16) }
+        status = TextView(this).apply { text = "Simple pages"; textSize = 15f; setPadding(24, 24, 24, 16) }
         screen = FrameLayout(this)
         calculation = TextView(this).apply { text = "Preparing native function…"; textSize = 17f; setPadding(24, 8, 24, 8) }
         calculate = Button(this).apply {
@@ -87,9 +91,10 @@ class MainActivity : Activity() {
     }
 
     private fun launchEngine(program: ScreenProgram) {
+        runner = null
+        PatchRelayFunctions.installDispatcher(null)
         engine?.close()
         syncBack(false)
-        runner = null
         screenReady = false
         calculate.isEnabled = false
         val generation = ++renderGeneration
@@ -103,6 +108,7 @@ class MainActivity : Activity() {
             val view = renderer.build(tree)
             syncBack(tree.backAction != null)
             if (view.parent !== screen) { screen.removeAllViews(); screen.addView(view) }
+            engine?.saveState { snapshot -> if (ready && generation == renderGeneration) app.saveState(snapshot) }
         }
         engine = ScreenEngine(this, "checkout", onTree = { tree ->
             if (alive() && generation == renderGeneration) {
@@ -111,8 +117,9 @@ class MainActivity : Activity() {
                 if (ready) publish(tree)
                 if (!confirmed) {
                     confirmed = true
-                    engine!!.prepareIntFunctions(setOf("checkout.total.v1", "checkout.shipping.v1")) { prepared ->
+                    engine!!.prepareFunctions(PatchRelayFunctions.contracts) { prepared ->
                         runner = prepared
+                        PatchRelayFunctions.installDispatcher(prepared::callSuspending)
                         runNativeCalculation { proof ->
                             Thread {
                                 try {
@@ -122,7 +129,7 @@ class MainActivity : Activity() {
                                         ready = true
                                         screenReady = true
                                         publish(latest)
-                                        status.text = "Checkout"
+                                        status.text = "Simple pages"
                                         calculation.text = proof
                                         calculate.isEnabled = true
                                         download.isEnabled = true
@@ -138,24 +145,19 @@ class MainActivity : Activity() {
             }
         }, onFailure = { failure -> if (alive() && generation == renderGeneration) failed(program, failure) })
         root.addView(engine!!.webView, 0, FrameLayout.LayoutParams(1, 1))
-        engine!!.registerHostFunction("github.repository.v1") { repository ->
-            require(repository == "JetBrains/kotlin") { "Repository not allowed" }
-            val bytes = dev.patchrelay.core.HttpsDownloads.download("https://api.github.com/repos/$repository", 65536)
-            val response = org.json.JSONObject(String(bytes, Charsets.UTF_8))
-            "${response.getString("full_name")} · ${response.getInt("stargazers_count")} stars"
-        }
-        engine!!.start(program.script)
+        engine!!.start(program.script, app.savedState)
     }
 
     private fun failed(program: ScreenProgram, failure: Exception) {
         Log.e("PatchRelayDemo", "Program ${program.version} rejected; selecting fallback", failure)
+        runner = null; PatchRelayFunctions.installDispatcher(null)
         engine?.close(); engine = null
         syncBack(false)
-        runner = null; calculate.isEnabled = false
+        calculate.isEnabled = false
         screenReady = false
         screen.removeAllViews()
         calculation.text = ""
-        status.text = "Checkout"
+        status.text = "Simple pages"
         ++renderGeneration
         if (program.version > 0) {
             download.isEnabled = false
@@ -178,7 +180,7 @@ class MainActivity : Activity() {
 
     private fun unavailable(failure: Exception) {
         Log.e("PatchRelayDemo", "Bundled checkout unavailable", failure)
-        status.text = "Checkout is temporarily unavailable."
+        status.text = "Simple pages is temporarily unavailable."
         download.isEnabled = true
     }
 
@@ -195,18 +197,24 @@ class MainActivity : Activity() {
     }
 
     private fun alive() = !isFinishing && !isDestroyed
-    private fun originalTotal(quantity: Int, price: Int): Int = quantity + price
-    private fun originalShipping(base: Int, extra: Int): Int = base + extra
 
     private fun runNativeCalculation(onReady: (String) -> Unit = { proof -> calculation.text = proof; calculate.isEnabled = true }) {
         val current = runner ?: return
         calculate.isEnabled = false
-        current.call("checkout.total.v1", 3, 100, ::originalTotal) { total ->
-            current.call("checkout.shipping.v1", 10, 5, ::originalShipping) { shipping ->
+        PatchRelayFunctions.checkoutTotal(3, 100, current::call) { total ->
+            PatchRelayFunctions.checkoutShipping(10, 5, current::call) { shipping ->
                 val proof = "3 × 100 = $total · " +
-                    (if (current.isPatched("checkout.total.v1")) "JS patch" else "original Kotlin") +
-                    "\nUnpatched Kotlin shipping: $shipping"
-                onReady(proof)
+                    "shared Kotlin" +
+                    "\nShared Kotlin shipping: $shipping"
+                val status: suspend () -> String = { checkoutStatus(false) }
+                PatchRelayFunctions.rewardPoints(2, current::call) { points ->
+                status.startCoroutine(Continuation(EmptyCoroutineContext) { result ->
+                    if (!alive() || runner !== current) return@Continuation
+                    result.fold({ onReady(proof + "\nShared Kotlin status: $it\nShared reward points: $points") }, { failure ->
+                        failed(app.selected ?: return@fold, failure as? Exception ?: IllegalStateException(failure))
+                    })
+                })
+                }
             }
         }
     }
@@ -223,5 +231,5 @@ class MainActivity : Activity() {
         removeBackCallback = { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(callback) }
     }
 
-    override fun onDestroy() { ++renderGeneration; syncBack(false); engine?.close(); super.onDestroy() }
+    override fun onDestroy() { ++renderGeneration; syncBack(false); runner = null; PatchRelayFunctions.installDispatcher(null); engine?.close(); super.onDestroy() }
 }

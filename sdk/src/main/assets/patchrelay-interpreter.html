@@ -10,6 +10,8 @@ window.__relay = (() => {
         const subscribe = self.addEventListener.bind(self);
         const execute = eval;
         const apply = Reflect.apply;
+        const resolve = Promise.resolve.bind(Promise);
+        const then = Promise.prototype.then;
         const preventDefault = Event.prototype.preventDefault;
         const readData = Object.getOwnPropertyDescriptor(MessageEvent.prototype, 'data').get;
         const invalid = '{"ok":false,"error":"Invalid worker response"}';
@@ -44,23 +46,23 @@ window.__relay = (() => {
             const data = apply(readData, event, []);
             const ticket = data.ticket;
             currentTicket = ticket;
-            let value;
-            try {
-                value = (0, execute)(data.source);
-                // Bound output before structured cloning can allocate it in the control page.
+            const reply = value => {
+                if (failed) return;
+                // Bound resolved output before structured cloning.
                 if (typeof value !== 'string' || value.length > 128 * 1024) value = invalid;
-            } catch (error) {
-                value = '{"ok":false,"error":"Worker execution failed"}';
-            }
-            send({ticket:ticket, value:value});
+                send({ticket:ticket, value:value});
+            };
+            try {
+                apply(then, resolve((0, execute)(data.source)), [reply, () => reply(invalid)]);
+            } catch (error) { reply(invalid); }
         });
     })();`;
     const url = URL.createObjectURL(new Blob([source], {type:'text/javascript'}));
+    // Older providers fetch the script asynchronously; retain its URL until termination.
     const worker = new Worker(url);
-    URL.revokeObjectURL(url);
     let ticket = 0, reply = null, received = false, stopped = false;
     const failed = () => JSON.stringify({ok:false,error:'Invalid worker response'});
-    const reject = () => { reply = failed(); received = true; stopped = true; worker.terminate(); };
+    const reject = () => { reply = failed(); received = true; stopped = true; worker.terminate(); URL.revokeObjectURL(url); };
     worker.onmessage = event => {
         if (stopped) return;
         if (received || !event.data || event.data.ticket !== ticket || typeof event.data.value !== 'string'
@@ -77,7 +79,7 @@ window.__relay = (() => {
             worker.postMessage({ticket:id, source:script});
         },
         take(id) { return id === ticket && received ? reply : null; },
-        stop() { stopped = true; worker.terminate(); }
+        stop() { stopped = true; worker.terminate(); URL.revokeObjectURL(url); }
     });
 })();
 </script>

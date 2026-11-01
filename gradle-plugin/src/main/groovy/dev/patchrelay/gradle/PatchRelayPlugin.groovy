@@ -76,12 +76,13 @@ abstract class PrepareBaseline extends DefaultTask {
         output.mkdirs()
         File source = new File(output, namespace.replace('.','/') + '/patchrelay/PatchRelayBuild.java')
         source.parentFile.mkdirs()
-        source.setText("package ${namespace}.patchrelay;\npublic final class PatchRelayBuild { public static final String HOST_SHA256 = \"$host\"; }\n", 'UTF-8')
+        // A Java constant can be inlined into cached Kotlin consumers from an older base.
+        source.setText("package ${namespace}.patchrelay;\npublic final class PatchRelayBuild { public static final String HOST_SHA256 = new String(\"$host\"); }\n", 'UTF-8')
         new File(output, 'baseline-screen.js').bytes = bytes
         new File(output, 'contract.json').setText(JsonOutput.toJson([
             format:3, appId:appId, baseVersion:runtime.baseVersion, screenApi:runtime.screenApi,
             screenIds:runtime.screenIds, hostSha256:host, nativeFiles:nativeFiles,
-            screenFiles:screenFiles, programSha256:Contract.hash(bytes)
+            screenFiles:screenFiles, functionContract:Contract.read(Contract.inside(root, options.functionContractFile)), programSha256:Contract.hash(bytes)
         ]), 'UTF-8')
     }
 }
@@ -181,10 +182,14 @@ class PatchRelayPlugin implements Plugin<Project> {
                     notCompatibleWithConfigurationCache('PatchRelay snapshots declared project sources at execution time')
                 }
                 variant.sources.java.addGeneratedSourceDirectory(prepare, { it.outputDirectory })
+                project.tasks.matching { it.name == "compile${cap}Kotlin" }.configureEach {
+                    dependsOn(prepare)
+                    inputs.dir(prepare.flatMap { it.outputDirectory })
+                }
                 variant.buildConfigFields.put('HOST_SHA256', project.providers.provider {
                     new BuildConfigField('String', "${variant.namespace.get()}.patchrelay.PatchRelayBuild.HOST_SHA256", null)
                 })
-                project.tasks.matching { it.name in ["merge${cap}Assets", "generate${cap}BuildConfig"] }.configureEach { dependsOn(prepare) }
+                project.tasks.matching { it.name == "merge${cap}Assets" || it.name == "generate${cap}BuildConfig" }.configureEach { dependsOn(prepare) }
                 ['apk','aab'].each { type ->
                     String buildName = type == 'apk' ? "assemble$cap" : "bundle$cap"
                     def provider = variant.artifacts.get(type == 'apk' ? SingleArtifact.APK.INSTANCE : SingleArtifact.BUNDLE.INSTANCE)
@@ -213,8 +218,9 @@ class BaselineOptions {
     String runtimeFile = 'runtime.json'
     String programFile = 'screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js'
     String baselineAsset
+    String functionContractFile = 'screens/build/generated/patchrelay/functions.json'
     List<String> screenInputs = ['screens/src/commonMain']
     List<String> compileTasks = [':screens:jvmTest', ':screens:compileProductionExecutableKotlinJs']
     BaselineOptions(Project project) { this.project = project; baselineAsset = project.rootDir.toPath().relativize(new File(project.projectDir, 'src/main/assets/baseline-screen.js').toPath()).toString().replace('\\','/') }
-    Map values() { [runtimeFile:runtimeFile, programFile:programFile, baselineAsset:baselineAsset, screenInputs:screenInputs, compileTasks:compileTasks] }
+    Map values() { [functionContractFile:functionContractFile, runtimeFile:runtimeFile, programFile:programFile, baselineAsset:baselineAsset, screenInputs:screenInputs, compileTasks:compileTasks] }
 }

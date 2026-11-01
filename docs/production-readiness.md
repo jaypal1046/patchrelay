@@ -1,3 +1,62 @@
+# Simple multi-page app and real-phone patch — 2026-11-01
+
+At user request, `screens` was replaced with a small multi-file Compose app. Prior uncommitted sources/settings/tools were preserved under `.patchrelay/backups/simple-pages-20261101/`. CLI setup created settings, a v1 APK ran on the real RMX2117, and `patchrelay baseline --name simple-pages-v1` saved a matching immutable record. The v2 patch changes all four original pages, navigation, pricing and rewards; it adds Offers and removes an obsolete helper. CLI comparison reports 1 added, 7 modified and 1 removed application files, with zero native changes.
+
+CLI signing and catalog generation completed for version 1. On the real phone, test-only USB byte transport used normal SDK catalog selection, pinned-key signatures, app/channel/base/fingerprint, hash and replay checks. Three tamper cases were rejected before valid staging. Full v2 page/native-hook checks, fresh-process restoration and replay rejection passed. At two items, total changed $24 → $18 and rewards 20 → 40; saved quantity/name survived. The APK pulled before/after activation is byte-identical (`17375f5feb3585f82fdfa6425e2d56569d122805111e841b840d660329c0b166`) and matches the named baseline. No APK reinstall was used to activate the patch. A first check stopped on a Home-versus-Cart test precondition; CLI inspection confirmed activation, and the prepared-route rerun passed.
+
+Current source is v2; installed/bundled native base is v1. JDK 17 plus in-process Kotlin compilation avoided an incompatible IDE daemon on Java 25. Shared/SDK/debug/release tests, browser restrictions and signed artifact/state verification passed. No push/publication occurred. Hosted HTTPS delivery and arbitrary Android/Compose conversion remain outside this proof. See [exact CLI commands, source layout and evidence](simple-pages-verification.md).
+
+# CLI comparison follow-up — 2026-11-01
+
+`patchrelay compare --baseline PATH` now reports every added/modified/removed file recursively across declared native and supported screen inputs, with counts. `--diff` shows source-line differences against the selected release's verified private source ZIP; Git external diff/text conversion are disabled and extraction is temporary, path-checked and cleaned up. This reads the released snapshot independently of Git commits or previous patches. Compilation/signature validation remains part of patch creation; comparison alone is not a correctness proof.
+
+The CLI tests cover settings creation/preservation, named baselines, signing/catalog/recovery, source diffs, read-only comparison, unsafe archive rejection, missing declared files and a 150-file change set (50 added, 50 modified, 50 removed). A real CLI named baseline also built successfully for the current Android demo: `.patchrelay/releases/baselines/cli-verified-20261101-c8f62a/`. It matches the installed release APK fingerprint. These CLI changes require no new APK and do not change the app running on the phone. No production patch versions were reserved by comparison tests.
+
+# Compose backend follow-up — 2026-11-01
+
+Opt-in Compose support now uses the actual multiplatform Compose compiler/runtime and a PatchRelay native-widget applier. Common Kotlin `@Composable` functions compile from one source for JVM and JS. Supported widgets are text, buttons, inputs, toggles and column/row/card layouts. Remembered state, repeated recomposition, keyed moves/removals, callbacks, navigation and synchronous disposal are tested. An independent Compose-only project compiles without dummy patch functions or handwritten exports. Format-2 empty contracts still reject uninstalled downloaded IDs.
+
+73 repository tests pass: 6 generator, 10 shared JVM, 42 SDK, 2 demo debug, 2 demo release and 11 CLI. Additional fixtures verify the independent Compose-only project and the non-Compose packaged project. Actual compiled Compose JS passes snapshot restoration into a fresh program and the existing restricted-worker browser/security checks. Two signed cumulative patches against the new baseline change Compose callback behavior/text alongside Kotlin functionality and navigation; patch 2 runs without patch 1. Incompatible signatures are rejected.
+
+Upgrade testing exposed stale Kotlin inlining of a generated Java fingerprint constant. The generator now emits a nonconstant field, explicitly tracks generated inputs for native Kotlin compilation, and baseline verification checks the real generated source and compiled `DemoApp` field access. The final release app passes Compose clicks/navigation, checkout and fresh-process Compose scalar restoration on API 30 / WebView 83. Existing emulator storage was preserved during this upgrade check. Current verified APK baseline: `apk-97bfa83cd07935a70ef5967bdf775fd97417d55916d00b6cfd229c5bf1a29879`. Earlier immutable local baselines remain historical; use the corrected new native base.
+
+After explicit user authorization to run on the phone, the same release APK and test companion were installed with `adb install -r` on RMX2117 / API 31, WebView **158.0.8127.2**. Both `generated_workflow` and `generated_restore` passed: actual native Compose widgets/callbacks/navigation, Kotlin function results, checkout, force-stop and fresh-process scalar restoration. Existing app storage was preserved; the matching new fingerprint selected the new bundled program/state scope. No payment, push or publication occurred. This verifies the installed bundled workflow, not a hosted OTA or Play delivery test.
+
+This is a supported Compose-runtime backend, **not arbitrary Android Kotlin/Compose conversion**. Android Material/UI widgets, modifiers/drawing, Android Views/platform APIs, asynchronous Compose effects, automatic remembered-object migration and arbitrary synchronous call interception remain unsupported. The compiler rejects unsupported UI imports/effect calls. Persist selected values explicitly through scalar snapshots before first composition. No Play approval/delivery claim is made. See [working integration and limits](kotlin-workflow.md#compose-runtime-backend).
+
+# Suspend interception follow-up — 2026-11-01
+
+The build now includes a Kotlin 1.9.23 JVM IR pass for marked public top-level suspend functions. Native callers use ordinary calls after one module-wide dispatcher installation. The pass retains native fallback bodies; JS compiles the same original Kotlin source. This requires a new native base. Non-suspend functions still use callback hooks; arbitrary Kotlin/Compose conversion is not implemented.
+
+Local verification includes 67 repository tests (5 generator, 6 shared JVM, 41 SDK, 2 demo debug, 2 demo release, 11 CLI), a separate packaged-project compilation, browser sandbox checks and a signed cumulative-patch fixture that changes suspend logic alongside UI/navigation. Tests cover delayed/direct dispatch, malformed and failed results, once-only completion, recursive native fallback, dispatcher removal and pending-call failure on engine shutdown. Release recovery tests still use private local R8 mappings. Compiler APIs are pinned; K2, coroutine cancellation propagation, simultaneous independent hosts and arbitrary object transport remain unsupported.
+
+See [installation and compiler limits](kotlin-workflow.md#one-time-integration). Evidence below for other Android/WebView configurations predates this IR addition unless explicitly stated.
+
+The final release APK passes `-DemoWorkflow` on API 30 / WebView **83.0.4103.106** with an ordinary native `checkoutStatus(false)` call routed through the generated bridge and actual WebView. The check asserts the returned status alongside function results, navigates catalog/detail/checkout, verifies durable state and restores checkout in a fresh process. Baseline integrity passes for `apk-1c123f39a3a944ade368951b81b3200dd33fafdca398b30f1a28bd9b3fcf935a`. This new IR path has not been freshly tested on a physical phone or the API-37 emulator.
+
+# Worker compatibility follow-up — 2026-11-01
+
+Current local source validation (no phone installation, push or publication):
+
+- 63 repository tests pass: 5 generator, 4 shared Kotlin, 39 SDK, 2 demo debug recovery, 2 demo release recovery and 11 CLI tests.
+- Foreign-project fixture compiles with independent project/module names and package-qualified Kotlin declarations. Its additional JVM test verifies suspended native fallback. JS checks verify real suspend/resume, scalar/null/Unit transport, snapshot restore and explicit schema migration.
+- Two signed cumulative patches build against an explicitly selected immutable APK baseline. A fresh interpreter runs patch 2 without patch 1, retaining the earlier function fix plus UI/navigation changes. Scalar/suspend calls, same-schema state restoration and incompatible signature rejection pass. This CLI fixture uses an isolated project/version ledger and test signing key, not the demo APK's pin. Earlier test-only reservations were verified using their temporary public keys and moved out of active ledgers, with audit copies retained.
+- Normal release APK build and baseline integrity checks pass. Browser worker/CSP checks pass, including Promise transport, output bounds, network/storage/native-capability denial, async faults and replacement-worker recovery.
+- Android emulator instrumentation passes with `com.google.android.webview` **154.0.8037.101** on the existing Pixel_4 API-37 image. It runs the generated Kotlin program and checks screen/navigation/state restoration, scalar/null/suspend exports, delayed/rejected/never-resolving Promises, real native HTTPS host calls, signed recovery fixtures, replay protection, download/tampering faults, sandbox limits and actual renderer termination/replacement.
+- The API-30 emulator with WebView **83.0.4103.106** now passes the full instrumentation suite. Its earlier `Invalid worker response` was worker-script loading failure: the control page revoked the Blob URL before this provider finished loading it. Holding the URL until termination fixes the failure. Worker stop/error paths release it; browser regression checks verify both lifetime and cleanup. No broad minimum-version guarantee is claimed.
+- The release demo also passes a real native-widget journey on both API-30 / WebView 83 and API-37 / WebView 154 emulators: generated function results, catalog → detail → quantity change → checkout, atomic state-file verification, force-stop and restoration in a fresh process. Use the helper's `-DemoWorkflow` mode; no test callbacks are injected and no payment is submitted.
+- Local CLI package contents include the new function generator and exclude private keys, credentials and R8 mappings. Release tests read the private local mapping without shipping it.
+
+This worker-bootstrap fix is an installed SDK asset change and requires a new native APK baseline. A downloaded patch cannot repair a worker that fails before program execution. The native fingerprint includes this asset, so old-base patches remain isolated.
+
+Reproduce using [README verification commands](../README.md#verify), `node tools/test-foreign-module.mjs`, `node tools/test-interpreter.mjs` and the emulator-only `tools/test-emulator.ps1`. The emulator helper refuses physical-phone serials and verifies `ro.kernel.qemu` before installation.
+
+Remaining scope: arbitrary Kotlin/Compose interception requires substantial compiler/runtime work. Generic objects, native heap/database migration, multi-process state coordination, fresh physical-device coverage for this generator and Google Play delivery/approval remain unverified or unsupported. Snapshots cover explicitly marked common scalars, within an installed native base. See [compiler/state boundaries](kotlin-workflow.md).
+
+---
+
+The material below records earlier prototype evidence and limitations; it is historical unless explicitly covered by the follow-up above.
+
 # Verification and production readiness
 
 [README](../README.md) · [Integration](integration.md) · [Architecture](architecture.md) · [Release workflow](release-workflow.md)
