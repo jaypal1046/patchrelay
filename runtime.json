@@ -23,9 +23,9 @@
     "settings.gradle",
     "gradle.properties",
     "gradle/wrapper",
-    "gradle-plugin/src/main",
-    "gradle-plugin/build.gradle",
-    "gradle-plugin/settings.gradle",
+    ".patchrelay-tools/src/main",
+    ".patchrelay-tools/build.gradle",
+    ".patchrelay-tools/settings.gradle",
     "runtime.json"
   ],
   "textExtensions": [

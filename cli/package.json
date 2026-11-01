@@ -5,7 +5,7 @@
   "type": "module",
   "bin": { "patchrelay": "bin/patchrelay.mjs" },
   "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "README.md", "LICENSE", "gradle-plugin/build.gradle", "gradle-plugin/settings.gradle", "gradle-plugin/src/main/"],
+  "files": ["bin/", "src/", "README.md", "LICENSE", ".patchrelay-tools/build.gradle", ".patchrelay-tools/settings.gradle", ".patchrelay-tools/src/main/"],
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "prepack": "node scripts/package.mjs"

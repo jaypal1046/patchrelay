@@ -203,11 +203,11 @@ async function init(root, ask) {
     baselineAsset: `${app}/src/main/assets/baseline-screen.js`, apkFile: `${app}/build/outputs/apk/release/${app}-release.apk`,
     buildConfigFile: `${app}/build/generated/source/buildConfig/release/${runtime.appId.replaceAll('.', '/')}/BuildConfig.java`,
     outputDir: '.patchrelay/releases' };
-  const pluginSource = existsSync(fileURLToPath(new URL('../gradle-plugin/build.gradle', import.meta.url)))
-    ? fileURLToPath(new URL('../gradle-plugin/', import.meta.url))
-    : fileURLToPath(new URL('../../gradle-plugin/', import.meta.url));
+  const pluginSource = existsSync(fileURLToPath(new URL('../.patchrelay-tools/build.gradle', import.meta.url)))
+    ? fileURLToPath(new URL('../.patchrelay-tools/', import.meta.url))
+    : fileURLToPath(new URL('../../.patchrelay-tools/', import.meta.url));
   const pluginClass = 'src/main/groovy/dev/patchrelay/gradle/PatchRelayPlugin.groovy';
-  const pluginFolder = existsSync(join(root, 'gradle-plugin', pluginClass)) ? 'gradle-plugin' : 'patchrelay-gradle-plugin';
+  const pluginFolder = '.patchrelay-tools';
   if (existsSync(join(root, pluginFolder)) && !existsSync(join(root, pluginFolder, pluginClass))) {
     throw new Error('Plugin destination already contains unrelated files. Preserve them and choose a clean integration directory.');
   }

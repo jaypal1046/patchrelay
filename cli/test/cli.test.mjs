@@ -203,12 +203,12 @@ test('guided init stores only settings and never overwrites them', () => tempora
   assert.ok(readFileSync(join(root, '.gitignore'), 'utf8').includes('.patchrelay/'));
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').startsWith('sdk.dir=existing-sdk\n'));
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').includes('patchrelay.catalogUrl=https://updates.example.com/catalog.json'));
-  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/groovy/dev/patchrelay/gradle/PatchRelayPlugin.groovy')));
-  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/kotlin/dev/patchrelay/compiler/PatchRelayCompilerRegistrar.kt')));
-  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/resources/META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar')));
-  assert.ok(existsSync(join(root, 'patchrelay-gradle-plugin/src/main/resources/patchrelay/ComposeScreens.kt')));
+  assert.ok(existsSync(join(root, '.patchrelay-tools/src/main/groovy/dev/patchrelay/gradle/PatchRelayPlugin.groovy')));
+  assert.ok(existsSync(join(root, '.patchrelay-tools/src/main/kotlin/dev/patchrelay/compiler/PatchRelayCompilerRegistrar.kt')));
+  assert.ok(existsSync(join(root, '.patchrelay-tools/src/main/resources/META-INF/services/org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar')));
+  assert.ok(existsSync(join(root, '.patchrelay-tools/src/main/resources/patchrelay/ComposeScreens.kt')));
   assert.equal(readFileSync(join(root, 'gradle-plugin/build.gradle'), 'utf8'), 'unrelated build plugin');
-  assert.ok(JSON.parse(readFileSync(join(root, 'runtime.json'))).nativeInputs.includes('patchrelay-gradle-plugin/src/main'));
+  assert.ok(JSON.parse(readFileSync(join(root, 'runtime.json'))).nativeInputs.includes('.patchrelay-tools/src/main'));
   await assert.rejects(main(['init'], root, async () => assert.fail('must not prompt')), /already configured/);
   await assert.rejects(main(['patch', '--from', 'HEAD'], root), /Invalid option/);
 }));

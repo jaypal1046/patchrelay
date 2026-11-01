@@ -21,7 +21,7 @@ The generator scans `src/commonMain/kotlin`. Keep the two screen entry points in
 
 ## One-time integration
 
-Use this repository's `screens/build.gradle` as the Kotlin multiplatform configuration: JVM + JS IR, executable, plain module. In settings `pluginManagement`, include the local `gradle-plugin` build. Add `kotlin.js.ir.output.granularity=whole-program` to `gradle.properties`; the plugin rejects split output because patches must include their complete runtime dependencies. Apply:
+Use this repository's `screens/build.gradle` as the Kotlin multiplatform configuration: JVM + JS IR, executable, plain module. In settings `pluginManagement`, include the local `.patchrelay-tools` build. Add `kotlin.js.ir.output.granularity=whole-program` to `gradle.properties`; the plugin rejects split output because patches must include their complete runtime dependencies. Apply:
 
 ```groovy
 // shared module

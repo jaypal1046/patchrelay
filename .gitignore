@@ -11,4 +11,6 @@ __pycache__/
 .patchrelay/
 cli/LICENSE
 cli/gradle-plugin/
+cli/.patchrelay-tools/
+.patchrelay-tools/bin/
 *.tgz

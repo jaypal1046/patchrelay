@@ -72,7 +72,7 @@ Runtime routing retains app ID, channel, native fingerprint and base compatibili
 ## Verify
 
 ```powershell
-.\gradlew.bat -p gradle-plugin test
+.\gradlew.bat -p .patchrelay-tools test
 node --test cli/test/cli.test.mjs
 .\gradlew.bat :screens:jvmTest :sdk:testDebugUnitTest :demo:testDebugUnitTest :demo:testReleaseUnitTest :demo:assembleRelease
 node tools/test-foreign-module.mjs

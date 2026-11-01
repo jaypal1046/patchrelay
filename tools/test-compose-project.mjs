@@ -9,7 +9,7 @@ import {gradle, checkFunctions} from '../cli/src/project.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const folder = join(root, '.patchrelay', 'compose-only-' + randomUUID());
 for (const path of ['src/commonMain/kotlin', 'src/commonTest/kotlin']) mkdirSync(join(folder, path), {recursive: true});
-const plugin = join(root, 'gradle-plugin').replaceAll('\\', '/');
+const plugin = join(root, '.patchrelay-tools').replaceAll('\\', '/');
 writeFileSync(join(folder, 'settings.gradle'), `pluginManagement { includeBuild('${plugin}'); repositories { google(); mavenCentral(); gradlePluginPortal() } }
 dependencyResolutionManagement { repositories { google(); mavenCentral() } }
 rootProject.name = 'IndependentCompose'

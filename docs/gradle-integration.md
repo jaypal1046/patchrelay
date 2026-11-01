@@ -7,14 +7,13 @@ The companion `dev.patchrelay.functions` plugin generates supported shared funct
 
 ## One-time setup
 
-`patchrelay init` copies the included build-plugin source into
-`patchrelay-gradle-plugin/` (or reuses this repository's existing `gradle-plugin/`),
+`patchrelay init` copies or reuses build-tool source in `.patchrelay-tools/`,
 adds it to the declared native inputs and prints the two required Gradle hooks.
 It does not rewrite arbitrary settings/app build scripts automatically. Add:
 
 ```kotlin
 // settings.gradle.kts, inside pluginManagement
-includeBuild("patchrelay-gradle-plugin")
+includeBuild(".patchrelay-tools")
 ```
 
 ```kotlin
@@ -24,10 +23,17 @@ id("dev.patchrelay.baseline")
 
 Also apply `id("dev.patchrelay.functions")` to the JVM/JS shared module, add `implementation(project(":screens"))` to the Android host, and use `PatchRelayFunctions` generated hooks. Set CLI `functionContractFile` and the baseline extension's matching property (default `screens/build/generated/patchrelay/functions.json`).
 
-This repository already applies those hooks to `demo` with `gradle-plugin/`.
+This repository already applies those hooks to `demo` with `.patchrelay-tools/`.
 Commit the copied plugin, runtime contract and module configuration with the
 native release. Keep credentials and `.patchrelay/` out of Git. The plugin is
 bundled with the local CLI package; no Gradle Plugin Portal publication exists.
+
+The leading dot keeps the tool directory unobtrusive; it does not make source
+disposable. Keep `.patchrelay-tools/src` and its build/settings files in Git.
+Its `build`, `.gradle` and `bin` caches are ignored. Renaming the old tooling
+directory changes recorded native-input paths: existing baselines remain
+immutable, and the renamed integration needs a new APK baseline for future
+patches. Use the original checkout/source archive to patch an older base.
 
 The prepared app still needs `buildFeatures.buildConfig = true`, its base identity,
 screen IDs, public keys and SDK lifecycle integration. The plugin supplies the
