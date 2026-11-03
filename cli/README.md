@@ -28,8 +28,12 @@ patchrelay patch
 patchrelay catalog
 ```
 
-`init` asks for module names, GitHub hosting repository (or HTTPS hosting) and
-signing-key location, stable signed-catalog HTTPS URL and channel. It writes
+`init` asks for module names, GitHub repository or HTTPS patch-host base URL,
+signing-key location, stable signed-catalog HTTPS URL, channel and an existing
+local catalog (or `new` for the first release). It records generated JS/APK/
+BuildConfig/key paths, the release APK baseline pointer, and a patch output folder
+under `<screens-module>/build/patchrelay`. Kotlin sources are discovered recursively,
+not entered one file at a time. It writes
 `patchrelay.config.json` without key contents and appends catalog URL/channel
 settings to `local.properties`, preserving existing SDK path settings.
 It also copies the Gradle build plugin and prints the one-time settings/app plugin
@@ -42,7 +46,28 @@ rules. Custom signing-key locations still need their own ignore protection.
 It does not generate/rotate keys, install SDK hooks, migrate ordinary native
 screens or configure private-host authentication. Review generated JS/APK/
 BuildConfig paths before building. A custom Kotlin/JS export name or Gradle
-variant needs corresponding settings changes.
+variant needs corresponding paths at setup (or edits to `patchrelay.config.json`).
+
+### Which files go where?
+
+| File | Purpose | Upload to patch hosting? |
+| --- | --- | --- |
+| Kotlin source files | Developer writes screens, functions and navigation | No |
+| `patchrelay.config.json`, `.patchrelay-tools/` | Setup creates project settings/build tools; commit with app source | No |
+| Generated hooks, function contract, compiled build output | Build creates integration and program | No direct upload |
+| Baseline directory (APK, JSON, bundled program, source ZIP) | Immutable private release backup | No |
+| Private signing key | Developer-owned signing credential | Never |
+| `screens.js` in the patch output directory | Complete compiled patch program | Yes, first |
+| `patch.json` beside that program | Signed compatibility manifest | Yes, second |
+| `catalog.json` from the catalog command | Signed discovery catalog | Yes, last, at stable catalog URL |
+
+Upload the **patch output** `screens.js`, not a similarly named build file.
+Output names are fixed; choose project input paths during setup and output folders
+with `--out`. `patchrelay catalog` prints the exact three local paths and hosting
+destinations. `patch` does not upload automatically; `patch --github` is the
+GitHub Releases option. Retain older hosted patches while catalog routes
+reference them. Public keys belong in the native app; private
+keys and baseline archives stay in private storage.
 
 `baseline` asks for a unique record name, builds/tests the configured screen
 module, bundles its program, builds the APK, checks the native fingerprint and
@@ -69,22 +94,47 @@ this is a released-app comparison, not a whole-repository or semantic-code audit
 Native changes require a new APK. Matching native hashes do not prove correctness:
 function/signature compatibility and configured tests run during `patch`.
 
-`patch` lists available baseline paths and asks you to choose one explicitly,
-then asks for a positive patch version. It never selects a record automatically.
-It rejects native/contract changes and altered source archives, compiles/tests
-the full current supported screen program and signs `screens.js` plus `patch.json`.
-It prints the same added/modified/removed file summary before compilation.
-Output directories are exclusive; prior releases are never overwritten.
+After setup and the first release APK build, the Gradle hook records an
+`apk-record.json` pointer to the current baseline. `patch` uses that pointer,
+reserves the next version, and writes `screens.js`, `patch.json` and an updated
+`catalog.json` directly under `<screens-module>/build/patchrelay/patches`.
+On a successful patch build, it replaces the previous generated patch folder;
+the stable working catalog remains at its separate configured path.
+For a non-GitHub host, setup stores the HTTPS base URL; patch files are
+versioned under the generated release tag. The current signed catalog is kept at
+the configured local catalog path so later patches preserve earlier base routes.
+The command prints the three exact files and their hosting destinations. For a
+personal server, upload `screens.js` and `patch.json` into the tag-named folder
+under `patchBaseUrl`, then replace `catalog.json` at `catalogUrl` last. The APK
+must be configured with the stable `catalogUrl`, never `patchBaseUrl`. See
+[`docs/update-routing.md`](../docs/update-routing.md) for a concrete server layout
+with multiple patch folders and the first-install checklist. Each run uses a new
+tag folder; keep prior folders unchanged while the catalog references them. The
+catalog URL stays the same and its signed contents are replaced after each upload.
+Explicit `--baseline`, `--version`, `--url` and
+`--out` still override the defaults. Native/contract changes require a new APK
+baseline. Output directories are exclusive; prior releases are never overwritten.
 
 GitHub artifact URLs use the configured repository and the convention
 `patch-ROUTE_HASH-VERSION`; the route hash binds app ID, base version and exact
 native fingerprint, avoiding collisions between apps/builds. `--tag` overrides
-that release tag. For another HTTPS host,
-the command asks for the actual final `screens.js` URL. Nothing is uploaded and
-no hosted catalog is changed by these commands. The app's catalog endpoint is
-configured separately in its native build; it is not the JS artifact URL.
+that release tag. Run `patch --github` to create a GitHub Release containing
+`screens.js`, `patch.json` and the updated `catalog.json`. It uses the `origin`
+GitHub repository and current branch, and publishes the catalog at the stable
+`releases/latest/download/catalog.json` URL. GitHub credentials must be available
+through Git Credential Manager or `GITHUB_TOKEN`. The command saves this catalog
+URL in ignored `local.properties` for the next APK build. Install an APK built
+with this URL before expecting it to discover release patches. For another HTTPS
+host, the command prints exact upload paths and destinations. See
+[`docs/update-routing.md`](../docs/update-routing.md) for how the app resolves
+catalog → manifest → program and how to configure personal hosting.
 
-Patch outputs are under `.patchrelay/releases/patches/ROUTE_HASH/VERSION`.
+Patch outputs from the configured one-command flow are under
+`<screens-module>/build/patchrelay/patches`. `screens.js` is the complete
+compiled program for the current supported screens, so it contains all current
+screen changes together. Version numbers still increase for each exact APK base;
+the local output folder is cleaned and reused, while the signed catalog records
+the active manifest route.
 A locked, local version record under `.patchrelay/versions` prevents reusing or
 lowering a version for the same exact base even with a different output folder.
 A failed write after reservation consumes that version; choose a higher one.
@@ -94,8 +144,9 @@ for an exact base share the version sequence.
 
 ## Stable update discovery
 
-`patchrelay catalog` asks for a signed patch manifest, the existing signed catalog
-(or explicit `new` for the first one), channel and final manifest HTTPS URL.
+`patchrelay catalog` remains available for manual workflows. It asks for a signed
+patch manifest, the existing signed catalog (or explicit `new` for the first
+one), channel and final manifest HTTPS URL.
 It verifies signatures/artifact hashes, preserves routes for older bases and
 updates only that patch's exact app/base route. It rejects a route downgrade,
 wrong app/channel, ambiguous routes and more than 64 supported base builds.

@@ -1,8 +1,9 @@
 # Maven distribution
 
-Status: submitted through the Central Portal; latest observed deployment status
-is `PUBLISHING`, not yet verified publicly downloadable. Coordinates:
-`io.github.jaypal1046:patchrelay-android:0.1.0-alpha01`.
+Status: published and publicly listed in Maven Central as of 2026-11-03.
+Coordinates: `io.github.jaypal1046:patchrelay-android:0.1.0-alpha01`.
+See the [published artifact](https://central.sonatype.com/artifact/io.github.jaypal1046/patchrelay-android)
+or manage deployment history in the [Sonatype Central Portal](https://central.sonatype.com/publishing/deployments).
 Namespace `io.github.jaypal1046` was verified in the signed-in Central Portal on
 2026-10-31. This is the Android SDK, independent of CLI alpha04 and demo APK 0.8.0.
 
@@ -20,8 +21,9 @@ retrievable from keys.openpgp.org, and a separate R8 consumer build compiles the
 catalog API and Kotlin defaults from the obfuscated AAR. No server deployment
 was initially submitted by automation because Chrome file-chooser handling timed
 out. The publisher subsequently submitted it manually; deployment
-`0dac37c3-c1bd-415a-acd7-ac4b95c2f130` is now `PUBLISHING`. Last public repository
-check still returned 404, so do not claim consumer availability yet.
+`0dac37c3-c1bd-415a-acd7-ac4b95c2f130` was submitted manually after local
+bundle verification. The artifact is now publicly listed; the earlier 404 and
+`PUBLISHING` observations were pre-publication.
 
 Verified upload ZIP SHA-256:
 `372e418cf8c54a153df8ad4933714357625242cd9a174174d489267ac536e8af`.
@@ -79,9 +81,9 @@ not a production stability promise.
 5. Validate the publication, test a separate consuming app with release R8 and
    the real patch flow, then upload the approved immutable version.
 
-After publication, consumers use `mavenCentral()` and the dependency above.
-Until then, those coordinates will not resolve from Central. GitHub Packages
-requires consumer authentication, making it less convenient for unrestricted use.
+Consumers can resolve the published coordinate with `mavenCentral()` and the
+dependency above. The source repository remains private; Maven Central distributes
+the signed SDK artifacts and public integration documentation.
 
 ## Exact upload procedure
 

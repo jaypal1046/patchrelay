@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, verify } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +23,15 @@ function temporary(run) {
   const root = mkdtempSync(join(tmpdir(), 'patchrelay-cli-'));
   return Promise.resolve().then(() => run(root)).finally(() => rmSync(root, { recursive: true, force: true }));
 }
+
+test('patch explains that a baseline path is required instead of leaking ENOENT', () => temporary(async root => {
+  writeFileSync(join(root, 'runtime.json'), JSON.stringify({
+    format: 1, appId: 'test.app', baseVersion: 'v1', screenApi: 2,
+    screenIds: ['checkout'], nativeInputs: [],
+  }));
+  writeFileSync(join(root, 'patchrelay.config.json'), JSON.stringify({ format: 1, runtimeFile: 'runtime.json', outputDir: '.patchrelay/releases' }));
+  await assert.rejects(main(['patch', '--baseline', 'new'], root), /"new" is only valid for the first catalog/);
+}));
 
 test('compare is read-only and reports native and Kotlin additions modifications removals', () => temporary(async root => {
   for (const dir of ['native', 'screens']) {
@@ -195,11 +204,19 @@ test('guided init stores only settings and never overwrites them', () => tempora
   mkdirSync(join(root, 'gradle-plugin'));
   writeFileSync(join(root, 'gradle-plugin/build.gradle'), 'unrelated build plugin');
   writeFileSync(join(root, 'local.properties'), 'sdk.dir=existing-sdk\n');
-  const answers = ['app', 'screens', 'owner/repository', '.keys/private.key', 'https://updates.example.com/catalog.json', 'production'];
+  const answers = ['app', 'screens', 'owner/repository', '.keys/private.key', 'https://updates.example.com/catalog.json', 'production', 'new', 'screens/build/custom.js', 'app/build/custom.apk', 'app/build/namespace/BuildConfig.java', 'app/public-key.pem'];
   await main(['init'], root, async () => answers.shift());
   const saved = JSON.parse(readFileSync(join(root, 'patchrelay.config.json')));
   assert.equal(saved.repository, 'owner/repository');
   assert.equal(saved.signingKey, '.keys/private.key');
+  assert.equal(saved.programFile, 'screens/build/custom.js');
+  assert.equal(saved.apkFile, 'app/build/custom.apk');
+  assert.equal(saved.buildConfigFile, 'app/build/namespace/BuildConfig.java');
+  assert.equal(saved.publicKeyFile, 'app/public-key.pem');
+  assert.equal(saved.catalogUrl, 'https://updates.example.com/catalog.json');
+  assert.equal(saved.baselinePointerFile, 'app/build/outputs/patchrelay/release/apk-record.json');
+  assert.equal(saved.patchOutputDir, 'screens/build/patchrelay');
+  assert.equal(saved.catalogFile, 'screens/build/patchrelay/catalog.json');
   assert.ok(readFileSync(join(root, '.gitignore'), 'utf8').includes('.patchrelay/'));
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').startsWith('sdk.dir=existing-sdk\n'));
   assert.ok(readFileSync(join(root, 'local.properties'), 'utf8').includes('patchrelay.catalogUrl=https://updates.example.com/catalog.json'));
@@ -211,6 +228,23 @@ test('guided init stores only settings and never overwrites them', () => tempora
   assert.ok(JSON.parse(readFileSync(join(root, 'runtime.json'))).nativeInputs.includes('.patchrelay-tools/src/main'));
   await assert.rejects(main(['init'], root, async () => assert.fail('must not prompt')), /already configured/);
   await assert.rejects(main(['patch', '--from', 'HEAD'], root), /Invalid option/);
+}));
+
+test('init accepts default build paths and rejects escaping paths before writing settings', () => temporary(async root => {
+  writeFileSync(join(root, 'runtime.json'), JSON.stringify({ appId: 'test.app', nativeInputs: [] }));
+  const replies = () => ['app', 'screens', 'https', 'https://example.com/patches', '.keys/private.key', 'https://example.com/catalog.json', 'production', 'new'];
+  let answers = [...replies(), '../outside.js'];
+  await assert.rejects(main(['init'], root, async (_, fallback) => answers.shift() ?? fallback), /escapes/);
+  assert.equal(existsSync(join(root, 'patchrelay.config.json')), false);
+  assert.equal(existsSync(join(root, '.patchrelay-tools')), false);
+  answers = replies();
+  await main(['init'], root, async (_, fallback) => answers.shift() ?? fallback);
+  const saved = JSON.parse(readFileSync(join(root, 'patchrelay.config.json')));
+  assert.equal(saved.programFile, 'screens/build/compileSync/js/main/productionExecutable/kotlin/PatchRelayScreens.js');
+  assert.equal(saved.apkFile, 'app/build/outputs/apk/release/app-release.apk');
+  assert.equal(saved.buildConfigFile, 'app/build/generated/source/buildConfig/release/test/app/BuildConfig.java');
+  assert.equal(saved.publicKeyFile, 'app/patch-public-key.txt');
+  assert.equal(saved.patchBaseUrl, 'https://example.com/patches');
 }));
 
 test('CLI verifies Gradle-generated host constants and rejects mismatched output', () => temporary(root => {
@@ -268,7 +302,9 @@ test('installed-independent baseline, patch and explicit Git recovery with real 
   writeFileSync(join(root, 'settings.gradle'), "rootProject.name='CliBuildFixture'\n");
   const runtime = { format: 1, appId: 'test.app', baseVersion: 'v1', screenApi: 2, screenIds: ['checkout'],
     nativeInputs: ['native.txt', 'app/assets/baseline-screen.js'], textExtensions: ['.txt', '.js'] };
-  const settings = { format: 1, runtimeFile: 'runtime.json', repository: 'owner/repository', signingKey: '.keys/private.key', publicKeyFile: 'public-key.txt', screenInputs: ['screen'],
+  const settings = { format: 1, runtimeFile: 'runtime.json', repository: null, patchBaseUrl: 'https://updates.example.com/patches', catalogUrl: 'https://updates.example.com/catalog.json',
+    catalogFile: 'screen/build/patchrelay/catalog.json', channel: 'production', baselinePointerFile: 'build/outputs/patchrelay/release/apk-record.json',
+    patchOutputDir: 'screen/build/patchrelay', signingKey: '.keys/private.key', publicKeyFile: 'public-key.txt', screenInputs: ['screen'],
     functionContractFile: 'build/functions.json', compileTasks: ['compileProgram'], baseTasks: ['buildApp'], programFile: 'build/program.js', baselineAsset: 'app/assets/baseline-screen.js',
     apkFile: 'build/fixture.apk', buildConfigFile: 'build/BuildConfig.java', outputDir: '.patchrelay/releases' };
   writeFileSync(join(root, 'runtime.json'), JSON.stringify(runtime));
@@ -293,29 +329,51 @@ tasks.register('buildApp') { doLast {
   const record = join(root, '.patchrelay/releases/baselines/original/baseline.json');
   assert.equal(loadBaseline(record).appId, 'test.app');
   assert.ok(existsSync(join(dirname(record), 'baseline-sources.zip')));
+  mkdirSync(join(root, 'build/outputs/patchrelay/release'), { recursive: true });
+  writeFileSync(join(root, 'build/outputs/patchrelay/release/apk-record.json'), JSON.stringify({ baselineFile: '.patchrelay/releases/baselines/original/baseline.json' }));
   await assert.rejects(main(['baseline', '--name', 'original'], root), /Output exists/);
   command(root, 'git', ['init']);
   command(root, 'git', ['add', '.']);
   command(root, 'git', ['-c', 'user.name=CLI Test', '-c', 'user.email=cli@example.invalid', 'commit', '-m', 'original base']);
   const commit = command(root, 'git', ['rev-parse', 'HEAD'], true);
   writeFileSync(join(root, 'screen/program.js'), 'globalThis.fixture = 2;');
-  await main(['patch', '--baseline', record, '--version', '1'], root);
+  await main(['patch'], root, () => assert.fail('Configured patch must not prompt'));
   const savedBaseline = loadBaseline(record);
-  const patchFile = join(root, `.patchrelay/releases/patches/${routeId(savedBaseline)}/1/patch.json`);
+  const patchDirectory = join(root, 'screen/build/patchrelay/patches');
+  const patchFile = join(patchDirectory, 'patch.json');
   const envelope = JSON.parse(readFileSync(patchFile));
   assert.ok(verify('sha256', Buffer.from(envelope.payload, 'base64'), keypair.publicKey, Buffer.from(envelope.signature, 'base64')));
-  assert.equal(JSON.parse(Buffer.from(envelope.payload, 'base64')).artifactUrl, `https://github.com/owner/repository/releases/download/patch-${routeId(savedBaseline).slice(0, 24)}-1/screens.js`);
-  await main(['catalog', '--patch', patchFile, '--catalog', 'new', '--channel', 'production', '--url', 'https://example.com/patch.json', '--out', '.patchrelay/catalog-test'], root);
+  assert.equal(JSON.parse(Buffer.from(envelope.payload, 'base64')).artifactUrl, `https://updates.example.com/patches/patch-${routeId(savedBaseline).slice(0, 24)}-1/screens.js`);
+  const autoCatalog = verifiedEnvelope(readFileSync(join(patchDirectory, 'catalog.json')), Buffer.from(keypair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64')));
+  assert.equal(autoCatalog.entries[0].manifestUrl, `https://updates.example.com/patches/patch-${routeId(savedBaseline).slice(0, 24)}-1/patch.json`);
+  assert.deepEqual(verifiedEnvelope(readFileSync(join(root, 'screen/build/patchrelay/catalog.json')), Buffer.from(keypair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64'))), autoCatalog);
+  const uploadOutput = [];
+  const originalLog = console.log;
+  try {
+    console.log = value => uploadOutput.push(value);
+    await main(['catalog', '--patch', patchFile, '--catalog', 'new', '--channel', 'production', '--url', 'https://example.com/patch.json', '--out', '.patchrelay/catalog-test'], root);
+  } finally { console.log = originalLog; }
+  const checklist = uploadOutput.find(line => line.startsWith('Upload in this order:'));
+  assert.ok(checklist.includes(`${join(dirname(patchFile), 'screens.js')} -> https://updates.example.com/patches/`));
+  assert.ok(checklist.includes(`${patchFile} -> https://example.com/patch.json`));
+  assert.ok(checklist.includes(`${join(root, '.patchrelay/catalog-test/catalog.json')} -> https://updates.example.com/catalog.json`));
   const catalog = verifiedEnvelope(readFileSync(join(root, '.patchrelay/catalog-test/catalog.json')), Buffer.from(keypair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64')));
   assert.equal(catalog.entries[0].hostSha256, savedBaseline.hostSha256);
+  writeFileSync(join(root, 'screen/program.js'), 'globalThis.fixture = 3;');
+  await main(['patch'], root, () => assert.fail('Configured patch must not prompt'));
+  const secondPatch = JSON.parse(readFileSync(patchFile));
+  assert.equal(JSON.parse(Buffer.from(secondPatch.payload, 'base64')).version, 2);
+  assert.deepEqual(readdirSync(patchDirectory).sort(), ['.patchrelay-managed-output', 'catalog.json', 'patch.json', 'screens.js']);
+  const secondCatalog = verifiedEnvelope(readFileSync(join(root, 'screen/build/patchrelay/catalog.json')), Buffer.from(keypair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64')));
+  assert.equal(secondCatalog.entries[0].version, 2);
   await main(['baseline', '--name', 'recovered', '--from', commit, '--apk', join(dirname(record), 'screen-base.apk')], root);
-  assert.equal(readFileSync(join(root, 'screen/program.js'), 'utf8'), 'globalThis.fixture = 2;');
+  assert.equal(readFileSync(join(root, 'screen/program.js'), 'utf8'), 'globalThis.fixture = 3;');
   assert.equal(command(root, 'git', ['rev-parse', 'HEAD'], true), commit);
   assert.equal(loadBaseline(join(root, '.patchrelay/releases/baselines/recovered/baseline.json')).recoveredFromCommit, commit);
   writeFileSync(join(root, 'wrong.apk'), 'different apk');
   await assert.rejects(main(['baseline', '--name', 'rejected', '--from', commit, '--apk', 'wrong.apk'], root), /Recovery rejected/);
   assert.equal(existsSync(join(root, '.patchrelay/releases/baselines/rejected')), false);
-  assert.equal(readFileSync(join(root, 'screen/program.js'), 'utf8'), 'globalThis.fixture = 2;');
+  assert.equal(readFileSync(join(root, 'screen/program.js'), 'utf8'), 'globalThis.fixture = 3;');
 }));
 
 

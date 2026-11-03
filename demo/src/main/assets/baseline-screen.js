@@ -98,26 +98,26 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(IteratorImpl, 'IteratorImpl', classMeta);
   setMetadataFor(ListIteratorImpl, 'ListIteratorImpl', classMeta, IteratorImpl);
   setMetadataFor(List, 'List', interfaceMeta, VOID, [Collection]);
-  setMetadataFor(AbstractMutableList, 'AbstractMutableList', classMeta, AbstractMutableCollection, [AbstractMutableCollection, MutableCollection, List]);
+  setMetadataFor(AbstractMutableList, 'AbstractMutableList', classMeta, AbstractMutableCollection, [AbstractMutableCollection, List, MutableCollection]);
   setMetadataFor(SubList, 'SubList', classMeta, AbstractMutableList);
   setMetadataFor(Map_0, 'Map', interfaceMeta);
   setMetadataFor(AbstractMap, 'AbstractMap', classMeta, VOID, [Map_0]);
   setMetadataFor(MutableMap, 'MutableMap', interfaceMeta, VOID, [Map_0]);
   setMetadataFor(AbstractMutableMap, 'AbstractMutableMap', classMeta, AbstractMap, [AbstractMap, MutableMap]);
   setMetadataFor(Set, 'Set', interfaceMeta, VOID, [Collection]);
-  setMetadataFor(AbstractMutableSet, 'AbstractMutableSet', classMeta, AbstractMutableCollection, [AbstractMutableCollection, MutableCollection, Set]);
+  setMetadataFor(AbstractMutableSet, 'AbstractMutableSet', classMeta, AbstractMutableCollection, [AbstractMutableCollection, Set, MutableCollection]);
   setMetadataFor(Companion, 'Companion', objectMeta);
-  setMetadataFor(ArrayList, 'ArrayList', classMeta, AbstractMutableList, [AbstractMutableList, MutableCollection, List], ArrayList_init_$Create$);
+  setMetadataFor(ArrayList, 'ArrayList', classMeta, AbstractMutableList, [AbstractMutableList, List, MutableCollection], ArrayList_init_$Create$);
   setMetadataFor(HashMap, 'HashMap', classMeta, AbstractMutableMap, [AbstractMutableMap, MutableMap], HashMap_init_$Create$);
-  setMetadataFor(HashMapKeys, 'HashMapKeys', classMeta, AbstractMutableSet, [MutableCollection, Set, AbstractMutableSet]);
+  setMetadataFor(HashMapKeys, 'HashMapKeys', classMeta, AbstractMutableSet, [Set, MutableCollection, AbstractMutableSet]);
   setMetadataFor(HashMapValues, 'HashMapValues', classMeta, AbstractMutableCollection, [MutableCollection, AbstractMutableCollection]);
-  setMetadataFor(HashMapEntrySetBase, 'HashMapEntrySetBase', classMeta, AbstractMutableSet, [MutableCollection, Set, AbstractMutableSet]);
+  setMetadataFor(HashMapEntrySetBase, 'HashMapEntrySetBase', classMeta, AbstractMutableSet, [Set, MutableCollection, AbstractMutableSet]);
   setMetadataFor(HashMapEntrySet, 'HashMapEntrySet', classMeta, HashMapEntrySetBase);
   setMetadataFor(HashMapKeysDefault$iterator$1, VOID, classMeta);
   setMetadataFor(HashMapKeysDefault, 'HashMapKeysDefault', classMeta, AbstractMutableSet);
   setMetadataFor(HashMapValuesDefault$iterator$1, VOID, classMeta);
   setMetadataFor(HashMapValuesDefault, 'HashMapValuesDefault', classMeta, AbstractMutableCollection);
-  setMetadataFor(HashSet, 'HashSet', classMeta, AbstractMutableSet, [AbstractMutableSet, MutableCollection, Set], HashSet_init_$Create$);
+  setMetadataFor(HashSet, 'HashSet', classMeta, AbstractMutableSet, [AbstractMutableSet, Set, MutableCollection], HashSet_init_$Create$);
   setMetadataFor(Companion_0, 'Companion', objectMeta);
   setMetadataFor(Itr, 'Itr', classMeta);
   setMetadataFor(KeysItr, 'KeysItr', classMeta, Itr);
@@ -164,7 +164,7 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(InternalMap, 'InternalMap', interfaceMeta);
   setMetadataFor(InternalHashMap, 'InternalHashMap', classMeta, VOID, [InternalMap], InternalHashMap_init_$Create$);
   setMetadataFor(LinkedHashMap, 'LinkedHashMap', classMeta, HashMap, [HashMap, MutableMap], LinkedHashMap_init_$Create$);
-  setMetadataFor(LinkedHashSet, 'LinkedHashSet', classMeta, HashSet, [HashSet, MutableCollection, Set], LinkedHashSet_init_$Create$);
+  setMetadataFor(LinkedHashSet, 'LinkedHashSet', classMeta, HashSet, [HashSet, Set, MutableCollection], LinkedHashSet_init_$Create$);
   setMetadataFor(BaseOutput, 'BaseOutput', classMeta);
   setMetadataFor(NodeJsOutput, 'NodeJsOutput', classMeta, BaseOutput);
   setMetadataFor(BufferedOutput, 'BufferedOutput', classMeta, BaseOutput, VOID, BufferedOutput);
@@ -711,12 +711,12 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(TrieNodeKeysIterator, 'TrieNodeKeysIterator', classMeta, TrieNodeBaseIterator, VOID, TrieNodeKeysIterator);
   setMetadataFor(TrieNodeEntriesIterator, 'TrieNodeEntriesIterator', classMeta, TrieNodeBaseIterator, VOID, TrieNodeEntriesIterator);
   setMetadataFor(MapEntry, 'MapEntry', classMeta, VOID, [Entry]);
-  setMetadataFor(PersistentHashMapKeys, 'PersistentHashMapKeys', classMeta, AbstractSet, [Set, Collection, AbstractSet]);
-  setMetadataFor(PersistentHashMapEntries, 'PersistentHashMapEntries', classMeta, AbstractSet, [Set, Collection, AbstractSet]);
+  setMetadataFor(PersistentHashMapKeys, 'PersistentHashMapKeys', classMeta, AbstractSet, [Collection, Set, AbstractSet]);
+  setMetadataFor(PersistentHashMapEntries, 'PersistentHashMapEntries', classMeta, AbstractSet, [Collection, Set, AbstractSet]);
   setMetadataFor(Companion_30, 'Companion', objectMeta);
   setMetadataFor(TrieNode, 'TrieNode', classMeta);
   setMetadataFor(Companion_31, 'Companion', objectMeta);
-  setMetadataFor(PersistentOrderedSet, 'PersistentOrderedSet', classMeta, AbstractSet, [AbstractSet, Set, Collection]);
+  setMetadataFor(PersistentOrderedSet, 'PersistentOrderedSet', classMeta, AbstractSet, [AbstractSet, Collection, Set]);
   setMetadataFor(PersistentOrderedSetIterator, 'PersistentOrderedSetIterator', classMeta);
   setMetadataFor(EndOfChain, 'EndOfChain', objectMeta);
   setMetadataFor(IntRef, 'IntRef', classMeta, VOID, VOID, IntRef);
@@ -754,6 +754,7 @@ if (typeof Math.imul === 'undefined') {
   setMetadataFor(invokeFunction$lambda$slambda, 'invokeFunction$lambda$slambda', classMeta, CoroutineImpl, VOID, VOID, VOID, VOID, [0]);
   setMetadataFor(_no_name_provided__qut3iv_3, VOID, classMeta, VOID, [Continuation]);
   setMetadataFor(ComposableSingletons$AppKt, 'ComposableSingletons$AppKt', objectMeta);
+  setMetadataFor(ComposableSingletons$OffersPageKt, 'ComposableSingletons$OffersPageKt', objectMeta);
   //endregion
   function CharSequence() {
   }
@@ -40227,7 +40228,7 @@ if (typeof Math.imul === 'undefined') {
       if (isTraceInProgress()) {
         traceEventStart(-63159422, $changed, -1, 'SimpleApp (App.kt:9)');
       }
-      $composer_0.i1l(221210453);
+      $composer_0.i1l(221210773);
       // Inline function 'androidx.compose.runtime.cache' call
       var this_0 = $composer_0;
       // Inline function 'kotlin.let' call
@@ -40247,7 +40248,7 @@ if (typeof Math.imul === 'undefined') {
       var tmp0_group = (tmp_0 == null ? true : !(tmp_0 == null)) ? tmp_0 : THROW_CCE();
       $composer_0.j1l();
       var page$delegate = tmp0_group;
-      $composer_0.i1l(221212345);
+      $composer_0.i1l(221212665);
       // Inline function 'androidx.compose.runtime.cache' call
       var this_1 = $composer_0;
       // Inline function 'kotlin.let' call
@@ -40267,7 +40268,7 @@ if (typeof Math.imul === 'undefined') {
       var tmp1_group = (tmp_2 == null ? true : !(tmp_2 == null)) ? tmp_2 : THROW_CCE();
       $composer_0.j1l();
       var quantity$delegate = tmp1_group;
-      $composer_0.i1l(221214229);
+      $composer_0.i1l(221214549);
       // Inline function 'androidx.compose.runtime.cache' call
       var this_2 = $composer_0;
       // Inline function 'kotlin.let' call
@@ -40432,7 +40433,7 @@ if (typeof Math.imul === 'undefined') {
   }
   function app$delegate$lambda() {
     _init_properties_App_kt__fk8usv();
-    if (!setOf_0(['home', 'catalog', 'cart', 'profile']).z(get_savedPage())) {
+    if (!setOf_0(['home', 'catalog', 'cart', 'profile', 'offers']).z(get_savedPage())) {
       set_savedPage('home');
     }
     return new RelayComposition('checkout', app$delegate$lambda$lambda, ComposableSingletons$AppKt_getInstance().e2b_1);
@@ -40506,9 +40507,9 @@ if (typeof Math.imul === 'undefined') {
         if (isTraceInProgress()) {
           traceEventStart(-1140367202, $changed, -1, 'SimpleApp.<anonymous> (App.kt:14)');
         }
-        Text('app_title', 'Simple pages v1', 'title', $composer_0, 438, 0);
+        Text('app_title', 'Simple pages v2', 'title', $composer_0, 438, 0);
         var tmp_0 = SimpleApp$lambda($page$delegate);
-        $composer_0.i1l(556170155);
+        $composer_0.i1l(556170475);
         // Inline function 'androidx.compose.runtime.cache' call
         // Inline function 'kotlin.let' call
         // Inline function 'kotlin.contracts.contract' call
@@ -40529,9 +40530,9 @@ if (typeof Math.imul === 'undefined') {
         Navigation(tmp_0, tmp0_group, $composer_0, 48);
         switch (SimpleApp$lambda($page$delegate)) {
           case 'home':
-            $composer_0.i1l(556172551);
+            $composer_0.i1l(556172871);
             var tmp_3 = SimpleApp$lambda_1($quantity$delegate);
-            $composer_0.i1l(556173140);
+            $composer_0.i1l(556173460);
             // Inline function 'androidx.compose.runtime.cache' call
 
             // Inline function 'kotlin.let' call
@@ -40558,9 +40559,9 @@ if (typeof Math.imul === 'undefined') {
             $composer_0.j1l();
             break;
           case 'catalog':
-            $composer_0.i1l(556175236);
+            $composer_0.i1l(556175556);
             var tmp_6 = SimpleApp$lambda_1($quantity$delegate);
-            $composer_0.i1l(556175918);
+            $composer_0.i1l(556176238);
             // Inline function 'androidx.compose.runtime.cache' call
 
             // Inline function 'kotlin.let' call
@@ -40587,9 +40588,9 @@ if (typeof Math.imul === 'undefined') {
             $composer_0.j1l();
             break;
           case 'cart':
-            $composer_0.i1l(556178786);
+            $composer_0.i1l(556179106);
             var tmp_9 = SimpleApp$lambda_1($quantity$delegate);
-            $composer_0.i1l(556179310);
+            $composer_0.i1l(556179630);
             // Inline function 'androidx.compose.runtime.cache' call
 
             // Inline function 'kotlin.let' call
@@ -40612,7 +40613,7 @@ if (typeof Math.imul === 'undefined') {
             var tmp_11 = tmp_10;
             var tmp3_group = (tmp_11 == null ? true : !(tmp_11 == null)) ? tmp_11 : THROW_CCE();
             $composer_0.j1l();
-            $composer_0.i1l(556181420);
+            $composer_0.i1l(556181740);
             // Inline function 'androidx.compose.runtime.cache' call
 
             // Inline function 'kotlin.let' call
@@ -40639,9 +40640,9 @@ if (typeof Math.imul === 'undefined') {
             $composer_0.j1l();
             break;
           case 'profile':
-            $composer_0.i1l(556184264);
+            $composer_0.i1l(556184584);
             var tmp_14 = SimpleApp$lambda_3($name$delegate);
-            $composer_0.i1l(556184822);
+            $composer_0.i1l(556185142);
             // Inline function 'androidx.compose.runtime.cache' call
 
             // Inline function 'kotlin.let' call
@@ -40667,8 +40668,13 @@ if (typeof Math.imul === 'undefined') {
             ProfilePage(tmp_14, tmp5_group, $composer_0, 48);
             $composer_0.j1l();
             break;
+          case 'offers':
+            $composer_0.i1l(556187194);
+            OffersPage($composer_0, 0);
+            $composer_0.j1l();
+            break;
           default:
-            $composer_0.i1l(556186762);
+            $composer_0.i1l(556188266);
             $composer_0.j1l();
             // Inline function 'kotlin.error' call
 
@@ -40710,33 +40716,6 @@ if (typeof Math.imul === 'undefined') {
       properties_initialized_App_kt_kalemn = true;
       app$delegate = lazy_0(app$delegate$lambda);
     }
-  }
-  function BaselineInfo($composer, $changed) {
-    var $composer_0 = $composer;
-    $composer_0 = $composer_0.o1m(-1188889320);
-    if (!($changed === 0) ? true : !$composer_0.f1l()) {
-      if (isTraceInProgress()) {
-        traceEventStart(-1188889320, $changed, -1, 'BaselineInfo (BaselineInfo.kt:4)');
-      }
-      Text('baseline_info', 'Bundled baseline edition', 'caption', $composer_0, 438, 0);
-      if (isTraceInProgress()) {
-        traceEventEnd();
-      }
-    } else {
-      $composer_0.w1f();
-    }
-    var tmp0_safe_receiver = $composer_0.p1m();
-    if (tmp0_safe_receiver == null)
-      null;
-    else {
-      tmp0_safe_receiver.x1r(BaselineInfo$lambda($changed));
-    }
-  }
-  function BaselineInfo$lambda($$changed) {
-    return function ($composer, $force) {
-      BaselineInfo($composer, updateChangedFlags($$changed | 1));
-      return Unit_instance;
-    };
   }
   function CartPage(quantity, add, remove, $composer, $changed) {
     var $composer_0 = $composer;
@@ -40799,7 +40778,7 @@ if (typeof Math.imul === 'undefined') {
       var tmp;
       if (!(($changed & 11) === 2) ? true : !$composer_0.f1l()) {
         if (isTraceInProgress()) {
-          traceEventStart(1635538931, $changed, -1, 'CartPage.<anonymous>.<anonymous> (CartPage.kt:11)');
+          traceEventStart(1635538931, $changed, -1, 'CartPage.<anonymous>.<anonymous> (CartPage.kt:12)');
         }
         Button('cart_add', 'Add one', $quantity < 100, $add, $composer_0, 54, 0);
         Button('cart_remove', 'Remove one', $quantity > 0, $remove, $composer_0, 54, 0);
@@ -40829,13 +40808,14 @@ if (typeof Math.imul === 'undefined') {
         if (isTraceInProgress()) {
           traceEventStart(985082661, $changed, -1, 'CartPage.<anonymous> (CartPage.kt:6)');
         }
-        Text('cart_title', 'Cart v1', 'title', $composer_0, 438, 0);
+        Text('cart_title', 'Cart v2', 'title', $composer_0, 438, 0);
         var tmp_0 = 'Items: ' + $quantity;
         Text('cart_count', tmp_0, null, $composer_0, 6, 4);
         var tmp_1 = 'Total: $' + checkoutTotal($quantity, productPrice());
         Text('cart_total', tmp_1, null, $composer_0, 6, 4);
         var tmp_2 = 'Reward points: ' + rewardPoints($quantity);
         Text('cart_points', tmp_2, null, $composer_0, 6, 4);
+        Text('cart_delivery', 'Free delivery included', 'caption', $composer_0, 438, 0);
         // Inline function 'kotlin.run' call
         // Inline function 'kotlin.contracts.contract' call
         // Inline function 'CartPage.<anonymous>.<anonymous>.<anonymous>' call
@@ -40949,13 +40929,13 @@ if (typeof Math.imul === 'undefined') {
         if (isTraceInProgress()) {
           traceEventStart(-750630273, $changed, -1, 'CatalogPage.<anonymous> (CatalogPage.kt:6)');
         }
-        Text('catalog_title', 'Catalog v1', 'title', $composer_0, 438, 0);
-        Text('product_name', 'Notebook', null, $composer_0, 54, 4);
+        Text('catalog_title', 'Catalog v2', 'title', $composer_0, 438, 0);
+        Text('product_name', 'Travel notebook', null, $composer_0, 54, 4);
         var tmp_0 = 'Unit price: $' + productPrice();
         Text('product_price', tmp_0, null, $composer_0, 6, 4);
         var tmp_1 = 'Items in cart: ' + $quantity;
         Text('catalog_count', tmp_1, null, $composer_0, 6, 4);
-        Button('add_product', 'Add notebook', $quantity < 100, $add, $composer_0, 54, 0);
+        Button('add_product', 'Add travel notebook', $quantity < 100, $add, $composer_0, 54, 0);
         var tmp_2;
         if (isTraceInProgress()) {
           traceEventEnd();
@@ -41012,10 +40992,10 @@ if (typeof Math.imul === 'undefined') {
     return tmp;
   }
   function rewardPoints(quantity) {
-    return imul(quantity, 10);
+    return imul(quantity, 20);
   }
   function productPrice() {
-    return 12;
+    return 9;
   }
   function HomePage(quantity, browse, $composer, $changed) {
     var $composer_0 = $composer;
@@ -41078,12 +41058,12 @@ if (typeof Math.imul === 'undefined') {
         if (isTraceInProgress()) {
           traceEventStart(87742707, $changed, -1, 'HomePage.<anonymous> (HomePage.kt:6)');
         }
-        Text('home_title', 'Home v1', 'title', $composer_0, 438, 0);
-        Text('home_message', 'Welcome to your simple app', null, $composer_0, 54, 4);
+        Text('home_title', 'Home v2', 'title', $composer_0, 438, 0);
+        Text('home_message', 'Welcome back to the updated app', null, $composer_0, 54, 4);
         var tmp_0 = 'Items in cart: ' + $quantity;
         Text('home_count', tmp_0, null, $composer_0, 6, 4);
-        Button('browse', 'Browse catalog', false, $browse, $composer_0, 54, 4);
-        BaselineInfo($composer_0, 0);
+        Button('browse', 'Explore catalog', false, $browse, $composer_0, 54, 4);
+        Text('home_update', 'Every page updated with signed JavaScript', 'caption', $composer_0, 438, 0);
         var tmp_1;
         if (isTraceInProgress()) {
           traceEventEnd();
@@ -41185,6 +41165,12 @@ if (typeof Math.imul === 'undefined') {
       return Unit_instance;
     };
   }
+  function Navigation$lambda$lambda_3($navigate) {
+    return function () {
+      $navigate('offers');
+      return Unit_instance;
+    };
+  }
   function Navigation$lambda($page, $navigate) {
     return function ($composer, $changed) {
       var $composer_0 = $composer;
@@ -41194,7 +41180,7 @@ if (typeof Math.imul === 'undefined') {
           traceEventStart(766189740, $changed, -1, 'Navigation.<anonymous> (Navigation.kt:6)');
         }
         var tmp_0 = !($page === 'home');
-        $composer_0.i1l(696801831);
+        $composer_0.i1l(696801863);
         // Inline function 'androidx.compose.runtime.cache' call
         var invalid = $composer_0.d1d($navigate);
         // Inline function 'kotlin.let' call
@@ -41213,9 +41199,9 @@ if (typeof Math.imul === 'undefined') {
         var tmp_2 = tmp_1;
         var tmp0_group = (tmp_2 == null ? true : !(tmp_2 == null)) ? tmp_2 : THROW_CCE();
         $composer_0.j1l();
-        Button('nav_home', 'Home', tmp_0, tmp0_group, $composer_0, 54, 0);
+        Button('nav_home', 'Start', tmp_0, tmp0_group, $composer_0, 54, 0);
         var tmp_3 = !($page === 'catalog');
-        $composer_0.i1l(696804426);
+        $composer_0.i1l(696804362);
         // Inline function 'androidx.compose.runtime.cache' call
         var invalid_0 = $composer_0.d1d($navigate);
         // Inline function 'kotlin.let' call
@@ -41234,7 +41220,7 @@ if (typeof Math.imul === 'undefined') {
         var tmp_5 = tmp_4;
         var tmp1_group = (tmp_5 == null ? true : !(tmp_5 == null)) ? tmp_5 : THROW_CCE();
         $composer_0.j1l();
-        Button('nav_catalog', 'Catalog', tmp_3, tmp1_group, $composer_0, 54, 0);
+        Button('nav_catalog', 'Shop', tmp_3, tmp1_group, $composer_0, 54, 0);
         var tmp_6 = !($page === 'cart');
         $composer_0.i1l(696806823);
         // Inline function 'androidx.compose.runtime.cache' call
@@ -41255,7 +41241,7 @@ if (typeof Math.imul === 'undefined') {
         var tmp_8 = tmp_7;
         var tmp2_group = (tmp_8 == null ? true : !(tmp_8 == null)) ? tmp_8 : THROW_CCE();
         $composer_0.j1l();
-        Button('nav_cart', 'Cart', tmp_6, tmp2_group, $composer_0, 54, 0);
+        Button('nav_cart', 'Basket', tmp_6, tmp2_group, $composer_0, 54, 0);
         var tmp_9 = !($page === 'profile');
         $composer_0.i1l(696809418);
         // Inline function 'androidx.compose.runtime.cache' call
@@ -41276,13 +41262,34 @@ if (typeof Math.imul === 'undefined') {
         var tmp_11 = tmp_10;
         var tmp3_group = (tmp_11 == null ? true : !(tmp_11 == null)) ? tmp_11 : THROW_CCE();
         $composer_0.j1l();
-        Button('nav_profile', 'Profile', tmp_9, tmp3_group, $composer_0, 54, 0);
-        var tmp_12;
+        Button('nav_profile', 'Account', tmp_9, tmp3_group, $composer_0, 54, 0);
+        var tmp_12 = !($page === 'offers');
+        $composer_0.i1l(696812009);
+        // Inline function 'androidx.compose.runtime.cache' call
+        var invalid_3 = $composer_0.d1d($navigate);
+        // Inline function 'kotlin.let' call
+        // Inline function 'kotlin.contracts.contract' call
+        // Inline function 'androidx.compose.runtime.cache.<anonymous>' call
+        var it_3 = $composer_0.a1n();
+        var tmp_13;
+        if (invalid_3 ? true : it_3 === Companion_getInstance_22().c1g_1) {
+          // Inline function 'Navigation.<anonymous>.<anonymous>.<anonymous>' call
+          var value_3 = Navigation$lambda$lambda_3($navigate);
+          $composer_0.b1n(value_3);
+          tmp_13 = value_3;
+        } else {
+          tmp_13 = it_3;
+        }
+        var tmp_14 = tmp_13;
+        var tmp4_group = (tmp_14 == null ? true : !(tmp_14 == null)) ? tmp_14 : THROW_CCE();
+        $composer_0.j1l();
+        Button('nav_offers', 'Offers', tmp_12, tmp4_group, $composer_0, 54, 0);
+        var tmp_15;
         if (isTraceInProgress()) {
           traceEventEnd();
-          tmp_12 = Unit_instance;
+          tmp_15 = Unit_instance;
         }
-        tmp = tmp_12;
+        tmp = tmp_15;
       } else {
         $composer_0.w1f();
         tmp = Unit_instance;
@@ -41298,6 +41305,66 @@ if (typeof Math.imul === 'undefined') {
   function Navigation$lambda_0($page, $navigate, $$changed) {
     return function ($composer, $force) {
       Navigation($page, $navigate, $composer, updateChangedFlags($$changed | 1));
+      return Unit_instance;
+    };
+  }
+  function OffersPage($composer, $changed) {
+    var $composer_0 = $composer;
+    $composer_0 = $composer_0.o1m(445558584);
+    if (!($changed === 0) ? true : !$composer_0.f1l()) {
+      if (isTraceInProgress()) {
+        traceEventStart(445558584, $changed, -1, 'OffersPage (OffersPage.kt:4)');
+      }
+      Card('offers', ComposableSingletons$OffersPageKt_getInstance().f2b_1, $composer_0, 54);
+      if (isTraceInProgress()) {
+        traceEventEnd();
+      }
+    } else {
+      $composer_0.w1f();
+    }
+    var tmp0_safe_receiver = $composer_0.p1m();
+    if (tmp0_safe_receiver == null)
+      null;
+    else {
+      tmp0_safe_receiver.x1r(OffersPage$lambda($changed));
+    }
+  }
+  function ComposableLambda$invoke$ref_10($boundThis) {
+    return function (p0, p1) {
+      return $boundThis.d1l(p0, p1);
+    };
+  }
+  function ComposableSingletons$OffersPageKt$lambda_1$lambda_y60fae($composer, $changed) {
+    var $composer_0 = $composer;
+    if (!(($changed & 11) === 2) ? true : !$composer_0.f1l()) {
+      if (isTraceInProgress()) {
+        traceEventStart(765568794, $changed, -1, 'ComposableSingletons$OffersPageKt.lambda-1.<anonymous> (OffersPage.kt:6)');
+      }
+      Text('offers_title', 'Offers v2', 'title', $composer_0, 438, 0);
+      Text('offers_delivery', 'Free delivery on every order', null, $composer_0, 54, 4);
+      Text('offers_points', 'Double reward points on every notebook', null, $composer_0, 54, 4);
+      if (isTraceInProgress()) {
+        traceEventEnd();
+      }
+    } else {
+      $composer_0.w1f();
+    }
+    return Unit_instance;
+  }
+  function ComposableSingletons$OffersPageKt() {
+    ComposableSingletons$OffersPageKt_instance = this;
+    var tmp = this;
+    tmp.f2b_1 = ComposableLambda$invoke$ref_10(composableLambdaInstance(765568794, false, ComposableSingletons$OffersPageKt$lambda_1$lambda_y60fae));
+  }
+  var ComposableSingletons$OffersPageKt_instance;
+  function ComposableSingletons$OffersPageKt_getInstance() {
+    if (ComposableSingletons$OffersPageKt_instance == null)
+      new ComposableSingletons$OffersPageKt();
+    return ComposableSingletons$OffersPageKt_instance;
+  }
+  function OffersPage$lambda($$changed) {
+    return function ($composer, $force) {
+      OffersPage($composer, updateChangedFlags($$changed | 1));
       return Unit_instance;
     };
   }
@@ -41331,7 +41398,7 @@ if (typeof Math.imul === 'undefined') {
       var tmp_0;
       if (invalid ? true : it === Companion_getInstance_22().c1g_1) {
         // Inline function 'ProfilePage.<anonymous>.<anonymous>' call
-        var value = ComposableLambda$invoke$ref_10(dispatchReceiver);
+        var value = ComposableLambda$invoke$ref_11(dispatchReceiver);
         $composer_1.b1n(value);
         tmp_0 = value;
       } else {
@@ -41362,11 +41429,11 @@ if (typeof Math.imul === 'undefined') {
         if (isTraceInProgress()) {
           traceEventStart(-1675929694, $changed, -1, 'ProfilePage.<anonymous> (ProfilePage.kt:6)');
         }
-        Text('profile_title', 'Profile v1', 'title', $composer_0, 438, 0);
+        Text('profile_title', 'Profile v2', 'title', $composer_0, 438, 0);
         var tmp_0 = 'Hello ' + $name;
         Text('profile_greeting', tmp_0, null, $composer_0, 6, 4);
         TextField('profile_name', 'Your name', $name, false, $updateName, $composer_0, 54, 8);
-        Text('profile_message', 'Your name is saved on this device', null, $composer_0, 54, 4);
+        Text('profile_message', 'Your name survives restarts and compatible patches', null, $composer_0, 54, 4);
         var tmp_1;
         if (isTraceInProgress()) {
           traceEventEnd();
@@ -41380,7 +41447,7 @@ if (typeof Math.imul === 'undefined') {
       return Unit_instance;
     };
   }
-  function ComposableLambda$invoke$ref_10($boundThis) {
+  function ComposableLambda$invoke$ref_11($boundThis) {
     return function (p0, p1) {
       return $boundThis.d1l(p0, p1);
     };

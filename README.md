@@ -61,11 +61,11 @@ patchrelay patch --baseline PATH_TO_BASELINE_JSON --version 1 --url https://upda
 patchrelay catalog --patch PATH_TO_PATCH_JSON --catalog new --channel production --url https://updates.example/app/base/1/patch.json
 ```
 
-Without flags, `patchrelay patch` prompts for an explicit baseline and version. Each patch contains the whole current program, so users can skip intermediate versions. Changed native inputs, added/removed function IDs or incompatible signatures require a new APK baseline. Pre-generator baselines are rejected for this workflow.
+After setup and the first APK baseline, `patchrelay patch` uses the saved baseline and writes the complete current program, signed manifest and signed catalog. Use `patchrelay patch --github` to upload those files to a GitHub Release. For a personal server, upload `screens.js` and `patch.json` to the printed versioned URLs first, then replace `catalog.json` at its stable URL. Each patch contains the whole current program, so users can skip intermediate versions. Changed native inputs, added/removed function IDs or incompatible signatures require a new APK baseline. Pre-generator baselines are rejected for this workflow.
 
 Comparison covers all declared source folders recursively, including hundreds of files. It reports added/modified/removed paths and counts; `--diff` also shows actual source-line changes against the saved release ZIP. It does not build or sign. See [comparison scope](cli/README.md#use).
 
-Use developer-owned keys/HTTPS or GitHub hosting. Configure `signingKey` outside the repository and the matching `publicKeyFile` pinned in the APK. No credentials/private keys belong in packages, APKs or hosted artifacts. Commands build/sign locally; upload only `screens.js`, `patch.json` and signed catalogs yourself. Back up complete baseline directories privately.
+Use developer-owned keys/HTTPS or GitHub Releases. Configure `signingKey` outside the repository and the matching `publicKeyFile` pinned in the APK. No credentials/private keys belong in packages, APKs or hosted artifacts. The APK checks one stable catalog URL; that catalog points to `patch.json`, which points to `screens.js`. Configure the catalog URL in the APK before the first install. See [hosting setup and exact server paths](docs/update-routing.md#hosting-setup-personal-server-or-github-releases). Back up complete baseline directories privately.
 
 Runtime routing retains app ID, channel, native fingerprint and base compatibility. A later APK starts its matching bundled program and rejects old-base patches. Existing signature, hash, replay, HTTPS, bounded-input and recovery checks remain in place. See [routing](docs/update-routing.md) and [integration](docs/integration.md).
 

@@ -13,6 +13,84 @@ patchrelay.channel=production
 Gradle BuildConfig generation and lifecycle integration described in the
 [integration guide](integration.md). The SDK does not read local.properties itself.
 
+## Hosting setup: personal server or GitHub Releases
+
+Pick one stable public HTTPS catalog URL for each app and channel. Put that exact
+URL in the APK's native configuration before the first production build. For
+example:
+
+```properties
+patchrelay.catalogUrl=https://updates.example.com/myapp/production/catalog.json
+patchrelay.channel=production
+```
+
+For a personal server, configure these values during `patchrelay init`:
+
+```text
+patchBaseUrl = https://updates.example.com/myapp/patches
+catalogUrl   = https://updates.example.com/myapp/production/catalog.json
+```
+
+The patch base URL is a directory prefix. Every patch run gets a unique tag
+folder; never upload a later patch over an earlier folder. For example, after
+three releases your server layout looks like this:
+
+```text
+/srv/www/updates/myapp/
+├── production/
+│   └── catalog.json                 # same URL every time; replace after upload
+└── patches/
+    ├── patch-a1b2-1/
+    │   ├── screens.js
+    │   └── patch.json
+    ├── patch-a1b2-2/
+    │   ├── screens.js
+    │   └── patch.json
+    └── patch-c3d4-1/                # another installed APK base
+        ├── screens.js
+        └── patch.json
+```
+
+The exact generated tag includes a route hash and version; use the URL printed
+by `patch`, not the shortened illustrative names above. For a tag like
+`patch-a1b2-4`, upload files to these exact locations:
+
+| Local generated file | Remote path |
+| --- | --- |
+| `screens.js` | `https://updates.example.com/myapp/patches/patch-a1b2-4/screens.js` |
+| `patch.json` | `https://updates.example.com/myapp/patches/patch-a1b2-4/patch.json` |
+| `catalog.json` | `https://updates.example.com/myapp/production/catalog.json` |
+
+Create the new tag-named folder on the server and upload `screens.js` and
+`patch.json` there first. Upload the new `catalog.json` to its stable path last.
+The catalog is one signed discovery file per app/channel, not one file per
+patch. Each update replaces that same catalog; its entries point to the latest
+patch for each supported installed APK base. Keep the referenced tag folders
+unchanged. Split different apps or channels into separate catalog paths. Replace
+the catalog atomically if the server supports it. Configure the
+server/CDN to serve these files over HTTPS without login pages, cookies, or
+interactive redirects. Verify each URL returns the actual JSON/JS file to an
+unauthenticated HTTPS GET.
+
+The CLI cleans and reuses its local `build/patchrelay/patches` output directory
+on each run. Do not mirror that whole local directory over the server's `patches`
+directory or use a sync option that deletes remote files. Copy only the new
+release's two files into its new tag folder; this preserves older published
+patches that existing catalogs may still need.
+
+For GitHub Releases, use `node ..\\cli\\bin\\patchrelay.mjs patch --github`.
+It creates a release and uploads the same three assets. Patch files use the
+release's immutable tag URL. The app checks the stable URL
+`https://github.com/OWNER/REPO/releases/latest/download/catalog.json`; put that
+URL in the APK before building/installing it. GitHub credentials are used by the
+CLI to publish and are never sent by the app. GitHub releases used by the app
+must be publicly downloadable.
+
+Do not configure the APK with the patch base URL or a GitHub Releases page. The
+APK needs the catalog file URL. The catalog points to `patch.json`, which points
+to `screens.js`. Changing the catalog URL later requires a new APK installation;
+publishing another patch at the same catalog URL does not.
+
 ## Files and commands
 
 1. With the Gradle plugin applied, a normal `assembleRelease` or `bundleRelease`
@@ -22,9 +100,10 @@ Gradle BuildConfig generation and lifecycle integration described in the
    selected baseline, compiles the complete current program and signs its manifest.
 3. `patchrelay catalog` requires the selected patch, prior signed catalog (or
    explicit `new`), channel and final manifest URL. It signs a new local catalog.
-4. Upload `screens.js` and its signed manifest to immutable URLs first. Verify
-   those downloads, then replace the catalog at the app's stable URL. Commands
-   do not perform remote uploads, GitHub login or token management.
+4. Host `screens.js` and its signed manifest at immutable HTTPS URLs first,
+   verify those downloads, then replace the catalog at the app's stable URL.
+   `patch --github` automates the GitHub Releases path; other servers use the
+   exact destinations printed by the command.
 
 Different apps can share a GitHub artifact repository. Default patch tags include
 a hash of app ID, base label and full native fingerprint, preventing the old

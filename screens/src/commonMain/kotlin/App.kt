@@ -2,8 +2,8 @@ import androidx.compose.runtime.*
 import dev.patchrelay.compose.*
 
 private val app by lazy {
-    if (savedPage !in setOf("home", "catalog", "cart", "profile", "offers")) savedPage = "home"
-    RelayComposition("checkout", backAction = { if (savedPage == "home") null else "simple_back" }) { SimpleApp() }
+    if (savedPage !in setOf("home1", "catalog1", "cart1", "profile1", "offers1")) savedPage = "home1"
+    RelayComposition("checkout", backAction = { if (savedPage == "home1") null else "simple_back" }) { SimpleApp() }
 }
 
 @Composable
@@ -15,11 +15,11 @@ private fun SimpleApp() {
         Text("app_title", "Simple pages v2", "title")
         Navigation(page) { page = it; savedPage = it }
         when (page) {
-            "home" -> HomePage(quantity) { page = "catalog"; savedPage = page }
-            "catalog" -> CatalogPage(quantity) { if (quantity < 100) { quantity++; savedQuantity = quantity } }
-            "cart" -> CartPage(quantity, { if (quantity < 100) { quantity++; savedQuantity = quantity } }, { if (quantity > 0) { quantity--; savedQuantity = quantity } })
-            "profile" -> ProfilePage(name) { name = it.take(40); savedName = name }
-            "offers" -> OffersPage()
+            "home1" -> HomePage(quantity) { page = "catalog1"; savedPage = page }
+            "catalog1" -> CatalogPage(quantity) { if (quantity < 100) { quantity++; savedQuantity = quantity } }
+            "cart1" -> CartPage(quantity, { if (quantity < 100) { quantity++; savedQuantity = quantity } }, { if (quantity > 0) { quantity--; savedQuantity = quantity } })
+            "profile1" -> ProfilePage(name) { name = it.take(40); savedName = name }
+            "offers1" -> OffersPage()
             else -> error("Unknown page: $page")
         }
     }

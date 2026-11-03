@@ -51,7 +51,7 @@ It compiles/tests the whole current shared module, checks contracts and signs `s
 patchrelay catalog --patch PATH_TO_PATCH_JSON --catalog new --channel production --url https://updates.example/app/base/1/patch.json
 ```
 
-For every subsequent catalog edit, pass the current signed catalog file instead of `new`; this preserves old-base routes. Upload immutable `screens.js` and `patch.json` first, verify HTTPS accessibility, then replace the stable signed catalog. CLI does not upload anything. GitHub release assets and developer-controlled HTTPS/CDNs can share storage across apps and native bases. Route identity remains app ID/channel/base/native fingerprint.
+For every subsequent catalog edit, pass the current signed catalog file instead of `new`; this preserves old-base routes. Upload immutable `screens.js` and `patch.json` first, verify HTTPS accessibility, then replace the stable signed catalog. `patch --github` publishes all three assets to a GitHub Release; personal servers use manual uploads to the exact paths printed by `patch`. GitHub release assets and developer-controlled HTTPS/CDNs can share storage across apps and native bases. Route identity remains app ID/channel/base/native fingerprint. See [hosting and update discovery](update-routing.md#hosting-setup-personal-server-or-github-releases) for exact URL setup and upload order.
 
 Configure the installed app's catalog URL/channel in `local.properties` or your native host configuration. URLs must be public or accessible through your own gateway; the SDK does not embed or send GitHub credentials. A GitHub repository page or login page is not an artifact endpoint.
 
