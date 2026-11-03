@@ -1,9 +1,15 @@
 {
   "format": 1,
   "runtimeFile": "runtime.json",
-  "repository": null,
+  "repository": "jaypal1046/patchrelay",
+  "patchBaseUrl": "https://raw.githubusercontent.com/jaypal1046/patchrelay/main/patchrelay-updates/patches",
   "signingKey": ".keys/patch-signing.key",
   "publicKeyFile": "demo/patch-public-key.txt",
+  "catalogUrl": "https://raw.githubusercontent.com/jaypal1046/patchrelay/main/patchrelay-updates/catalog.json",
+  "catalogFile": "screens/build/patchrelay/catalog.json",
+  "channel": "production",
+  "baselinePointerFile": "demo/build/outputs/patchrelay/release/apk-record.json",
+  "patchOutputDir": "screens/build/patchrelay",
   "functionContractFile": "screens/build/generated/patchrelay/functions.json",
   "screenInputs": [
     "screens/src/commonMain"
