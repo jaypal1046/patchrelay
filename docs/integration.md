@@ -2,7 +2,7 @@
 
 [README](../README.md) · [Architecture](architecture.md) · [Release workflow](release-workflow.md) · [Verification](production-readiness.md)
 
-This guide covers installed SDK lifecycle APIs. The [generated Kotlin workflow](kotlin-workflow.md) adds compiler-PSI based hook/export generation for a bounded common Kotlin module. It does not convert arbitrary Android/Compose code.
+This guide covers installed SDK lifecycle APIs. The public [PatchRelay quickstart](https://patchrelay.vercel.app/) and [hosting guide](https://patchrelay.vercel.app/hosting) explain the CLI, APK, patch files and GitHub/personal-server update flow. The [generated Kotlin workflow](kotlin-workflow.md) adds compiler-PSI based hook/export generation for a bounded common Kotlin module. It does not convert arbitrary Android/Compose code.
 
 ## What developers must change
 
@@ -35,7 +35,7 @@ dependencies {
 }
 ```
 
-This is a local integration experiment, not a completed external-app compatibility test. A raw AAR has no dependency metadata; the host must provide a compatible Kotlin standard library. A Java-only host has not been verified. Minimum Android API is 26 and a working Android WebView provider is required. No npm runtime packages are needed.
+This is a local integration experiment. For a published release, add `mavenCentral()` and use the current SDK coordinate shown on the [PatchRelay website](https://patchrelay.vercel.app/) or Maven Central. A raw AAR has no dependency metadata; the host must provide a compatible Kotlin standard library. A Java-only host has not been verified. Minimum Android API is 26 and a working Android WebView provider is required. No npm runtime packages are needed.
 
 **No separate WebView dependency or manual `WebView(...)` construction is required.** `android.webkit.WebView` is part of Android; `ScreenEngine` creates the hidden interpreter view. Current low-level integration still attaches `engine.webView` to the host, as shown below. Visible content uses `NativeScreenRenderer`, not HTML. The device supplies its WebView provider; Maven does not install that provider. Gradle resolves declared library dependencies and packages the AAR's code/assets/manifest. A [local Maven preview](maven-publishing.md) is configured; public Central publication is pending. [Android WebView](https://developer.android.com/reference/android/webkit/WebView), [library publishing](https://developer.android.com/build/publish-library/upload-library).
 

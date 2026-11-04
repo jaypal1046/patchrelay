@@ -334,7 +334,7 @@ async function recover(ctx, ref, original, out) {
 
 export async function main(args = process.argv.slice(2), cwd = process.cwd(), input) {
   const { action, options } = argumentsFor(args);
-  if (action === '--version') { console.log('0.1.0-alpha04'); return; }
+  if (action === '--version') { console.log('0.1.0-alpha05'); return; }
   if (['help', '--help', '-h'].includes(action)) { console.log(help); return; }
   let terminal;
   const ask = input || (async (question, fallback) => {

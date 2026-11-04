@@ -3,8 +3,24 @@
 An installable `patchrelay` command. No Python installation or Python commands.
 Uses Node 22+ and the project's Gradle wrapper with JDK 17 and Android SDK 35.
 
-Experimental alpha package: `@orbital_mcp/patchrelay`. The Android SDK is a
-separate Maven dependency; installing it does not install this CLI.
+Experimental alpha package: [`@orbital_mcp/patchrelay`](https://www.npmjs.com/package/@orbital_mcp/patchrelay) (CLI `0.1.0-alpha05`). The Android SDK is a
+separate Maven dependency; installing it does not install this CLI. See the
+[public quickstart](https://patchrelay.vercel.app/) and [hosting guide](https://patchrelay.vercel.app/hosting).
+
+## Install in a project
+
+Requirements: Node.js 22+, JDK 17+, Android SDK 35, and the Android project's
+Gradle wrapper. From the prepared Android project root:
+
+```sh
+npm install --save-dev @orbital_mcp/patchrelay
+npx patchrelay --help
+npx patchrelay init
+```
+
+`init` creates project config/build tooling and prints the Gradle plugin changes
+to apply. Add the Android SDK separately from Maven Central. Build and install a
+release APK with its stable catalog URL before publishing patches.
 
 ## Run current source
 

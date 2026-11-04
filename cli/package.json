@@ -1,6 +1,6 @@
 {
   "name": "@orbital_mcp/patchrelay",
-  "version": "0.1.0-alpha04",
+  "version": "0.1.0-alpha05",
   "description": "Build and sign patches for prepared PatchRelay Android projects",
   "type": "module",
   "bin": { "patchrelay": "bin/patchrelay.mjs" },

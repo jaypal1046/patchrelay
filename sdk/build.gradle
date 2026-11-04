@@ -1,7 +1,7 @@
 plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android'; id 'maven-publish'; id 'signing' }
 
 group = 'io.github.jaypal1046'
-version = '0.1.0-alpha01'
+version = '0.1.0-alpha02'
 def publicationLicenseName = providers.gradleProperty('publicationLicenseName').orElse('PatchRelay SDK License — Binary Use')
 def publicationLicenseUrl = providers.gradleProperty('publicationLicenseUrl').orElse(
     "https://repo.maven.apache.org/maven2/io/github/jaypal1046/patchrelay-android/${project.version}/patchrelay-android-${project.version}-license.txt")

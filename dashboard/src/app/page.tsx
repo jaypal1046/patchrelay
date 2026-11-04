@@ -24,7 +24,7 @@ const setup = [
     number: "04 / ANDROID SDK",
     icon: "◇",
     title: "Add the published SDK",
-    copy: "The Android library is available from Maven Central. Add mavenCentral() and this dependency to your prepared Android app.",
+    copy: "The current Android library is on Maven Central. Add mavenCentral() and this dependency to your prepared Android app. SDK alpha02 bundle is prepared; Central publication is pending.",
     command: 'implementation("io.github.jaypal1046:patchrelay-android:0.1.0-alpha01")',
   },
 ];
@@ -88,7 +88,7 @@ export default function Home() {
     <>
       <header className="topbar shell">
         <a className="brand" href="#top"><span className="mark">↗</span> PatchRelay</a>
-        <nav aria-label="Main navigation"><a href="#workflow">Workflow</a><a href="#hosting">Hosting</a><a href="/hosting">Full guide</a><a href="#artifacts">Files</a><a href="#install">Install</a></nav>
+        <nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#workflow">Workflow</a><a href="#hosting">Hosting</a><a href="/hosting">Full guide</a><a href="#artifacts">Files</a><a href="#install">Install</a></nav>
         <div className="top-right"><span className="badge">Android · Kotlin/JS</span><a className="quiet-link" href="https://central.sonatype.com/artifact/io.github.jaypal1046/patchrelay-android">Maven Central ↗</a></div>
       </header>
       <main className="shell" id="top">
@@ -111,7 +111,7 @@ export default function Home() {
 
         <div className="stats">
           <div className="stat"><strong>Node.js 22+ · JDK 17+</strong><span>Android SDK 35 for Android builds</span></div>
-          <div className="stat"><strong>SDK on Maven Central</strong><span>io.github.jaypal1046:patchrelay-android</span></div>
+          <div className="stat"><strong>SDK on Maven Central</strong><span>0.1.0-alpha01 published · alpha02 pending</span></div>
           <div className="stat"><strong>Two hosting options</strong><span>Personal HTTPS server or GitHub Releases</span></div>
         </div>
 
@@ -128,6 +128,17 @@ export default function Home() {
             <article className="card"><div className="number">APK REQUIRED</div><h3>Native app changes</h3><p>Native Android UI, permissions, dependencies, SDK hooks, and new host functions need an APK build. PatchRelay does not download or install APKs, DEX files, or native libraries.</p></article>
           </div>
           <p className="workflow-note"><strong>Important boundary:</strong> This is not a converter for arbitrary Android or Compose screens. Android Material UI, platform APIs in shared code, custom drawing, asynchronous Compose effects, automatic database migrations and unmarked application state are not patched. See the <a href="/hosting">full deployment guide</a> for install and hosting requirements.</p>
+        </section>
+
+        <section className="section" id="how-it-works">
+          <SectionHeading eyebrow="How it works" title="The app checks. The catalog routes. The SDK verifies." detail="One-time native setup, then supported screen updates follow the same signed path every release." />
+          <div className="workflow">
+            <article className="workflow-item"><small>01 · BUILD THE BASE</small><h3>Ship the first APK</h3><p>Add the Android SDK, apply the generated Gradle hooks, configure a stable catalog URL and signing public key, then build and install the release APK.</p></article>
+            <article className="workflow-item"><small>02 · BUILD A PATCH</small><h3>Compile the Kotlin changes</h3><p>Keep native inputs and supported function contracts compatible. Run <code>npx patchrelay patch</code>; the CLI compiles the complete current screen program and signs its files.</p></article>
+            <article className="workflow-item"><small>03 · PUBLISH FILES</small><h3>Upload to your host</h3><p>Publish a GitHub Release with <code>--github</code>, or upload the printed program and manifest to your own HTTPS server, followed by the stable catalog.</p></article>
+            <article className="workflow-item"><small>04 · APP CHECKS</small><h3>Verify and activate</h3><p>The installed SDK downloads the catalog, selects the exact app/channel/base route, checks signatures and hashes, stages the update, then activates it on the next launch.</p></article>
+          </div>
+          <p className="workflow-note"><strong>What users receive:</strong> the app downloads signed <code>catalog.json</code>, <code>patch.json</code> and <code>screens.js</code>. It does not download an APK, DEX or native library. A new APK is still required when native Android code, permissions, dependencies, SDK integration or supported function contracts change. See the <a href="/hosting">full install and hosting guide</a>.</p>
         </section>
 
         <section className="section" id="workflow">

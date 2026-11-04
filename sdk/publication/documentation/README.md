@@ -1,7 +1,7 @@
 # PatchRelay Android — API overview
 
-Experimental Android library, minSdk 26. This is a documentation notice, not
-generated Javadoc or a complete integration guide.
+PatchRelay Android SDK 0.1.0-alpha02, minSdk 26. This is a documentation
+notice, not generated Javadoc or a complete integration guide.
 
 - ScreenUpdates verifies signed, exact-base programs, stages them for a later
   process, selects startup fallback and tracks health. Run storage/network work
@@ -18,5 +18,7 @@ No Google Play approval or production stability is promised.
 
 Usage guides included in this archive: docs/integration.md,
 docs/gradle-integration.md and docs/update-routing.md. These document public APIs
-and setup; implementation source is not included. Some linked development-only
-documents require repository access: https://github.com/jaypal1046/patchrelay
+and setup; implementation source is not included. The complete public quickstart
+and hosting guide are at https://patchrelay.vercel.app/ and
+https://patchrelay.vercel.app/hosting. The source repository requires authorized
+access: https://github.com/jaypal1046/patchrelay

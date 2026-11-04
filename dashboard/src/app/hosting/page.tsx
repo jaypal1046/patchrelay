@@ -30,7 +30,7 @@ export default function HostingGuide() {
         </section>
 
         <section className="guide-section" id="flow">
-          <div className="eyebrow">How updates reach the app</div>
+          <div className="eyebrow">How updates reach the app · current SDK 0.1.0-alpha01</div>
           <h2>One catalog, two hosted files per patch</h2>
           <div className="guide-flow" aria-label="PatchRelay download sequence">
             <div><small>APK checks</small><code>catalog.json</code></div><span aria-hidden="true">→</span>
