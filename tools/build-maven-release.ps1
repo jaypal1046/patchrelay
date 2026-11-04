@@ -1,6 +1,20 @@
 param([switch]$CreateSigningKey, [switch]$ResumeKeySetup, [switch]$Diagnostic)
 $ErrorActionPreference = 'Stop'
 $releaseRoot = Split-Path $PSScriptRoot -Parent
+$releaseJavaCandidates = @($env:JAVA_HOME, (Join-Path $env:ProgramFiles 'Java\jdk-17'))
+$releaseJavaCandidates += @(Get-ChildItem (Join-Path $env:ProgramFiles 'Java') -Directory -Filter 'jdk-17*' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+$releaseJavaCandidates += @((Join-Path $env:ProgramFiles 'Android\Android Studio\jbr'), (Join-Path $env:ProgramFiles 'Android\Android Studio1\jbr'))
+$releaseJavaHome = $null
+foreach ($releaseJavaCandidate in ($releaseJavaCandidates | Where-Object { $_ } | Select-Object -Unique)) {
+    $releaseJavaExecutable = Join-Path $releaseJavaCandidate 'bin\java.exe'
+    if (!(Test-Path -LiteralPath $releaseJavaExecutable)) { continue }
+    $releaseJavaVersion = (& $releaseJavaExecutable -version 2>&1 | Out-String)
+    if ($releaseJavaVersion -match '(?:version|openjdk)\s+"?17(?:[.+\s"]|$)') {
+        $releaseJavaHome = $releaseJavaCandidate
+        break
+    }
+}
+if (!$releaseJavaHome) { throw 'JDK 17 is required for the Kotlin compiler. Install JDK 17 or set JAVA_HOME to a JDK 17 folder, then rerun this script.' }
 $releaseKeys = Join-Path $releaseRoot '.keys'
 $releaseGpgHome = Join-Path $releaseKeys 'maven-gnupg'
 $releaseMetadata = Join-Path $releaseKeys 'maven-signing.json'
@@ -70,14 +84,18 @@ $releaseSecure = Get-Content -LiteralPath $releasePassFile -Raw | ConvertTo-Secu
 $releasePointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($releaseSecure)
 $releaseOldKey = $env:MAVEN_SIGNING_KEY
 $releaseOldPassword = $env:MAVEN_SIGNING_PASSWORD
+$releaseOldJavaHome = $env:JAVA_HOME
+$releaseOldPath = $env:Path
 try {
+    $env:JAVA_HOME = $releaseJavaHome
+    $env:Path = "$releaseJavaHome\bin;$releaseOldPath"
     $env:MAVEN_SIGNING_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($releasePointer)
     $releaseKeySettings = Get-Content -LiteralPath $releaseMetadata -Raw | ConvertFrom-Json
     if ($releaseKeySettings.passphraseSuffix -eq 'CR') { $env:MAVEN_SIGNING_PASSWORD += "`r" }
     $env:MAVEN_SIGNING_KEY = [IO.File]::ReadAllText($releasePrivateFile)
     Push-Location $releaseRoot
     try {
-        $releaseArguments = @(':sdk:centralBundle', '--no-daemon', '--console=plain', '--max-workers=2')
+        $releaseArguments = @(':sdk:centralBundle', '--no-daemon', '--console=plain', '--max-workers=2', '-Pkotlin.compiler.execution.strategy=in-process')
         if ($Diagnostic) { $releaseArguments += '--stacktrace' }
         & (Join-Path $releaseRoot 'gradlew.bat') @releaseArguments
         if ($LASTEXITCODE -ne 0) { throw 'Signed Maven bundle build failed.' }
@@ -85,6 +103,8 @@ try {
 } finally {
     $env:MAVEN_SIGNING_KEY = $releaseOldKey
     $env:MAVEN_SIGNING_PASSWORD = $releaseOldPassword
+    $env:JAVA_HOME = $releaseOldJavaHome
+    $env:Path = $releaseOldPath
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($releasePointer)
     $releaseSecret = $null
     $releasePrivate = $null
