@@ -1,7 +1,7 @@
 plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android'; id 'maven-publish'; id 'signing' }
 
 group = 'io.github.jaypal1046'
-version = '0.1.0-alpha02'
+version = '0.1.0-alpha03'
 def publicationLicenseName = providers.gradleProperty('publicationLicenseName').orElse('PatchRelay SDK License — Binary Use')
 def publicationLicenseUrl = providers.gradleProperty('publicationLicenseUrl').orElse(
     "https://repo.maven.apache.org/maven2/io/github/jaypal1046/patchrelay-android/${project.version}/patchrelay-android-${project.version}-license.txt")
@@ -42,7 +42,7 @@ publishing {
             artifactId = 'patchrelay-android'
             pom {
                 name = 'PatchRelay Android'
-                description = 'Native Android screen rendering and bounded JavaScript patch execution.'
+                description = 'Alpha release of the PatchRelay Android SDK for prepared Android apps. Adds native screen rendering and signed Kotlin screen updates delivered through GitHub Releases or a developer-hosted HTTPS server. Requires app-side SDK integration; see https://patchrelay.vercel.app/ for setup and implementation guidance.'
                 url = 'https://github.com/jaypal1046/patchrelay'
                 licenses { license {
                     name = publicationLicenseName.get()
