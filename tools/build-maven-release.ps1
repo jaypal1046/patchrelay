@@ -8,7 +8,11 @@ $releaseJavaHome = $null
 foreach ($releaseJavaCandidate in ($releaseJavaCandidates | Where-Object { $_ } | Select-Object -Unique)) {
     $releaseJavaExecutable = Join-Path $releaseJavaCandidate 'bin\java.exe'
     if (!(Test-Path -LiteralPath $releaseJavaExecutable)) { continue }
-    $releaseJavaVersion = (& $releaseJavaExecutable -version 2>&1 | Out-String)
+    $releasePreviousErrorPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $releaseJavaVersion = (& $releaseJavaExecutable -version 2>&1 | Out-String)
+    } finally { $ErrorActionPreference = $releasePreviousErrorPreference }
     if ($releaseJavaVersion -match '(?:version|openjdk)\s+"?17(?:[.+\s"]|$)') {
         $releaseJavaHome = $releaseJavaCandidate
         break
